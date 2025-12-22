@@ -29,3 +29,7 @@ export function SaveConfig(arg1) {
 export function SelectProjectDir() {
   return window['go']['main']['App']['SelectProjectDir']();
 }
+
+export function SetLanguage(arg1) {
+  return window['go']['main']['App']['SetLanguage'](arg1);
+}

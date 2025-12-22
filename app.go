@@ -19,6 +19,7 @@ type App struct {
 }
 
 var OnConfigChanged func(AppConfig)
+var UpdateTrayMenu func(string)
 
 type ModelConfig struct {
 	ModelName string `json:"model_name"`
@@ -44,6 +45,12 @@ func (a *App) startup(ctx context.Context) {
 	// Force sync system env vars using current config on startup
 	config, _ := a.LoadConfig()
 	a.syncToSystemEnv(config)
+}
+
+func (a *App) SetLanguage(lang string) {
+	if UpdateTrayMenu != nil {
+		UpdateTrayMenu(lang)
+	}
 }
 
 // Greet returns a greeting for the given name
@@ -380,6 +387,20 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	
 	if config.ProjectDir == "" {
 		config.ProjectDir, _ = os.UserHomeDir()
+	}
+
+	// Ensure ModelUrls are populated for existing configs
+	for i := range config.Models {
+		if config.Models[i].ModelUrl == "" {
+			switch strings.ToLower(config.Models[i].ModelName) {
+			case "glm":
+				config.Models[i].ModelUrl = "https://open.bigmodel.cn/api/anthropic"
+			case "kimi":
+				config.Models[i].ModelUrl = "https://api.kimi.com/coding"
+			case "doubao":
+				config.Models[i].ModelUrl = "https://ark.cn-beijing.volces.com/api/coding"
+			}
+		}
 	}
 
 	return config, nil
