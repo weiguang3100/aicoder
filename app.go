@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -44,6 +42,8 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	// Platform specific initialization
+	a.platformStartup()
 	// Force sync system env vars using current config on startup
 	config, _ := a.LoadConfig()
 	a.syncToSystemEnv(config)
@@ -74,110 +74,6 @@ func (a *App) SelectProjectDir() string {
 		return ""
 	}
 	return selection
-}
-
-func (a *App) CheckEnvironment() {
-	go func() {
-		a.log("Checking Node.js installation...")
-		
-		npmPath := "npm"
-		// Check for node
-		nodeCmd := exec.Command("node", "--version")
-		nodeCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-		if err := nodeCmd.Run(); err != nil {
-			a.log("Node.js not found. Installing via Winget (this may take a while)...")
-			// Try installing Node.js
-			cmd := exec.Command("winget", "install", "-e", "--id", "OpenJS.NodeJS", "--silent", "--accept-package-agreements", "--accept-source-agreements")
-			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-			// Create a window specifically for winget interaction if strictly needed, but silent is better.
-			// However, winget often requires admin. This might fail if not run as admin.
-			// We will try.
-			if out, err := cmd.CombinedOutput(); err != nil {
-				a.log("Error installing Node.js: " + string(out))
-				// Fallback or stop? We'll try to continue but likely fail.
-			} else {
-				a.log("Node.js installed successfully.")
-				// Update npm path assumption
-				npmPath = `C:\Program Files\nodejs\npm.cmd`
-			}
-		} else {
-			a.log("Node.js is installed.")
-		}
-
-		a.log("Checking Claude Code...")
-		
-		// Check if claude exists first
-		claudeCheckCmd := exec.Command("claude", "--version")
-		claudeCheckCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-		claudeExists := claudeCheckCmd.Run() == nil
-
-		if !claudeExists {
-			a.log("Claude Code not found. Installing...")
-			installCmd := exec.Command(npmPath, "install", "-g", "@anthropic-ai/claude-code")
-			installCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-			
-			if out, err := installCmd.CombinedOutput(); err != nil {
-				// Fallback to absolute path
-				if npmPath == "npm" {
-					installCmd = exec.Command(`C:\Program Files\nodejs\npm.cmd`, "install", "-g", "@anthropic-ai/claude-code")
-					installCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-					if out2, err2 := installCmd.CombinedOutput(); err2 != nil {
-						a.log("Failed to install Claude Code: " + string(out) + " / " + string(out2))
-					} else {
-						a.log("Claude Code installed successfully. Restarting app to apply changes...")
-						a.restartApp()
-						return
-					}
-				} else {
-					a.log("Failed to install Claude Code: " + string(out))
-				}
-			} else {
-				a.log("Claude Code installed successfully. Restarting app to apply changes...")
-				a.restartApp()
-				return
-			}
-		} else {
-			// Always try to update claude-code if it exists
-			a.log("Claude Code found. Checking for updates (npm install -g @anthropic-ai/claude-code)...")
-			
-			installCmd := exec.Command(npmPath, "install", "-g", "@anthropic-ai/claude-code")
-			installCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-			if out, err := installCmd.CombinedOutput(); err != nil {
-				if npmPath == "npm" {
-					installCmd = exec.Command(`C:\Program Files\nodejs\npm.cmd`, "install", "-g", "@anthropic-ai/claude-code")
-					installCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-					if out2, err2 := installCmd.CombinedOutput(); err2 != nil {
-						a.log("Failed to update Claude Code: " + string(out) + " / " + string(out2))
-					} else {
-						a.log("Claude Code updated successfully.")
-					}
-				} else {
-					a.log("Failed to update Claude Code: " + string(out))
-				}
-			} else {
-				a.log("Claude Code updated successfully.")
-			}
-		}
-
-		a.log("Environment check complete.")
-		runtime.EventsEmit(a.ctx, "env-check-done")
-	}()
-}
-
-func (a *App) restartApp() {
-	executable, err := os.Executable()
-	if err != nil {
-		a.log("Failed to get executable path: " + err.Error())
-		return
-	}
-
-	cmd := exec.Command("cmd", "/c", "start", "", executable)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	if err := cmd.Start(); err != nil {
-		a.log("Failed to restart: " + err.Error())
-	} else {
-		runtime.Quit(a.ctx)
-	}
 }
 
 func (a *App) syncToClaudeSettings(config AppConfig) error {
@@ -271,23 +167,18 @@ func (a *App) syncToClaudeSettings(config AppConfig) error {
 	return os.WriteFile(claudeJsonPath, data2, 0644)
 }
 
-func (a *App) LaunchClaude(yoloMode bool, projectDir string) {
-	args := []string{"/c", "start", "cmd.exe", "/k", "claude"}
-	if yoloMode {
-		args = append(args, "--dangerously-skip-permissions")
+func getBaseUrl(selectedModel *ModelConfig) string {
+	baseUrl := selectedModel.ModelUrl
+	// Match the specific URLs used in settings.json
+	switch strings.ToLower(selectedModel.ModelName) {
+	case "kimi":
+		baseUrl = "https://api.kimi.com/coding"
+	case "glm":
+		baseUrl = "https://open.bigmodel.cn/api/anthropic"
+	case "doubao":
+		baseUrl = "https://ark.cn-beijing.volces.com/api/coding"
 	}
-	
-	cmd := exec.Command("cmd.exe", args...)
-	if projectDir != "" {
-		cmd.Dir = projectDir
-	}
-	
-	// Use standard environment
-	cmd.Env = os.Environ()
-	
-	if err := cmd.Start(); err != nil {
-		a.log("Failed to launch Claude: " + err.Error())
-	}
+	return baseUrl
 }
 
 func (a *App) log(message string) {
@@ -300,40 +191,6 @@ func (a *App) getConfigPath() (string, error) {
 		return "", err
 	}
 	return filepath.Join(home, ".claude_model_config.json"), nil
-}
-
-func (a *App) syncToSystemEnv(config AppConfig) {
-	var selectedModel *ModelConfig
-	for _, m := range config.Models {
-		if m.ModelName == config.CurrentModel {
-			selectedModel = &m
-			break
-		}
-	}
-
-	if selectedModel == nil {
-		return
-	}
-
-	baseUrl := selectedModel.ModelUrl
-	// Match the specific URLs used in settings.json
-	switch strings.ToLower(selectedModel.ModelName) {
-	case "kimi":
-		baseUrl = "https://api.kimi.com/coding"
-	case "glm":
-		baseUrl = "https://open.bigmodel.cn/api/anthropic"
-	case "doubao":
-		baseUrl = "https://ark.cn-beijing.volces.com/api/coding"
-	}
-
-	// Set persistent environment variables on Windows
-	cmd1 := exec.Command("setx", "ANTHROPIC_AUTH_TOKEN", selectedModel.ApiKey)
-	cmd1.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	cmd1.Run()
-
-	cmd2 := exec.Command("setx", "ANTHROPIC_BASE_URL", baseUrl)
-	cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	cmd2.Run()
 }
 
 func (a *App) LoadConfig() (AppConfig, error) {
@@ -432,6 +289,8 @@ func (a *App) LoadConfig() (AppConfig, error) {
 func (a *App) SaveConfig(config AppConfig) error {
 	// Sync to Claude Code settings
 	a.syncToClaudeSettings(config)
+	// Sync system environment variables
+	a.syncToSystemEnv(config)
 
 	path, err := a.getConfigPath()
 	if err != nil {

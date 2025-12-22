@@ -1,0 +1,7 @@
+#!/bin/bash
+ARCH=$(uname -m)
+if [ "$ARCH" != "x86_64" ]; then
+    echo "Error: This package is for Intel (x86_64) only. Your system is $ARCH."
+    exit 1
+fi
+exit 0
