@@ -25,6 +25,7 @@ type ModelConfig struct {
 	ModelName string `json:"model_name"`
 	ModelUrl  string `json:"model_url"`
 	ApiKey    string `json:"api_key"`
+	IsCustom  bool   `json:"is_custom"`
 }
 
 type AppConfig struct {
@@ -360,6 +361,12 @@ func (a *App) LoadConfig() (AppConfig, error) {
 					ModelUrl:  "https://ark.cn-beijing.volces.com/api/coding",
 					ApiKey:    "your_doubao_api_key_here",
 				},
+				{
+					ModelName: "Custom",
+					ModelUrl:  "",
+					ApiKey:    "",
+					IsCustom:  true,
+				},
 			},
 		}
 		if len(defaultConfig.Models) > 0 {
@@ -390,7 +397,12 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	}
 
 	// Ensure ModelUrls are populated for existing configs
+	hasCustom := false
 	for i := range config.Models {
+		if config.Models[i].IsCustom || config.Models[i].ModelName == "Custom" {
+			hasCustom = true
+			config.Models[i].IsCustom = true
+		}
 		if config.Models[i].ModelUrl == "" {
 			switch strings.ToLower(config.Models[i].ModelName) {
 			case "glm":
@@ -401,6 +413,15 @@ func (a *App) LoadConfig() (AppConfig, error) {
 				config.Models[i].ModelUrl = "https://ark.cn-beijing.volces.com/api/coding"
 			}
 		}
+	}
+
+	if !hasCustom {
+		config.Models = append(config.Models, ModelConfig{
+			ModelName: "Custom",
+			ModelUrl:  "",
+			ApiKey:    "",
+			IsCustom:  true,
+		})
 	}
 
 	return config, nil

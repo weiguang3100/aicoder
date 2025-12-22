@@ -24,6 +24,7 @@ const translations: any = {
         "launchBtn": "Launch Claude Code",
         "activeModel": "ACTIVE MODEL",
         "modelSettings": "MODEL SETTINGS",
+        "modelName": "Model Name",
         "apiKey": "API Key",
         "getKey": "Get Key",
         "enterKey": "Enter API Key",
@@ -35,7 +36,8 @@ const translations: any = {
         "loadingConfig": "Loading config...",
         "syncing": "Syncing to Claude Code...",
         "switched": "Model switched & synced!",
-        "langName": "English"
+        "langName": "English",
+        "custom": "Custom"
     },
     "zh-Hans": {
         "title": "Claude Code 简易套件",
@@ -50,6 +52,7 @@ const translations: any = {
         "launchBtn": "启动 Claude Code",
         "activeModel": "当前模型",
         "modelSettings": "模型设置",
+        "modelName": "模型名称",
         "apiKey": "API 密钥",
         "getKey": "获取 Key",
         "enterKey": "输入 API Key",
@@ -61,7 +64,8 @@ const translations: any = {
         "loadingConfig": "加载配置中...",
         "syncing": "正在同步到 Claude Code...",
         "switched": "模型已切换并同步！",
-        "langName": "简体中文"
+        "langName": "简体中文",
+        "custom": "自定义"
     },
     "zh-Hant": {
         "title": "Claude Code 簡易套件",
@@ -76,8 +80,9 @@ const translations: any = {
         "launchBtn": "啟動 Claude Code",
         "activeModel": "當前模型",
         "modelSettings": "模型設定",
+        "modelName": "模型名稱",
         "apiKey": "API 金鑰",
-        "getKey": "獲取 Key",
+        "getKey": "獲獲 Key",
         "enterKey": "輸入 API Key",
         "apiEndpoint": "API 端點",
         "saveChanges": "儲存變更",
@@ -87,7 +92,8 @@ const translations: any = {
         "loadingConfig": "載入設定中...",
         "syncing": "正在同步到 Claude Code...",
         "switched": "模型已切換並同步！",
-        "langName": "繁體中文"
+        "langName": "繁體中文",
+        "custom": "自定義"
     },
     "ko": {
         "title": "Claude Code 이지 스위트",
@@ -102,6 +108,7 @@ const translations: any = {
         "launchBtn": "Claude Code 시작",
         "activeModel": "활성 모델",
         "modelSettings": "모델 설정",
+        "modelName": "모델 이름",
         "apiKey": "API 키",
         "getKey": "키 발급",
         "enterKey": "API 키 입력",
@@ -113,7 +120,8 @@ const translations: any = {
         "loadingConfig": "설정 불러오는 중...",
         "syncing": "Claude Code와 동기화 중...",
         "switched": "모델 전환 및 동기화 완료!",
-        "langName": "한국어"
+        "langName": "한국어",
+        "custom": "사용자 정의"
     },
     "ja": {
         "title": "Claude Code イージー・スイート",
@@ -128,6 +136,7 @@ const translations: any = {
         "launchBtn": "Claude Code を起動",
         "activeModel": "アクティブなモデル",
         "modelSettings": "モデル設定",
+        "modelName": "モデル名",
         "apiKey": "API キー",
         "getKey": "キーを取得",
         "enterKey": "API キーを入力",
@@ -139,7 +148,8 @@ const translations: any = {
         "loadingConfig": "設定を読み込み中...",
         "syncing": "Claude Code に同期中...",
         "switched": "モデルの切り替えと同期が完了しました！",
-        "langName": "日本語"
+        "langName": "日本語",
+        "custom": "カスタム"
     },
     "de": {
         "title": "Claude Code Easy Suite",
@@ -154,6 +164,7 @@ const translations: any = {
         "launchBtn": "Claude Code starten",
         "activeModel": "Aktives Modell",
         "modelSettings": "Modell-Einstellungen",
+        "modelName": "Modellname",
         "apiKey": "API-Schlüssel",
         "getKey": "Schlüssel erhalten",
         "enterKey": "API-Schlüssel eingeben",
@@ -165,7 +176,8 @@ const translations: any = {
         "loadingConfig": "Lade Konfiguration...",
         "syncing": "Synchronisiere mit Claude Code...",
         "switched": "Modell gewechselt & synchronisiert!",
-        "langName": "Deutsch"
+        "langName": "Deutsch",
+        "custom": "Benutzerdefiniert"
     },
     "fr": {
         "title": "Suite Facile Claude Code",
@@ -180,6 +192,7 @@ const translations: any = {
         "launchBtn": "Lancer Claude Code",
         "activeModel": "Modèle actif",
         "modelSettings": "Paramètres du modèle",
+        "modelName": "Nom du modèle",
         "apiKey": "Clé API",
         "getKey": "Obtenir une clé",
         "enterKey": "Entrer la clé API",
@@ -191,7 +204,8 @@ const translations: any = {
         "loadingConfig": "Chargement de la configuration...",
         "syncing": "Synchronisation avec Claude Code...",
         "switched": "Modèle changé et synchronisé !",
-        "langName": "Français"
+        "langName": "Français",
+        "custom": "Personnalisé"
     }
 };
 
@@ -228,7 +242,7 @@ function App() {
         // Environment Check Logic
         const logHandler = (msg: string) => setEnvLog(msg);
         const doneHandler = () => {
-            ResizeWindow(1024, 768);
+            ResizeWindow(600, 676);
             setIsLoading(false);
         };
 
@@ -274,8 +288,30 @@ function App() {
     const handleApiKeyChange = (newKey: string) => {
         if (!config) return;
         const newModels = [...config.models];
-        newModels[activeTab].api_key = newKey;
+        newModels[activeTab] = { ...newModels[activeTab], api_key: newKey };
         setConfig(new main.AppConfig({...config, models: newModels}));
+    };
+
+    const handleModelUrlChange = (newUrl: string) => {
+        if (!config) return;
+        const newModels = [...config.models];
+        newModels[activeTab] = { ...newModels[activeTab], model_url: newUrl };
+        setConfig(new main.AppConfig({...config, models: newModels}));
+    };
+
+    const handleModelNameChange = (newName: string) => {
+        if (!config) return;
+        const newModels = [...config.models];
+        // If we rename the currently active model, we need to update current_model ID too
+        const isRenamingActive = config.current_model === newModels[activeTab].model_name;
+        newModels[activeTab] = { ...newModels[activeTab], model_name: newName };
+        
+        const newConfig = new main.AppConfig({
+            ...config, 
+            models: newModels,
+            current_model: isRenamingActive ? newName : config.current_model
+        });
+        setConfig(newConfig);
     };
 
     const handleModelSwitch = (modelName: string) => {
@@ -417,10 +453,25 @@ function App() {
                  </div>
             </div>
 
-            <div className="main-content">
+            <div className="main-content" style={{overflowY: currentModelConfig.is_custom ? 'auto' : 'hidden'}}>
+                <div style={{padding: '0 20px'}}>
+                    <h3 style={{fontSize: '0.9rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px'}}>{t("activeModel")}</h3>
+                </div>
+                <div className="model-switcher">
+                    {config.models.map((model) => (
+                        <button
+                            key={model.model_name}
+                            className={`model-btn ${config.current_model === model.model_name ? 'selected' : ''}`}
+                            onClick={() => handleModelSwitch(model.model_name)}
+                        >
+                            {model.model_name}
+                        </button>
+                    ))}
+                </div>
+
+                <div style={{margin: '20px 20px', borderTop: '1px solid #e5e7eb'}}></div>
+
                 <div style={{padding: '0 20px 20px 20px'}}>
-                    <h3 style={{fontSize: '0.9rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px'}}>{t("launch")}</h3>
-                    
                     <div className="form-group">
                         <label className="form-label">{t("projectDir")}</label>
                         <div style={{display: 'flex', gap: '10px'}}>
@@ -451,23 +502,6 @@ function App() {
                         {t("launchBtn")}
                     </button>
                 </div>
-                
-                <div style={{margin: '0 20px 20px', borderTop: '1px solid #e5e7eb'}}></div>
-
-                <div style={{padding: '0 20px'}}>
-                    <h3 style={{fontSize: '0.9rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px'}}>{t("activeModel")}</h3>
-                </div>
-                <div className="model-switcher">
-                    {config.models.map((model) => (
-                        <button
-                            key={model.model_name}
-                            className={`model-btn ${config.current_model === model.model_name ? 'selected' : ''}`}
-                            onClick={() => handleModelSwitch(model.model_name)}
-                        >
-                            {model.model_name}
-                        </button>
-                    ))}
-                </div>
 
                 <div style={{margin: '25px 20px', borderTop: '2px solid #3b82f6', opacity: 0.6}}></div>
 
@@ -478,14 +512,27 @@ function App() {
                 <div className="tabs">
                     {config.models.map((model, index) => (
                         <button
-                            key={model.model_name}
+                            key={model.is_custom ? "custom-tab" : model.model_name}
                             className={`tab-button ${activeTab === index ? 'active' : ''}`}
                             onClick={() => setActiveTab(index)}
                         >
-                            {model.model_name}
+                            {model.is_custom ? t("custom") || "Custom" : model.model_name}
                         </button>
                     ))}
                 </div>
+
+                {currentModelConfig.is_custom && (
+                <div className="form-group">
+                    <label className="form-label">{t("modelName")}</label>
+                    <input 
+                        type="text" 
+                        className="form-input"
+                        value={currentModelConfig.model_name} 
+                        onChange={(e) => handleModelNameChange(e.target.value)}
+                        placeholder="e.g. claude-3-5-sonnet-20241022"
+                    />
+                </div>
+                )}
 
                 <div className="form-group">
                     <label className="form-label">{t("apiKey")}</label>
@@ -497,14 +544,29 @@ function App() {
                             onChange={(e) => handleApiKeyChange(e.target.value)}
                             placeholder={`${t("enterKey")} (${currentModelConfig.model_name})`}
                         />
+                        {!currentModelConfig.is_custom && (
                         <button 
                             className="btn-subscribe" 
                             onClick={() => handleOpenSubscribe(currentModelConfig.model_name)}
                         >
                             {t("getKey")}
                         </button>
+                        )}
                     </div>
                 </div>
+
+                {currentModelConfig.is_custom && (
+                <div className="form-group">
+                    <label className="form-label">{t("apiEndpoint")}</label>
+                    <input 
+                        type="text" 
+                        className="form-input"
+                        value={currentModelConfig.model_url} 
+                        onChange={(e) => handleModelUrlChange(e.target.value)}
+                        placeholder="https://api.example.com/v1"
+                    />
+                </div>
+                )}
 
             </div>
 

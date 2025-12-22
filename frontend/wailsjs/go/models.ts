@@ -4,6 +4,7 @@ export namespace main {
 	    model_name: string;
 	    model_url: string;
 	    api_key: string;
+	    is_custom: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ModelConfig(source);
@@ -14,6 +15,7 @@ export namespace main {
 	        this.model_name = source["model_name"];
 	        this.model_url = source["model_url"];
 	        this.api_key = source["api_key"];
+	        this.is_custom = source["is_custom"];
 	    }
 	}
 	export class AppConfig {
