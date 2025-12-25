@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -197,25 +198,49 @@ func (a *App) installNodeJSManually(destDir string) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("bad status: %s", resp.Status)
 	}
+
+	// Create a temp file for the tarball
+	tempFile, err := os.CreateTemp("", "node-*.tar.gz")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(tempFile.Name())
+	defer tempFile.Close()
+
+	a.log("Saving download to temp file...")
+	if _, err := io.Copy(tempFile, resp.Body); err != nil {
+		return fmt.Errorf("failed to save download: %v", err)
+	}
 	
-	// Create destination directory
+	// Close file to ensure all data is flushed before tar reads it
+	tempFile.Close()
+
+	// Clean destination directory if it exists to avoid conflicts
+	if _, err := os.Stat(destDir); err == nil {
+		a.log("Cleaning existing Node.js directory...")
+		os.RemoveAll(destDir)
+	}
+
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return err
 	}
 	
-	a.log("Extracting Node.js using native tar (much faster)...")
+	a.log("Extracting Node.js (this should be fast)...")
 	
-	// Using native tar command is significantly faster than Go's archive/tar
-	// We pipe the response body directly to tar
-	cmd := exec.Command("tar", "-xz", "-C", destDir, "--strip-components", "1")
-	cmd.Stdin = resp.Body
+	// Using native tar command on the file
+	// -x: extract, -z: gunzip, -f: file, -C: directory, --strip-components 1: remove root folder
+	cmd := exec.Command("tar", "-xzf", tempFile.Name(), "-C", destDir, "--strip-components", "1")
 	
-	// Capture errors
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("tar extraction failed: %v, stderr: %s", err, stderr.String())
+	}
+
+	// Final verification: check if bin/node exists
+	if _, err := os.Stat(filepath.Join(destDir, "bin", "node")); err != nil {
+		return fmt.Errorf("verification failed: bin/node not found after extraction")
 	}
 	
 	return nil
