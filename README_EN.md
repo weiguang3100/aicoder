@@ -10,9 +10,13 @@ This application is specifically integrated with popular programming models (GLM
 
 *   **🚀 Automatic Environment Preparation**: Automatically detects Node.js environment and Claude Code installation status upon startup, supporting automatic installation and version updates.
 *   **🖼️ Modern & Clean UI**: Features a light blue themed design with a frameless window, supporting top dragging and quick hiding in the upper right corner.
-*   **📂 Project Directory Management**: Supports customizing and remembering the working directory for Claude Code, automatically entering the specified folder upon launch.
+*   **📂 Multi-Project Management (Vibe Coding)**:
+    *   **Tabbed Interface**: Manage multiple projects simultaneously and switch contexts quickly using top tabs.
+    *   **Independent Configuration**: Each project can have its own working directory and launch parameters (e.g., Yolo Mode).
+    *   **Visual Management**: Provides a project management panel to easily add, rename, or delete projects.
 *   **🔄 One-Click Model Switching**:
-    *   Integrated with **GLM**, **Kimi**, and **Doubao** models.
+    *   Integrated with **GLM**, **Kimi**, **Doubao**, and **MiniMax** models.
+    *   Supports **Custom** mode for connecting to any Anthropic-compatible API endpoint.
     *   Supports independent storage of API Keys for each model.
     *   **Instant Sync**: Automatically updates `~/.claude/settings.json`, `~/.claude.json`, and system environment variables (`ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`) when switching models.
 *   **🌍 Multi-language Support**: Interface supports English, Simplified Chinese, Traditional Chinese, Korean, Japanese, German, and French, with automatic switching based on OS language.
@@ -34,17 +38,17 @@ Run `Claude Code Easy Suite.exe` directly.
 On the first launch, the program performs an environment self-check. If Node.js is not installed, the program will attempt to install it via Winget (please ensure network connectivity). It will then automatically install/update to the latest version of `@anthropic-ai/claude-code`.
 
 ### 3. Configure API Key
-In the "Model Settings" tab of the main interface, enter your API Key for GLM, Kimi, or Doubao.
+In the "Model Settings" tab of the main interface, enter your API Key for GLM, Kimi, Doubao, MiniMax, or Custom.
 *   If you don't have a Key yet, click the **"Get Key"** button next to the input field to jump to the respective provider's application page.
 
 ### 4. Switch and Launch
 *   Select your desired model in the "Active Model" area at the top. System environments and Claude configuration files will sync immediately.
-*   (Optional) Click **"Change"** in the "Launch" area to modify your project working directory.
+*   **Select Project**: Click a project tab in the "Vibe Coding" area to switch projects. Click **"Change"** to modify the working directory.
 *   Click **"Launch Claude Code"**; a CMD window with a pre-configured environment will pop up and run Claude automatically.
 
 ## About
 
-*   **Version**: V1.0.001 Beta
+*   **Version**: V1.2 Beta
 *   **Author**: Dr. Daniel
 *   **GitHub**: [RapidAI/cceasy](https://github.com/RapidAI/cceasy)
 *   **Resources**: [CS146s Chinese Version](https://github.com/BIT-ENGD/cs146s_cn)
