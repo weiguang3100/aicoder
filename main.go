@@ -6,6 +6,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -25,7 +26,7 @@ func main() {
 	appOptions := &options.App{
 		Title:     "Claude Code Easy Suite",
 		Frameless: true,
-		Width:     528,
+		Width:     602,
 		Height:    200,
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId: "claude-code-easy-suite-lock",
@@ -52,6 +53,9 @@ func main() {
 			TitleBar:             mac.TitleBarHidden(),
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
+		},
+		Linux: &linux.Options{
+			Icon: icon,
 		},
 	}
 
