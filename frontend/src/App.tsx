@@ -54,7 +54,8 @@ const translations: any = {
         "updateAvailable": "Update available: ",
         "foundNewVersion": "Found new version",
         "downloadNow": "Download Now",
-        "paste": "Paste"
+        "paste": "Paste",
+        "bugReport": "Bug Report or Suggestion"
     },
     "zh-Hans": {
         "title": "Claude Code Easy Suite",
@@ -95,7 +96,8 @@ const translations: any = {
         "updateAvailable": "发现新版本: ",
         "foundNewVersion": "发现新版本",
         "downloadNow": "立即下载",
-        "paste": "粘贴"
+        "paste": "粘贴",
+        "bugReport": "Bug 报告或建议"
     },
     "zh-Hant": {
         "title": "Claude Code Easy Suite",
@@ -819,14 +821,14 @@ function App() {
                     borderRadius: '12px',
                     border: '1px solid rgba(251, 146, 60, 0.1)'
                 }}>
-                    <div style={{padding: '0 10px', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '5px'}}>
+                    <div style={{position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '5px'}}>
                         <h3 style={{fontSize: '1.1rem', color: '#fb923c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px', marginTop: '-5px', textAlign: 'center'}}>{t("activeModel")}</h3>
                         <button 
                             className="btn-link" 
                             onClick={() => setShowModelSettings(true)}
                             style={{
                                 position: 'absolute', 
-                                right: '0', 
+                                right: '10px', 
                                 borderColor: '#fb923c', 
                                 color: '#fb923c',
                                 fontSize: '0.8rem'
@@ -871,20 +873,19 @@ function App() {
                                                                                                                                                         <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '5px', position: 'relative'}}>
                 
                                                                                                                                                             <h3 style={{fontSize: '1.1rem', color: '#fb923c', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, marginTop: '-10px', textAlign: 'center'}}>Vibe Coding</h3>
-                                                                                        <button 
-                                                                                            className="btn-link" 
-                                                                                            onClick={() => setShowProjectManager(true)}
-                                                                                            style={{
-                                                                                                position: 'absolute', 
-                                                                                                right: '0', 
-                                                                                                borderColor: '#fb923c', 
-                                                                                                color: '#fb923c',
-                                                                                                fontSize: '0.8rem'
-                                                                                            }}
-                                                                                        >
-                                                                                            📂 {t("manageProjects")}
-                                                                                        </button>
-                                                                                    </div>                                            
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <button 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            className="btn-link" 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            onClick={() => setShowProjectManager(true)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            style={{
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                position: 'absolute', 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                right: '0', 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                borderColor: '#fb923c', 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                color: '#fb923c',
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                fontSize: '0.8rem'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        >
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            📂 {t("manageProjects")}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </button>                                                                                    </div>                                            
                                                                                                                                                                                                             {/* Project Tabs */}
                                             
                                                                                                                                                                                                             <div className="tabs" style={{marginBottom: '0', borderBottom: 'none', justifyContent: 'flex-start'}}>
@@ -1230,13 +1231,20 @@ function App() {
                         <h3 style={{marginTop: 0, color: '#fb923c'}}>Claude Code Easy Suite</h3>
                         <p style={{color: '#6b7280', margin: '5px 0'}}>Version V{APP_VERSION} Beta (Build {buildNumber})</p>
                         <p style={{color: '#6b7280', margin: '5px 0'}}>Author: Dr. Daniel</p>
-                        <div style={{display: 'flex', justifyContent: 'center', marginTop: '20px'}}>
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px'}}>
                             <button 
                                 className="btn-primary" 
                                 onClick={() => BrowserOpenURL("https://github.com/RapidAI/cceasy")}
-                                style={{display: 'flex', alignItems: 'center', gap: '8px'}}
+                                style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}
                             >
                                 <span style={{fontSize: '1.2em'}}>GitHub</span>
+                            </button>
+                            <button 
+                                className="btn-primary" 
+                                onClick={() => BrowserOpenURL("https://github.com/RapidAI/cceasy/issues/new")}
+                                style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'transparent', border: '1px solid #fb923c', color: '#fb923c'}}
+                            >
+                                {t("bugReport")}
                             </button>
                         </div>
                     </div>
