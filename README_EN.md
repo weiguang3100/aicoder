@@ -48,7 +48,7 @@ In the "Model Settings" tab of the main interface, enter your API Key for GLM, K
 
 ## About
 
-*   **Version**: V1.2 Beta
+*   **Version**: V1.3.2.53
 *   **Author**: Dr. Daniel
 *   **GitHub**: [RapidAI/cceasy](https://github.com/RapidAI/cceasy)
 *   **Resources**: [CS146s Chinese Version](https://github.com/BIT-ENGD/cs146s_cn)

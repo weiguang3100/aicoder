@@ -53,4 +53,6 @@ After selecting a project tab, configure its specific settings:
 ## 6. Other Features
 *   **Status Bar**: The bottom area shows real-time feedback (e.g., "Saved successfully"). Errors are highlighted in red.
 *   **Language Switch**: Change languages in the title bar (supports English, Chinese, Japanese, Korean, German, and French).
+*   **Check Update**: Click the **"Check Update"** button in the top right to check for new releases on GitHub.
+*   **Recover CC**: If you encounter persistent environmental issues, click the **"Recover CC"** button to reset Claude Code to its initial state (Warning: this will clear all credentials).
 *   **System Tray**: Right-click the tray icon for quick access to model switching, launching, or hiding the window.

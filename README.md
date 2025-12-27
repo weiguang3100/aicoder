@@ -48,7 +48,7 @@ Claude Code Easy Suite 是一款基于 Wails + Go + React 开发的桌面 GUI �
 
 ## 关于
 
-*   **版本**：V1.2 Beta
+*   **版本**：V1.3.2.53
 *   **作者**：Dr. Daniel
 *   **GitHub**：[RapidAI/cceasy](https://github.com/RapidAI/cceasy)
 *   **资源**：[CS146s 中文版](https://github.com/BIT-ENGD/cs146s_cn)

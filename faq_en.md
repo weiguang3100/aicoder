@@ -24,8 +24,11 @@ Each time the program starts, it automatically checks the version of `@anthropic
 ## 6. What if the environment check fails?
 If Node.js installation fails, please check your internet connection. In mainland China, the program automatically attempts to use the Tsinghua University mirror to speed up downloads. If automatic installation continues to fail, it is recommended to manually download and install v22.14.0 or higher from [nodejs.org](https://nodejs.org/).
 
-## 7. Why do I need to restart the app for changes to take effect?
-Normally, after environment changes (like installing Node.js), the program automatically tries to refresh the environment variables for the current process. However, in some extreme cases, Windows system environment changes may require an application restart to be fully recognized.
+## 8. What is "Recover CC" and when should I use it?
+The "Recover CC" feature is designed to reset the `claude-code` execution environment to its factory default state.
+*   **Use Case**: Use this if you have manually modified Claude's official configuration, cannot log in due to API Key conflicts, or encounter persistent environment errors that the program cannot automatically fix.
+*   **Impact**: It will permanently delete all local configurations and authentication tokens in the `~/.claude/` directory.
+*   **Follow-up**: After recovery, **do not** immediately click "Launch Claude Code" in this app. Instead, manually open a new terminal (CMD or PowerShell), run `claude`, and follow the official prompts to complete the initial setup once.
 
 ---
 *For more issues, please visit GitHub Issues: [RapidAI/cceasy/issues](https://github.com/RapidAI/cceasy/issues)*
