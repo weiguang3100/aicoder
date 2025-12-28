@@ -11,13 +11,13 @@ Goal: Ensure the application correctly detects and configures the latest `claude
 - [x] Task: Implement Feature: Robust file system watchers for configuration changes. c022fe7
 - [x] Task: Conductor - User Manual Verification 'Environment & CLI Synchronization' (Protocol in workflow.md)
 
-## Phase 2: UI/UX Refinement (Vibe Coding)
+## Phase 2: UI/UX Refinement (Vibe Coding) [checkpoint: b6ca54b]
 Goal: Polishing the multi-project tabbed interface.
 
 - [x] Task: Refine Tabbed Interface CSS/Layout for better visibility and responsiveness. 39ac855
 - [ ] Task: Write Tests: Unit tests for project switching logic in `App.tsx`. (Skipped per user request)
 - [x] Task: Implement Feature: Improved visual feedback when switching projects or changing working directories. e0fe6b9
-- [ ] Task: Conductor - User Manual Verification 'UI/UX Refinement (Vibe Coding)' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'UI/UX Refinement (Vibe Coding)' (Protocol in workflow.md)
 
 ## Phase 3: Stability & Bug Fixes
 Goal: Address known issues and improve overall robustness.
