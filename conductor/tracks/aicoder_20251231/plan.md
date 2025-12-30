@@ -21,23 +21,23 @@ Goal: Implement the logic for detecting, verifying, and installing the required 
 ## Phase 3: Unified Sidebar & Multi-Tab UI (Frontend)
 Goal: Revamp the UI to use a vertical sidebar and provide configuration tabs for each model.
 
-- [~] Task: Implement the Left Sidebar navigation using React/CSS.
-- [ ] Task: Create a reusable `ToolConfiguration` component for Settings (API Key, URL) and Model Switching.
-- [ ] Task: Implement persistence logic to ensure changes in each tab are saved independently.
+- [x] Task: Implement the Left Sidebar navigation using React/CSS. 373add3
+- [x] Task: Create a reusable `ToolConfiguration` component for Settings (API Key, URL) and Model Switching. 373add3 (modified)
+- [x] Task: Implement persistence logic to ensure changes in each tab are saved independently. 373add3 (modified)
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Unified Sidebar UI' (Protocol in workflow.md)
 
 ## Phase 4: Startup Installation Flow
 Goal: Implement the mandatory installation check window during application launch.
 
-- [ ] Task: Create the "Installation Progress" UI component.
-- [ ] Task: Modify application startup sequence to display the progress window before the main dashboard.
-- [ ] Task: Implement error handling and "Retry" logic for failed installations.
+- [x] Task: Create the "Installation Progress" UI component. 373add3 (modified)
+- [x] Task: Modify application startup sequence to display the progress window before the main dashboard. 373add3 (modified)
+- [x] Task: Implement error handling and "Retry" logic for failed installations. 373add3 (modified)
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: Startup Installation Flow' (Protocol in workflow.md)
 
 ## Phase 5: Launch Integration & Final Polish
 Goal: Connect the "Launch" buttons and perform final refinements.
 
-- [ ] Task: Update the CLI launch logic in `app.go` to inject the correct environment variables based on the active tab's configuration.
-- [ ] Task: Update all user documentation (`README.md`, `UserManual_CN.md`, etc.) to reflect the new "AICoder" identity and features.
+- [x] Task: Update the CLI launch logic in `app.go` to inject the correct environment variables based on the active tab's configuration. 373add3 (modified)
+- [x] Task: Update all user documentation (`README.md`, `UserManual_CN.md`, etc.) to reflect the new "AICoder" identity and features. f71b978
 - [ ] Task: Final cross-platform build verification (macOS/Windows).
 - [ ] Task: Conductor - User Manual Verification 'Phase 5: Final Polish' (Protocol in workflow.md)
