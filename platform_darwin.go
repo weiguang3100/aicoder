@@ -131,72 +131,24 @@ func (a *App) CheckEnvironment() {
 			return
 		}
 
-		// 5. Search for Claude
-		claudePath, _ := exec.LookPath("claude")
-		if claudePath == "" {
-			// Check if we are using local node, claude might be in local bin
-			localClaude := filepath.Join(localBinDir, "claude")
-			if _, err := os.Stat(localClaude); err == nil {
-				claudePath = localClaude
-			} else {
-				prefixCmd := exec.Command(npmExec, "config", "get", "prefix")
-				if out, err := prefixCmd.Output(); err == nil {
-					prefix := strings.TrimSpace(string(out))
-					globalClaude := filepath.Join(prefix, "bin", "claude")
-					if _, err := os.Stat(globalClaude); err == nil {
-						claudePath = globalClaude
-					}
-				}
-			}
-		}
-
-		if claudePath == "" {
-			a.log("Claude Code not found. Installing...")
+		// 5. Check and Install AI Tools
+		tm := NewToolManager(a)
+		tools := []string{"claude", "gemini", "codex"}
+		
+		for _, tool := range tools {
+			a.log(fmt.Sprintf("Checking %s...", tool))
+			status := tm.GetToolStatus(tool)
 			
-			// Use local npm install -g if we are using manual node
-			// If npm is in ~/.cceasy/node/bin/npm, it should default global install to ~/.cceasy/node/lib...
-			
-			installCmd := exec.Command(npmExec, "install", "-g", "@anthropic-ai/claude-code")
-			installCmd.Env = os.Environ() // Explicitly pass environment with updated PATH
-			if err := installCmd.Run(); err != nil {
-				a.log("Standard installation failed. Trying with sudo...")
-				script := fmt.Sprintf(`do shell script "%s install -g @anthropic-ai/claude-code" with administrator privileges`, npmExec)
-				adminCmd := exec.Command("osascript", "-e", script)
-				if err := adminCmd.Run(); err != nil {
-					a.log("Installation failed.")
+			if !status.Installed {
+				a.log(fmt.Sprintf("%s not found. Attempting automatic installation...", tool))
+				if err := tm.InstallTool(tool); err != nil {
+					a.log(fmt.Sprintf("ERROR: Failed to install %s: %v", tool, err))
+					// We continue to other tools even if one fails, allowing manual intervention later
 				} else {
-					a.log("Claude Code installed.")
+					a.log(fmt.Sprintf("%s installed successfully.", tool))
 				}
 			} else {
-				a.log("Claude Code installed.")
-			}
-		} else {
-			a.log("Claude Code found at: " + claudePath)
-			currentVer, err := a.getInstalledClaudeVersion(claudePath)
-			if err == nil {
-				a.log("Current Claude version: " + currentVer)
-				if npmExec != "" {
-					a.log("Checking for Claude Code updates...")
-					latestVer, err := a.getLatestClaudeVersion(npmExec)
-					if err == nil {
-						if compareVersions(latestVer, currentVer) > 0 {
-							a.log("New version available: " + latestVer + ". Updating...")
-							installCmd := exec.Command(npmExec, "install", "-g", "@anthropic-ai/claude-code")
-							installCmd.Env = os.Environ()
-							if err := installCmd.Run(); err != nil {
-								a.log("Update failed: " + err.Error())
-							} else {
-								a.log("Claude Code updated to " + latestVer)
-							}
-						} else {
-							a.log("Claude Code is up to date.")
-						}
-					} else {
-						a.log("Failed to check for updates: " + err.Error())
-					}
-				}
-			} else {
-				a.log("Failed to determine Claude version: " + err.Error())
+				a.log(fmt.Sprintf("%s found (version: %s).", tool, status.Version))
 			}
 		}
 

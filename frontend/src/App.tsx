@@ -478,78 +478,6 @@ const ToolConfiguration = ({
     );
 };
 
-interface InstallationProgressProps {
-    statuses: any[];
-    onInstallAll: () => void;
-    isInstalling: boolean;
-    t: (key: string) => string;
-}
-
-const InstallationProgress = ({ statuses, onInstallAll, isInstalling, t }: InstallationProgressProps) => {
-    return (
-        <div style={{
-            height: '100vh', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            backgroundColor: '#fff',
-            padding: '40px',
-            textAlign: 'center',
-            boxSizing: 'border-box'
-        }}>
-            <h2 style={{color: '#fb923c', marginBottom: '10px'}}>Tool Installation Check</h2>
-            <p style={{color: '#6b7280', marginBottom: '30px'}}>AICoder requires several CLI tools to function correctly.</p>
-            
-            <div style={{width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '40px'}}>
-                {statuses.map(s => (
-                    <div key={s.name} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb'}}>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                            <span style={{fontSize: '1.2rem'}}>{s.name === 'claude' ? '🤖' : s.name === 'gemini' ? '♊' : '💻'}</span>
-                            <span style={{fontWeight: 600, textTransform: 'capitalize'}}>{s.name}</span>
-                        </div>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                            {s.installed ? (
-                                <>
-                                    <span style={{color: '#10b981', fontSize: '0.8rem'}}>v{s.version || 'installed'}</span>
-                                    <span style={{color: '#10b981'}}>✅</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span style={{color: '#ef4444', fontSize: '0.8rem'}}>Missing</span>
-                                    <span style={{color: '#ef4444'}}>❌</span>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {isInstalling ? (
-                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px'}}>
-                    <div className="loading-spinner" style={{width: '30px', height: '30px', border: '3px solid #ffedd5', borderTopColor: '#fb923c', borderRadius: '50%', animation: 'spin 1s infinite linear'}}></div>
-                    <span style={{color: '#fb923c', fontWeight: 500}}>Installing missing tools...</span>
-                </div>
-            ) : (
-                <button 
-                    className="btn-launch" 
-                    onClick={onInstallAll}
-                    disabled={statuses.every(s => s.installed)}
-                    style={{maxWidth: '300px', opacity: statuses.every(s => s.installed) ? 0.5 : 1}}
-                >
-                    {statuses.every(s => s.installed) ? 'All Tools Ready' : 'Install Missing Tools'}
-                </button>
-            )}
-
-            <style>{`
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
-        </div>
-    );
-};
-
 function App() {
     const [config, setConfig] = useState<main.AppConfig | null>(null);
     const [navTab, setNavTab] = useState<string>("claude");
@@ -558,8 +486,6 @@ function App() {
     const [activeTab, setActiveTab] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [toolStatuses, setToolStatuses] = useState<any[]>([]);
-    const [isCheckingTools, setIsCheckingTools] = useState(true);
-    const [isInstallingTools, setIsInstallingTools] = useState(false);
     const [envLogs, setEnvLogs] = useState<string[]>(["Initializing..."]);
     const [showLogs, setShowLogs] = useState(false);
     const [yoloMode, setYoloMode] = useState(false);
@@ -681,25 +607,9 @@ function App() {
         try {
             const statuses = await CheckToolsStatus();
             setToolStatuses(statuses);
-            setIsCheckingTools(false);
         } catch (err) {
             console.error("Failed to check tools:", err);
-            setIsCheckingTools(false);
         }
-    };
-
-    const handleInstallAll = async () => {
-        setIsInstallingTools(true);
-        const missing = toolStatuses.filter(s => !s.installed);
-        for (const tool of missing) {
-            try {
-                await InstallTool(tool.name);
-            } catch (err) {
-                console.error(`Failed to install ${tool.name}:`, err);
-            }
-        }
-        await checkTools();
-        setIsInstallingTools(false);
     };
 
     const handleLangChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -1053,19 +963,6 @@ function App() {
                     }
                 `}</style>
             </div>
-        );
-    }
-
-    const allToolsInstalled = toolStatuses.length > 0 && toolStatuses.every(s => s.installed);
-
-    if (!allToolsInstalled || isCheckingTools) {
-        return (
-            <InstallationProgress 
-                statuses={toolStatuses} 
-                onInstallAll={handleInstallAll} 
-                isInstalling={isInstallingTools}
-                t={t}
-            />
         );
     }
 

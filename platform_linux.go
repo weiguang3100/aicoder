@@ -102,61 +102,23 @@ func (a *App) CheckEnvironment() {
 			return
 		}
 
-		// 5. Search for Claude
-		claudePath, _ := exec.LookPath("claude")
-		if claudePath == "" {
-			home, _ := os.UserHomeDir()
-			localClaude := filepath.Join(home, ".cceasy", "node", "bin", "claude")
-			if _, err := os.Stat(localClaude); err == nil {
-				claudePath = localClaude
-			} else {
-				prefixCmd := exec.Command(npmExec, "config", "get", "prefix")
-				if out, err := prefixCmd.Output(); err == nil {
-					prefix := strings.TrimSpace(string(out))
-					globalClaude := filepath.Join(prefix, "bin", "claude")
-					if _, err := os.Stat(globalClaude); err == nil {
-						claudePath = globalClaude
-					}
-				}
-			}
-		}
-
-		if claudePath == "" {
-			a.log("Claude Code not found. Installing...")
-			installCmd := exec.Command(npmExec, "install", "-g", "@anthropic-ai/claude-code")
-			installCmd.Env = os.Environ()
-			if out, err := installCmd.CombinedOutput(); err != nil {
-				a.log("Installation failed: " + string(out))
-			} else {
-				a.log("Claude Code installed.")
-			}
-		} else {
-			a.log("Claude Code found at: " + claudePath)
-			currentVer, err := a.getInstalledClaudeVersion(claudePath)
-			if err == nil {
-				a.log("Current Claude version: " + currentVer)
-				if npmExec != "" {
-					a.log("Checking for Claude Code updates...")
-					latestVer, err := a.getLatestClaudeVersion(npmExec)
-					if err == nil {
-						if compareVersions(latestVer, currentVer) > 0 {
-							a.log("New version available: " + latestVer + ". Updating...")
-							installCmd := exec.Command(npmExec, "install", "-g", "@anthropic-ai/claude-code")
-							installCmd.Env = os.Environ()
-							if out, err := installCmd.CombinedOutput(); err != nil {
-								a.log("Update failed: " + string(out))
-							} else {
-								a.log("Claude Code updated to " + latestVer)
-							}
-						} else {
-							a.log("Claude Code is up to date.")
-						}
-					} else {
-						a.log("Failed to check for updates: " + err.Error())
-					}
+		// 5. Check and Install AI Tools
+		tm := NewToolManager(a)
+		tools := []string{"claude", "gemini", "codex"}
+		
+		for _, tool := range tools {
+			a.log(fmt.Sprintf("Checking %s...", tool))
+			status := tm.GetToolStatus(tool)
+			
+			if !status.Installed {
+				a.log(fmt.Sprintf("%s not found. Attempting automatic installation...", tool))
+				if err := tm.InstallTool(tool); err != nil {
+					a.log(fmt.Sprintf("ERROR: Failed to install %s: %v", tool, err))
+				} else {
+					a.log(fmt.Sprintf("%s installed successfully.", tool))
 				}
 			} else {
-				a.log("Failed to determine Claude version: " + err.Error())
+				a.log(fmt.Sprintf("%s found (version: %s).", tool, status.Version))
 			}
 		}
 

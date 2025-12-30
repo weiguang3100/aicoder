@@ -117,52 +117,24 @@ func (a *App) CheckEnvironment() {
 			npmPath = `C:\Program Files\nodejs\npm.cmd`
 		}
 
-		a.log("Checking Claude Code...")
-
-		claudeCheckCmd := exec.Command("claude", "--version")
-		claudeCheckCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-		claudeExists := claudeCheckCmd.Run() == nil
-
-		if !claudeExists {
-			a.log("Claude Code not found. Installing...")
-			cmdStr := fmt.Sprintf("%s install -g @anthropic-ai/claude-code", npmPath)
-			a.log("Running command: " + cmdStr)
+		// 5. Check and Install AI Tools
+		tm := NewToolManager(a)
+		tools := []string{"claude", "gemini", "codex"}
+		
+		for _, tool := range tools {
+			a.log(fmt.Sprintf("Checking %s...", tool))
+			status := tm.GetToolStatus(tool)
 			
-			installCmd := exec.Command(npmPath, "install", "-g", "@anthropic-ai/claude-code")
-			installCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-
-			if out, err := installCmd.CombinedOutput(); err != nil {
-				a.log("Failed to install Claude Code: " + string(out))
-			} else {
-				a.log("Claude Code installed successfully. Refreshing environment...")
-				a.updatePathForNode()
-			}
-		} else {
-			a.log("Claude Code found. Checking for updates...")
-			// Assuming claude is in PATH since we checked it with claude --version
-			currentVer, err := a.getInstalledClaudeVersion("claude")
-			if err == nil {
-				a.log("Current Claude version: " + currentVer)
-				latestVer, err := a.getLatestClaudeVersion(npmPath)
-				if err == nil {
-					if compareVersions(latestVer, currentVer) > 0 {
-						a.log("New version available: " + latestVer + ". Updating...")
-						installCmd := exec.Command(npmPath, "install", "-g", "@anthropic-ai/claude-code")
-						installCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-						if out, err := installCmd.CombinedOutput(); err != nil {
-							a.log("Failed to update Claude Code: " + string(out))
-						} else {
-							a.log("Claude Code updated successfully.")
-							a.updatePathForNode()
-						}
-					} else {
-						a.log("Claude Code is up to date.")
-					}
+			if !status.Installed {
+				a.log(fmt.Sprintf("%s not found. Attempting automatic installation...", tool))
+				if err := tm.InstallTool(tool); err != nil {
+					a.log(fmt.Sprintf("ERROR: Failed to install %s: %v", tool, err))
 				} else {
-					a.log("Failed to check for updates: " + err.Error())
+					a.log(fmt.Sprintf("%s installed successfully.", tool))
+					a.updatePathForNode() // Refresh path after install
 				}
 			} else {
-				a.log("Failed to determine Claude version: " + err.Error())
+				a.log(fmt.Sprintf("%s found (version: %s).", tool, status.Version))
 			}
 		}
 
