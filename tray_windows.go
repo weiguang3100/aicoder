@@ -41,8 +41,8 @@ func setupTray(app *App, appOptions *options.App) {
 
 			// Load config to populate tray
 			config, _ := app.LoadConfig()
-			for _, model := range config.Models {
-				m := systray.AddMenuItemCheckbox(model.ModelName, "Switch to "+model.ModelName, model.ModelName == config.CurrentModel)
+			for _, model := range config.Claude.Models {
+				m := systray.AddMenuItemCheckbox(model.ModelName, "Switch to "+model.ModelName, model.ModelName == config.Claude.CurrentModel)
 				modelItems[model.ModelName] = m
 				
 				modelName := model.ModelName
@@ -50,20 +50,16 @@ func setupTray(app *App, appOptions *options.App) {
 					go func() {
 						currentConfig, _ := app.LoadConfig()
 						// Check if target model has API key
-						for _, m := range currentConfig.Models {
+						for _, m := range currentConfig.Claude.Models {
 							if m.ModelName == modelName {
 								if m.ApiKey == "" {
-									// No API key, do not switch
-									// Ideally show a notification, but for now just show window so user sees status?
-									// Or just ignore. The request says "not allow switching".
-									// Showing window might be helpful.
 									runtime.WindowShow(app.ctx)
 									return
 								}
 								break
 							}
 						}
-						currentConfig.CurrentModel = modelName
+						currentConfig.Claude.CurrentModel = modelName
 						app.SaveConfig(currentConfig)
 					}()
 				})
@@ -91,7 +87,7 @@ func setupTray(app *App, appOptions *options.App) {
 					return
 				}
 				for name, item := range modelItems {
-					if name == cfg.CurrentModel {
+					if name == cfg.Claude.CurrentModel {
 						item.Check()
 					} else {
 						item.Uncheck()

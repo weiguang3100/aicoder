@@ -5,8 +5,8 @@ Expansion of Claude Code Easy Suite into "AICoder", a multi-model dashboard supp
 ## Phase 1: Rebranding & Configuration Schema Migration
 Goal: Rename the application and prepare the configuration system for multiple tools.
 
-- [~] Task: Update project metadata (`wails.json`, `main.go`, `app.go`) to "AICoder".
-- [ ] Task: Refactor `AppConfig` in `app.go` to support independent settings for Codex, Gemini, and Claude Code.
+- [x] Task: Update project metadata (`wails.json`, `main.go`, `app.go`) to "AICoder". 42fcd5b
+- [~] Task: Refactor `AppConfig` in `app.go` to support independent settings for Codex, Gemini, and Claude Code.
 - [ ] Task: Implement migration logic to safely move existing Claude settings into the new multi-tool schema.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Rebranding & Config' (Protocol in workflow.md)
 

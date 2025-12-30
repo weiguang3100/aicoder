@@ -40,16 +40,16 @@ func setupTray(app *App, appOptions *options.App) {
 
 			// Load config to populate tray
 			config, _ := app.LoadConfig()
-			for _, model := range config.Models {
+			for _, model := range config.Claude.Models {
 				modelName := model.ModelName
-				m := systray.AddMenuItemCheckbox(modelName, "Switch to "+modelName, modelName == config.CurrentModel)
+				m := systray.AddMenuItemCheckbox(modelName, "Switch to "+modelName, modelName == config.Claude.CurrentModel)
 				modelItems[modelName] = m
 				
 				m.Click(func() {
 					go func() {
 						currentConfig, _ := app.LoadConfig()
 						// Check if target model has API key
-						for _, m := range currentConfig.Models {
+						for _, m := range currentConfig.Claude.Models {
 							if m.ModelName == modelName {
 								if m.ApiKey == "" {
 									runtime.WindowShow(app.ctx)
@@ -58,7 +58,7 @@ func setupTray(app *App, appOptions *options.App) {
 								break
 							}
 						}
-						currentConfig.CurrentModel = modelName
+						currentConfig.Claude.CurrentModel = modelName
 						app.SaveConfig(currentConfig)
 					}()
 				})
@@ -85,7 +85,7 @@ func setupTray(app *App, appOptions *options.App) {
 					return
 				}
 				for name, item := range modelItems {
-					if name == cfg.CurrentModel {
+					if name == cfg.Claude.CurrentModel {
 						item.Check()
 					} else {
 						item.Uncheck()

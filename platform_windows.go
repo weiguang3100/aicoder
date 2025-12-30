@@ -382,8 +382,8 @@ func (a *App) LaunchClaude(yoloMode bool, projectDir string) {
 
 func (a *App) syncToSystemEnv(config AppConfig) {
 	var selectedModel *ModelConfig
-	for _, m := range config.Models {
-		if m.ModelName == config.CurrentModel {
+	for _, m := range config.Claude.Models {
+		if m.ModelName == config.Claude.CurrentModel {
 			selectedModel = &m
 			break
 		}

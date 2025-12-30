@@ -34,12 +34,14 @@ func TestSyncToClaudeSettings(t *testing.T) {
 
 	// Define a test configuration
 	config := AppConfig{
-		CurrentModel: "TestModel",
-		Models: []ModelConfig{
-			{
-				ModelName: "TestModel",
-				ApiKey:    "sk-test-key-123",
-				ModelUrl:  "https://api.test.com",
+		Claude: ToolConfig{
+			CurrentModel: "TestModel",
+			Models: []ModelConfig{
+				{
+					ModelName: "TestModel",
+					ApiKey:    "sk-test-key-123",
+					ModelUrl:  "https://api.test.com",
+				},
 			},
 		},
 	}
@@ -136,7 +138,7 @@ func TestGetCurrentProjectPath(t *testing.T) {
 	app := &App{}
 	
 	// Setup test config file
-	configPath := filepath.Join(tmpHome, ".claude_model_config.json")
+	configPath := filepath.Join(tmpHome, ".aicoder_config.json")
 	config := AppConfig{
 		CurrentProject: "proj2",
 		Projects: []ProjectConfig{

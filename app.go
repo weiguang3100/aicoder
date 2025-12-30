@@ -41,12 +41,18 @@ type ProjectConfig struct {
 	YoloMode bool   `json:"yolo_mode"`
 }
 
+type ToolConfig struct {
+	CurrentModel string        `json:"current_model"`
+	Models       []ModelConfig `json:"models"`
+}
+
 type AppConfig struct {
-	CurrentModel   string          `json:"current_model"`
-	ProjectDir     string          `json:"project_dir"` // Deprecated, kept for migration
-	Models         []ModelConfig   `json:"models"`
+	Claude         ToolConfig      `json:"claude"`
+	Gemini         ToolConfig      `json:"gemini"`
+	Codex          ToolConfig      `json:"codex"`
 	Projects       []ProjectConfig `json:"projects"`
 	CurrentProject string          `json:"current_project"` // ID of the current project
+	ActiveTool     string          `json:"active_tool"`     // "claude", "gemini", or "codex"
 }
 
 // NewApp creates a new App application struct
@@ -182,8 +188,8 @@ func (a *App) syncToClaudeSettings(config AppConfig) error {
 	settingsPath := filepath.Join(claudeDir, "settings.json")
 
 	var selectedModel *ModelConfig
-	for _, m := range config.Models {
-		if m.ModelName == config.CurrentModel {
+	for _, m := range config.Claude.Models {
+		if m.ModelName == config.Claude.CurrentModel {
 			selectedModel = &m
 			break
 		}
@@ -294,7 +300,7 @@ func (a *App) getConfigPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".claude_model_config.json"), nil
+	return filepath.Join(home, ".aicoder_config.json"), nil
 }
 
 func (a *App) LoadConfig() (AppConfig, error) {
@@ -303,10 +309,75 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		return AppConfig{}, err
 	}
 
+	// Helper for default models
+	defaultClaudeModels := []ModelConfig{
+		{ModelName: "GLM", ModelUrl: "https://open.bigmodel.cn/api/anthropic", ApiKey: ""},
+		{ModelName: "kimi", ModelUrl: "https://api.kimi.com/coding", ApiKey: ""},
+		{ModelName: "doubao", ModelUrl: "https://ark.cn-beijing.volces.com/api/coding", ApiKey: ""},
+		{ModelName: "MiniMax", ModelUrl: "https://api.minimaxi.com/anthropic", ApiKey: ""},
+		{ModelName: "Custom", ModelUrl: "", ApiKey: "", IsCustom: true},
+	}
+	defaultGeminiModels := []ModelConfig{
+		{ModelName: "Gemini 1.5 Pro", ModelUrl: "", ApiKey: ""},
+		{ModelName: "Gemini 1.5 Flash", ModelUrl: "", ApiKey: ""},
+	}
+	defaultCodexModels := []ModelConfig{
+		{ModelName: "Codex", ModelUrl: "", ApiKey: ""},
+	}
+
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		// Create default config
+		// Check for old config file for migration
 		home, _ := os.UserHomeDir()
+		oldPath := filepath.Join(home, ".claude_model_config.json")
+		if _, err := os.Stat(oldPath); err == nil {
+			// Migrate old config
+			data, err := os.ReadFile(oldPath)
+			if err == nil {
+				var oldConfig struct {
+					CurrentModel string          `json:"current_model"`
+					Models       []ModelConfig   `json:"models"`
+					Projects     []ProjectConfig `json:"projects"`
+					CurrentProj  string          `json:"current_project"`
+				}
+				if err := json.Unmarshal(data, &oldConfig); err == nil {
+					config := AppConfig{
+						Claude: ToolConfig{
+							CurrentModel: oldConfig.CurrentModel,
+							Models:       oldConfig.Models,
+						},
+						Gemini: ToolConfig{
+							CurrentModel: "Gemini 1.5 Pro",
+							Models:       defaultGeminiModels,
+						},
+						Codex: ToolConfig{
+							CurrentModel: "Codex",
+							Models:       defaultCodexModels,
+						},
+						Projects:       oldConfig.Projects,
+						CurrentProject: oldConfig.CurrentProj,
+						ActiveTool:     "claude",
+					}
+					a.SaveConfig(config)
+					// Optional: os.Remove(oldPath)
+					return config, nil
+				}
+			}
+		}
+
+		// Create default config
 		defaultConfig := AppConfig{
+			Claude: ToolConfig{
+				CurrentModel: "GLM",
+				Models:       defaultClaudeModels,
+			},
+			Gemini: ToolConfig{
+				CurrentModel: "Gemini 1.5 Pro",
+				Models:       defaultGeminiModels,
+			},
+			Codex: ToolConfig{
+				CurrentModel: "Codex",
+				Models:       defaultCodexModels,
+			},
 			Projects: []ProjectConfig{
 				{
 					Id:       "default",
@@ -316,37 +387,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 				},
 			},
 			CurrentProject: "default",
-			Models: []ModelConfig{
-				{
-					ModelName: "GLM",
-					ModelUrl:  "https://open.bigmodel.cn/api/anthropic",
-					ApiKey:    "",
-				},
-				{
-					ModelName: "kimi",
-					ModelUrl:  "https://api.kimi.com/coding",
-					ApiKey:    "",
-				},
-				{
-					ModelName: "doubao",
-					ModelUrl:  "https://ark.cn-beijing.volces.com/api/coding",
-					ApiKey:    "",
-				},
-				{
-					ModelName: "MiniMax",
-					ModelUrl:  "https://api.minimaxi.com/anthropic",
-					ApiKey:    "",
-				},
-				{
-					ModelName: "Custom",
-					ModelUrl:  "",
-					ApiKey:    "",
-					IsCustom:  true,
-				},
-			},
-		}
-		if len(defaultConfig.Models) > 0 {
-			defaultConfig.CurrentModel = defaultConfig.Models[0].ModelName
+			ActiveTool:     "claude",
 		}
 
 		err = a.SaveConfig(defaultConfig)
@@ -364,110 +405,20 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		return config, err
 	}
 
-	if config.CurrentModel == "" && len(config.Models) > 0 {
-		config.CurrentModel = config.Models[0].ModelName
+	// Ensure defaults for new fields
+	if config.Claude.CurrentModel == "" && len(config.Claude.Models) > 0 {
+		config.Claude.CurrentModel = config.Claude.Models[0].ModelName
 	}
-	
-	// Migration: If Projects list is empty but ProjectDir exists
-	if len(config.Projects) == 0 {
-		pDir := config.ProjectDir
-		if pDir == "" {
-			pDir, _ = os.UserHomeDir()
-		}
-		config.Projects = []ProjectConfig{
-			{
-				Id:       "default",
-				Name:     "Project 1",
-				Path:     pDir,
-				YoloMode: false, // Default to false for safety
-			},
-		}
-		config.CurrentProject = "default"
+	if config.Gemini.Models == nil {
+		config.Gemini.Models = defaultGeminiModels
+		config.Gemini.CurrentModel = "Gemini 1.5 Pro"
 	}
-	
-	// Ensure CurrentProject is valid
-	validProj := false
-	for _, p := range config.Projects {
-		if p.Id == config.CurrentProject {
-			validProj = true
-			break
-		}
+	if config.Codex.Models == nil {
+		config.Codex.Models = defaultCodexModels
+		config.Codex.CurrentModel = "Codex"
 	}
-	if !validProj && len(config.Projects) > 0 {
-		config.CurrentProject = config.Projects[0].Id
-	}
-
-	// Ensure ModelUrls are populated and migrate names for existing configs
-	hasCustom := false
-	hasMiniMax := false
-	for i := range config.Models {
-		// Migrate to "GLM" for display
-		lowerName := strings.ToLower(config.Models[i].ModelName)
-		if lowerName == "glm" || lowerName == "glm-4.7" {
-			config.Models[i].ModelName = "GLM"
-			if strings.ToLower(config.CurrentModel) == "glm" || strings.ToLower(config.CurrentModel) == "glm-4.7" {
-				config.CurrentModel = "GLM"
-			}
-		}
-
-		if lowerName == "minimax" {
-			hasMiniMax = true
-			config.Models[i].ModelName = "MiniMax"
-			if strings.ToLower(config.CurrentModel) == "minimax" {
-				config.CurrentModel = "MiniMax"
-			}
-		}
-
-		if config.Models[i].IsCustom || config.Models[i].ModelName == "Custom" {
-			hasCustom = true
-			config.Models[i].IsCustom = true
-		}
-		if config.Models[i].ModelUrl == "" {
-			switch strings.ToLower(config.Models[i].ModelName) {
-			case "glm", "glm-4.7":
-				config.Models[i].ModelUrl = "https://open.bigmodel.cn/api/anthropic"
-			case "kimi":
-				config.Models[i].ModelUrl = "https://api.kimi.com/coding"
-			case "doubao":
-				config.Models[i].ModelUrl = "https://ark.cn-beijing.volces.com/api/coding"
-			case "minimax":
-				config.Models[i].ModelUrl = "https://api.minimaxi.com/anthropic"
-			}
-		}
-	}
-
-	if !hasMiniMax {
-		// Insert MiniMax before Custom if Custom exists, otherwise append
-		newModels := []ModelConfig{}
-		inserted := false
-		for _, m := range config.Models {
-			if (m.IsCustom || m.ModelName == "Custom") && !inserted {
-				newModels = append(newModels, ModelConfig{
-					ModelName: "MiniMax",
-					ModelUrl:  "https://api.minimaxi.com/anthropic",
-					ApiKey:    "your_minimax_api_key_here",
-				})
-				inserted = true
-			}
-			newModels = append(newModels, m)
-		}
-		if !inserted {
-			newModels = append(newModels, ModelConfig{
-				ModelName: "MiniMax",
-				ModelUrl:  "https://api.minimaxi.com/anthropic",
-				ApiKey:    "your_minimax_api_key_here",
-			})
-		}
-		config.Models = newModels
-	}
-
-	if !hasCustom {
-		config.Models = append(config.Models, ModelConfig{
-			ModelName: "Custom",
-			ModelUrl:  "",
-			ApiKey:    "",
-			IsCustom:  true,
-		})
+	if config.ActiveTool == "" {
+		config.ActiveTool = "claude"
 	}
 
 	return config, nil
