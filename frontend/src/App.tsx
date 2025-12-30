@@ -434,12 +434,9 @@ function App() {
     const [yoloMode, setYoloMode] = useState(false);
     const [showAbout, setShowAbout] = useState(false);
     const [showModelSettings, setShowModelSettings] = useState(false);
-    const [showProjectManager, setShowProjectManager] = useState(false);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
     const [updateResult, setUpdateResult] = useState<any>(null);
     const [projectOffset, setProjectOffset] = useState(0);
-    const [tempProjects, setTempProjects] = useState<any[]>([]); // Local state for project manager
-    const [managerStatus, setManagerStatus] = useState("");
     const [lang, setLang] = useState("en");
 
     // Recover Modal State
@@ -532,19 +529,10 @@ function App() {
         EventsOn("config-changed", handleConfigChange);
 
         return () => {
-            EventsOff("config-changed");
             EventsOff("env-log");
             EventsOff("env-check-done");
         };
     }, []);
-
-    // Initialize temp projects when manager opens
-    useEffect(() => {
-        if (showProjectManager && config) {
-            setTempProjects(JSON.parse(JSON.stringify(config.projects)));
-            setManagerStatus("");
-        }
-    }, [showProjectManager, config]);
 
     const checkTools = async () => {
         try {
@@ -687,22 +675,9 @@ function App() {
     };
 
     // Temp Project Manager Handlers (Local State)
-    const validateTempProjects = (projects: any[]) => {
-        const names = projects.map(p => p.name.trim());
-        if (names.some(n => n === "")) {
-            setManagerStatus("Error: Project name cannot be empty.");
-            return false;
-        }
-        const hasDuplicate = names.some((name, index) => names.indexOf(name) !== index);
-        if (hasDuplicate) {
-            setManagerStatus("Error: Duplicate project names are not allowed.");
-            return false;
-        }
-        setManagerStatus("");
-        return true;
-    };
-
-    const handleAddTempProject = async () => {
+    const handleAddNewProject = async () => {
+        if (!config) return;
+        
         let baseName = "Project";
         let newName = "";
         let i = 1;
@@ -710,7 +685,7 @@ function App() {
         while (true) {
             newName = `${baseName} ${i}`;
             // eslint-disable-next-line
-            if (!tempProjects.some((p: any) => p.name === newName)) break;
+            if (!config.projects.some((p: any) => p.name === newName)) break;
             i++;
         }
 
@@ -722,48 +697,13 @@ function App() {
             path: homeDir || "",
             yolo_mode: false
         };
-        const newList = [...tempProjects, newProject];
-        setTempProjects(newList);
-        validateTempProjects(newList);
-    };
-
-    const handleDeleteTempProject = (id: string) => {
-        if (tempProjects.length <= 1) return;
-        const newList = tempProjects.filter((p: any) => p.id !== id);
-        setTempProjects(newList);
-        validateTempProjects(newList);
-    };
-
-    const handleRenameTempProject = (id: string, newName: string) => {
-        const newList = tempProjects.map((p: any) => 
-            p.id === id ? { ...p, name: newName } : p
-        );
-        setTempProjects(newList);
-        validateTempProjects(newList);
-    };
-
-    const saveProjectManagerChanges = () => {
-        if (!config) return;
-        if (!validateTempProjects(tempProjects)) return;
         
-        // Determine current project ID (keep if exists, else first available)
-        let newCurrentId = config.current_project;
-        if (!tempProjects.find(p => p.id === newCurrentId)) {
-            newCurrentId = tempProjects.length > 0 ? tempProjects[0].id : "";
-        }
-
-        const newConfig = new main.AppConfig({
-            ...config, 
-            projects: tempProjects,
-            current_project: newCurrentId
-        });
-        
+        const newProjects = [...config.projects, newProject];
+        const newConfig = new main.AppConfig({...config, projects: newProjects});
         setConfig(newConfig);
         SaveConfig(newConfig);
-        setShowProjectManager(false);
-        
-        // Adjust tabs offset if current selection is out of view, or just reset
-        if (tempProjects.length <= 5) setProjectOffset(0);
+        setStatus(t("saved"));
+        setTimeout(() => setStatus(""), 1500);
     };
 
     const handleOpenSubscribe = (modelName: string) => {
@@ -1037,7 +977,7 @@ function App() {
                         <div style={{padding: '10px'}}>
                              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
                                 <h3 style={{margin: 0}}>{t("projectManagement")}</h3>
-                                <button className="btn-primary" onClick={handleAddTempProject}>{t("addNewProject")}</button>
+                                <button className="btn-primary" onClick={handleAddNewProject}>{t("addNewProject")}</button>
                             </div>
                             
                             <div style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
@@ -1059,6 +999,9 @@ function App() {
                                                 onChange={(e) => {
                                                     const newList = config.projects.map((p: any) => p.id === proj.id ? {...p, name: e.target.value} : p);
                                                     setConfig(new main.AppConfig({...config, projects: newList}));
+                                                }}
+                                                onBlur={() => {
+                                                    if (config) SaveConfig(config);
                                                 }}
                                                 style={{fontWeight: 'bold', border: 'none', padding: 0, fontSize: '1rem'}}
                                             />
