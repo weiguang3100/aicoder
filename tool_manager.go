@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -72,29 +74,82 @@ func (tm *ToolManager) getToolVersion(name, path string) (string, error) {
 }
 
 func (tm *ToolManager) InstallTool(name string) error {
+	npmPath := tm.getNpmPath()
+	if npmPath == "" {
+		return fmt.Errorf("npm not found. Please ensure Node.js is installed.")
+	}
+
 	var cmd *exec.Cmd
 	switch name {
 	case "claude":
-		cmd = exec.Command("npm", "install", "-g", "@anthropic-ai/claude-code")
+		cmd = exec.Command(npmPath, "install", "-g", "@anthropic-ai/claude-code")
 	case "gemini":
-		cmd = exec.Command("npm", "install", "-g", "@google/gemini-cli")
+		cmd = exec.Command(npmPath, "install", "-g", "@google/gemini-cli")
 	case "codex":
-		cmd = exec.Command("npm", "install", "-g", "@openai/codex")
+		cmd = exec.Command(npmPath, "install", "-g", "@openai/codex")
 	default:
 		return fmt.Errorf("unknown tool: %s", name)
 	}
 
-	// For Windows, we might need to handle the .cmd extension for npm
+	// Set environment to include local node bin for the installation process
+	home, _ := os.UserHomeDir()
+	localBinDir := filepath.Join(home, ".cceasy", "node", "bin")
 	if runtime.GOOS == "windows" {
-		cmd.Args = append([]string{"/c", "npm"}, cmd.Args[1:]...)
-		cmd.Path = "cmd"
+		localBinDir = filepath.Join(home, ".cceasy", "node")
 	}
+
+	env := os.Environ()
+	pathFound := false
+	for i, e := range env {
+		if strings.HasPrefix(strings.ToUpper(e), "PATH=") {
+			env[i] = fmt.Sprintf("PATH=%s%c%s", localBinDir, os.PathListSeparator, e[5:])
+			pathFound = true
+			break
+		}
+	}
+	if !pathFound {
+		env = append(env, "PATH="+localBinDir)
+	}
+	cmd.Env = env
+
+	// For Windows, handle .cmd extension and shell execution
+	if runtime.GOOS == "windows" {
+		if !strings.HasSuffix(strings.ToLower(npmPath), ".cmd") && !strings.HasSuffix(strings.ToLower(npmPath), ".exe") {
+			cmd.Args = append([]string{"/c", npmPath}, cmd.Args[1:]...)
+			cmd.Path = "cmd"
+		}
+	}
+
+	tm.app.log(fmt.Sprintf("Running installation: %s %s", npmPath, strings.Join(cmd.Args[1:], " ")))
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %v\nOutput: %s", name, err, string(out))
 	}
 	return nil
+}
+
+func (tm *ToolManager) getNpmPath() string {
+	// 1. Check local node environment first
+	home, _ := os.UserHomeDir()
+	var localNpm string
+	if runtime.GOOS == "windows" {
+		localNpm = filepath.Join(home, ".cceasy", "node", "npm.cmd")
+	} else {
+		localNpm = filepath.Join(home, ".cceasy", "node", "bin", "npm")
+	}
+
+	if _, err := os.Stat(localNpm); err == nil {
+		return localNpm
+	}
+
+	// 2. Fallback to system npm
+	path, err := exec.LookPath("npm")
+	if err == nil {
+		return path
+	}
+
+	return ""
 }
 
 func (a *App) InstallTool(name string) error {
