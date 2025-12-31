@@ -15,10 +15,10 @@ This plan outlines the steps to fix the environment configuration logic, ensurin
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Claude Code' (Protocol in workflow.md) [checkpoint: 80edf01]
 
 ## Phase 3: Gemini CLI Configuration Fixes
-- [ ] Task: Update `syncToGeminiSettings` to handle the "Original" provider by deleting relevant config files (e.g., `~/.gemini/config.json`).
-- [ ] Task: Refactor `LaunchTool` for Gemini to ensure `GEMINI_API_KEY` and `GEMINI_BASE_URL` are cleared in "Original" mode.
-- [ ] Task: Write unit tests to verify Gemini cleanup and custom setup.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Gemini CLI' (Protocol in workflow.md)
+- [x] Task: Update `syncToGeminiSettings` to handle the "Original" provider by deleting relevant config files (e.g., `~/.gemini/config.json`).
+- [x] Task: Refactor `LaunchTool` for Gemini to ensure `GEMINI_API_KEY` and `GEMINI_BASE_URL` are cleared in "Original" mode.
+- [x] Task: Write unit tests to verify Gemini cleanup and custom setup.
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Gemini CLI' (Protocol in workflow.md) [checkpoint: ]
 
 ## Phase 4: OpenAI Codex Configuration Fixes
 - [ ] Task: Update `syncToCodexSettings` to handle the "Original" provider by deleting `.codex` directory or files.
