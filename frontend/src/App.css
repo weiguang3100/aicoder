@@ -104,12 +104,35 @@ body {
     flex-direction: column;
     overflow: hidden;
     background-color: var(--bg-color);
-    position: relative; /* For absolute positioning of status message if needed, or footer */
-    margin-top: 20px; /* Shifted down by 20px */
+    position: relative;
+    height: 100%;
+}
+
+.top-header {
+    flex: 0 0 auto; /* Do not grow or shrink */
+    padding: 15px 20px;
+    background-color: var(--surface-color);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 10;
+}
+
+.top-header h2 {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.2rem;
+    color: var(--text-color);
+    letter-spacing: -0.025em;
+}
+
+.main-content {
+    flex: 6.5; /* 65% of remaining space */
+    padding: 15px 15px 0 15px;
+    overflow-y: auto;
+    background: linear-gradient(to bottom, #ffffff, #f8faff);
 }
 
 .global-action-bar {
-    min-height: 120px; /* Reliable minimum height */
+    flex: 3.5; /* 35% of remaining space */
     width: 100%;
     background-color: var(--surface-color);
     border-top: 1px solid var(--border-color);
@@ -120,35 +143,6 @@ body {
     gap: 15px;
     box-sizing: border-box;
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.03);
-}
-
-.action-bar-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-}
-
-.header {
-    padding: 15px 20px;
-    background-color: var(--surface-color);
-    border-bottom: 1px solid var(--border-color);
-    z-index: 10;
-}
-
-.header h2 {
-    margin: 0;
-    font-weight: 600;
-    font-size: 1.2rem;
-    color: var(--text-color);
-    letter-spacing: -0.025em;
-}
-
-.main-content {
-    flex: 1;
-    padding: 15px 15px 0 15px;
-    overflow-y: auto;
-    background: linear-gradient(to bottom, #ffffff, #f8faff);
 }
 
 /* Tabs */
