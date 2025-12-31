@@ -237,11 +237,6 @@ func (a *App) clearEnvVars() {
 }
 
 func (a *App) syncToClaudeSettings(config AppConfig) error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-
 	var selectedModel *ModelConfig
 	for _, m := range config.Claude.Models {
 		if m.ModelName == config.Claude.CurrentModel {
@@ -254,14 +249,15 @@ func (a *App) syncToClaudeSettings(config AppConfig) error {
 		return fmt.Errorf("selected model not found")
 	}
 
-	settingsPath := filepath.Join(home, ".claude", "settings.json")
-	claudeJsonPath := filepath.Join(home, ".claude.json")
+	dir, settingsPath, legacyPath := a.getClaudeConfigPaths()
 
 	if strings.ToLower(selectedModel.ModelName) == "original" {
-		// Clear/Delete configuration files for "Original" mode
-		os.RemoveAll(filepath.Join(home, ".claude"))
-		os.Remove(claudeJsonPath)
+		a.clearClaudeConfig()
 		return nil
+	}
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
 	}
 
 	settings := make(map[string]interface{})
@@ -317,10 +313,9 @@ func (a *App) syncToClaudeSettings(config AppConfig) error {
 	}
 
 	// 2. Sync to ~/.claude.json for customApiKeyResponses
-	// claudeJsonPath already declared earlier in function
 	var claudeJson map[string]interface{}
 	
-	if jsonData, err := os.ReadFile(claudeJsonPath); err == nil {
+	if jsonData, err := os.ReadFile(legacyPath); err == nil {
 		json.Unmarshal(jsonData, &claudeJson)
 	}
 	if claudeJson == nil {
@@ -337,7 +332,7 @@ func (a *App) syncToClaudeSettings(config AppConfig) error {
 		return err
 	}
 
-	return os.WriteFile(claudeJsonPath, data2, 0644)
+	return os.WriteFile(legacyPath, data2, 0644)
 }
 
 func (a *App) syncToCodexSettings(config AppConfig) error {
@@ -509,97 +504,119 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, projectDir string) {
 		}
 	}
 
-	if selectedModel == nil {
-		a.log("No model selected.")
-		return
-	}
+		if selectedModel == nil {
 
-	// Clear configuration directories for all CLI tools before launch to ensure clean state
-	home, err := os.UserHomeDir()
-	if err == nil {
-		switch strings.ToLower(toolName) {
-		case "claude":
-			claudeDir := filepath.Join(home, ".claude")
-			claudeJsonPath := filepath.Join(home, ".claude.json")
-			os.RemoveAll(claudeDir)
-			os.Remove(claudeJsonPath)
-			a.log("Cleared Claude configuration files for clean launch")
-		case "gemini":
-			geminiDir := filepath.Join(home, ".gemini")
-			geminiConfigPath := filepath.Join(home, ".geminirc")
-			os.RemoveAll(geminiDir)
-			os.Remove(geminiConfigPath)
-			a.log("Cleared Gemini configuration files for clean launch")
-		case "codex":
-			codexDir := filepath.Join(home, ".codex")
-			os.RemoveAll(codexDir)
-			a.log("Cleared Codex configuration directory for clean launch")
-		}
-	}
+			a.log("No model selected.")
 
-	// Clear environment variables for the current process to ensure a clean state
-	varsToClear := []string{
-		"ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN",
-		"OPENAI_API_KEY", "OPENAI_BASE_URL",
-		"GEMINI_API_KEY", "GEMINI_BASE_URL",
-	}
-	for _, v := range varsToClear {
-		os.Unsetenv(v)
-	}
+			return
 
-	env := make(map[string]string)
-	if strings.ToLower(selectedModel.ModelName) != "original" {
-		// --- OTHER PROVIDER MODE: CLEANUP + WRITE ---
-		
-		// Set process environment variables
-		os.Setenv(envKey, selectedModel.ApiKey)
-		env[envKey] = selectedModel.ApiKey
-		if selectedModel.ModelUrl != "" {
-			os.Setenv(envBaseUrl, selectedModel.ModelUrl)
-			env[envBaseUrl] = selectedModel.ModelUrl
 		}
 
-		// Tool-specific configurations
+	
+
+		// 1. CLEAR EVERYTHING FIRST (Safety First)
+
+		a.clearEnvVars()
+
+		// Also clear tool configs to ensure a fresh start every time
+
 		switch strings.ToLower(toolName) {
+
 		case "claude":
-			os.Setenv("ANTHROPIC_AUTH_TOKEN", selectedModel.ApiKey)
-			env["ANTHROPIC_AUTH_TOKEN"] = selectedModel.ApiKey
-			a.syncToClaudeSettings(config)
+
+			a.clearClaudeConfig()
+
 		case "gemini":
-			a.syncToGeminiSettings(config)
+
+			a.clearGeminiConfig()
+
 		case "codex":
-			os.Setenv("WIRE_API", "responses")
-			env["WIRE_API"] = "responses"
-			// Ensure OpenAI standard vars for Codex
-			os.Setenv("OPENAI_API_KEY", selectedModel.ApiKey)
-			env["OPENAI_API_KEY"] = selectedModel.ApiKey
+
+			a.clearCodexConfig()
+
+		}
+
+	
+
+		env := make(map[string]string)
+
+		if strings.ToLower(selectedModel.ModelName) != "original" {
+
+			// --- OTHER PROVIDER MODE: WRITE CONFIG & SET ENV ---
+
+			
+
+			// Set process environment variables
+
+			os.Setenv(envKey, selectedModel.ApiKey)
+
+			env[envKey] = selectedModel.ApiKey
+
 			if selectedModel.ModelUrl != "" {
-				os.Setenv("OPENAI_BASE_URL", selectedModel.ModelUrl)
-				env["OPENAI_BASE_URL"] = selectedModel.ModelUrl
-			}
-			a.syncToCodexSettings(config)
-		}
-	} else {
-		// --- ORIGINAL MODE: CLEANUP ONLY, NO WRITING ---
-		
-		// Unset process environment variables
-		os.Unsetenv(envKey)
-		os.Unsetenv(envBaseUrl)
-		os.Unsetenv("ANTHROPIC_AUTH_TOKEN")
-		os.Unsetenv("WIRE_API")
-		os.Unsetenv("OPENAI_API_KEY")
-		os.Unsetenv("OPENAI_BASE_URL")
 
-		// Trigger explicit cleanup of all config files
-		a.syncToClaudeSettings(config)
-		a.syncToGeminiSettings(config)
-		a.syncToCodexSettings(config)
-		
-		a.log("Running in Original mode: All custom configurations cleared.")
+				os.Setenv(envBaseUrl, selectedModel.ModelUrl)
+
+				env[envBaseUrl] = selectedModel.ModelUrl
+
+			}
+
+	
+
+			// Tool-specific configurations
+
+			switch strings.ToLower(toolName) {
+
+			case "claude":
+
+				os.Setenv("ANTHROPIC_AUTH_TOKEN", selectedModel.ApiKey)
+
+				env["ANTHROPIC_AUTH_TOKEN"] = selectedModel.ApiKey
+
+				a.syncToClaudeSettings(config)
+
+			case "gemini":
+
+				a.syncToGeminiSettings(config)
+
+			case "codex":
+
+				os.Setenv("WIRE_API", "responses")
+
+				env["WIRE_API"] = "responses"
+
+				// Ensure OpenAI standard vars for Codex
+
+				os.Setenv("OPENAI_API_KEY", selectedModel.ApiKey)
+
+				env["OPENAI_API_KEY"] = selectedModel.ApiKey
+
+				if selectedModel.ModelUrl != "" {
+
+					os.Setenv("OPENAI_BASE_URL", selectedModel.ModelUrl)
+
+					env["OPENAI_BASE_URL"] = selectedModel.ModelUrl
+
+				}
+
+				a.syncToCodexSettings(config)
+
+			}
+
+		} else {
+
+			// --- ORIGINAL MODE: ALREADY CLEARED ABOVE ---
+
+			a.log("Running in Original mode: All custom configurations cleared.")
+
+		}
+
+	
+
+		// Platform specific launch
+
+		a.platformLaunch(binaryName, yoloMode, projectDir, env)
+
 	}
-	// Platform specific launch
-	a.platformLaunch(binaryName, yoloMode, projectDir, env)
-}
 
 func (a *App) log(message string) {
 	if a.ctx != nil {

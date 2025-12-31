@@ -91,3 +91,42 @@ func TestCleanupFunctions(t *testing.T) {
 		t.Errorf("GEMINI_API_KEY was not cleared")
 	}
 }
+
+func TestSyncToClaudeSettings_Original(t *testing.T) {
+	tmpHome, _ := os.MkdirTemp("", "claude-original-test")
+	defer os.RemoveAll(tmpHome)
+
+	os.Setenv("HOME", tmpHome)
+	if os.Getenv("USERPROFILE") != "" {
+		os.Setenv("USERPROFILE", tmpHome)
+	}
+
+	app := &App{}
+	
+	// Create some files to be deleted
+	dir, settings, legacy := app.getClaudeConfigPaths()
+	os.MkdirAll(dir, 0755)
+	os.WriteFile(settings, []byte("junk"), 0644)
+	os.WriteFile(legacy, []byte("junk"), 0644)
+
+	config := AppConfig{
+		Claude: ToolConfig{
+			CurrentModel: "Original",
+			Models: []ModelConfig{
+				{ModelName: "Original"},
+			},
+		},
+	}
+
+	err := app.syncToClaudeSettings(config)
+	if err != nil {
+		t.Fatalf("syncToClaudeSettings failed: %v", err)
+	}
+
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("Expected .claude directory to be gone")
+	}
+	if _, err := os.Stat(legacy); !os.IsNotExist(err) {
+		t.Errorf("Expected legacy .claude.json to be gone")
+	}
+}
