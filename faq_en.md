@@ -31,5 +31,8 @@ Select **AICoderMirror** as the provider and enter your API Key. This provider a
 ## 8. How to use the services provided directly by the tools themselves?
 Select **"Original"** as the provider in the tool's settings to restore each tool to its default state. In this mode, you can use the tool's built-in authentication and communication methods directly.
 
+## 9. What does Yolo mode mean?
+When Yolo mode is enabled, the programming tool will no longer ask for confirmation before every file or system operation, enhancing the coding experience. However, please be aware that this option is risky and carries the potential for accidental file deletion or modification. It is intended for expert users only.
+
 ---
 *For more issues, please visit GitHub Issues: [RapidAI/cceasy/issues](https://github.com/RapidAI/cceasy/issues)*
