@@ -20,7 +20,7 @@ const subscriptionUrls: {[key: string]: string} = {
     "aigocode": "https://aigocode.com/invite/TCFQQCCK"
 };
 
-const APP_VERSION = "2.0.1.100";
+const APP_VERSION = "2.0.1.101";
 
 const translations: any = {
     "en": {
@@ -89,7 +89,8 @@ const translations: any = {
         "copy": "Copy",
         "cut": "Cut",
         "contextPaste": "Paste",
-        "refreshMessage": "Refresh Message"
+        "refreshMessage": "Refresh Message",
+        "forward": "Relay"
     },
     "zh-Hans": {
         "title": "AICoder",
@@ -156,8 +157,9 @@ const translations: any = {
         "selectAll": "全选",
         "copy": "复制",
         "cut": "剪切",
-        "contextPaste": "粘贴",
-        "refreshMessage": "刷新消息"
+        "contextPaste": "Paste",
+        "refreshMessage": "Refresh Message",
+        "forward": "转发服务"
     },
     "zh-Hant": {
         "title": "AICoder",
@@ -223,7 +225,8 @@ const translations: any = {
         "copy": "複製",
         "cut": "剪切",
         "contextPaste": "粘貼",
-        "refreshMessage": "刷新消息"
+        "refreshMessage": "刷新消息",
+        "forward": "轉發服務"
     }
 };
 
@@ -270,10 +273,29 @@ const ToolConfiguration = ({
                         onClick={() => handleModelSwitch(model.model_name)}
                         style={{
                             minWidth: '120px',
-                            borderBottom: (model.api_key && model.api_key.trim() !== "") ? '3px solid #60a5fa' : '1px solid var(--border-color)'
+                            borderBottom: (model.api_key && model.api_key.trim() !== "") ? '3px solid #60a5fa' : '1px solid var(--border-color)',
+                            position: 'relative'
                         }}
                     >
                         {model.model_name === "Original" ? t("original") : model.model_name}
+                        {(model.model_name.toLowerCase().includes("aicodemirror") || model.model_name.toLowerCase().includes("aigocode")) && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '-8px',
+                                right: '0px',
+                                backgroundColor: '#10b981',
+                                color: 'white',
+                                fontSize: '10px',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                fontWeight: 'bold',
+                                zIndex: 10,
+                                transform: 'scale(0.85)',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                            }}>
+                                {t("forward")}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
