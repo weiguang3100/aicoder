@@ -22,7 +22,7 @@ const subscriptionUrls: {[key: string]: string} = {
     "DeepSeek": "https://platform.deepseek.com/api_keys"
 };
 
-const APP_VERSION = "2.5.0.2068";
+const APP_VERSION = "2.5.0.2069";
 
 const translations: any = {
     "en": {
@@ -1990,24 +1990,33 @@ function App() {
                         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
                     }}>
                         <div style={{
-                            background: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
-                            padding: '20px 15px',
-                            color: 'white',
-                            position: 'relative'
+                            background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                            padding: '25px 20px',
+                            color: '#1e293b',
+                            position: 'relative',
+                            borderBottom: '1px solid #e2e8f0'
                         }}>
                             <button 
                                 className="modal-close" 
                                 onClick={() => setShowStartupPopup(false)}
-                                style={{color: 'white', opacity: 0.8, top: '10px', right: '15px'}}
+                                style={{color: '#64748b', opacity: 0.8, top: '10px', right: '15px'}}
                             >&times;</button>
-                            <div style={{fontSize: '2rem', marginBottom: '8px'}}>🚀</div>
-                            <h3 style={{margin: 0, color: 'white', fontSize: '1.2rem', fontWeight: 'bold'}}>{t("startupTitle")}</h3>
+                            <div style={{
+                                fontSize: '2.5rem', 
+                                marginBottom: '10px',
+                                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                fontWeight: '900',
+                                lineHeight: 1,
+                                filter: 'drop-shadow(0 2px 4px rgba(59, 130, 246, 0.1))'
+                            }}>{`</>`}</div>
+                            <h3 style={{margin: 0, color: '#0f172a', fontSize: '1.2rem', fontWeight: 'bold'}}>{t("startupTitle")}</h3>
                             <p style={{
                                 margin: '6px 0 0 0', 
-                                color: 'white', 
+                                color: '#475569', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '500',
-                                opacity: 0.95
+                                fontWeight: '500'
                             }}>
                                 会AI编程者得工作！
                             </p>
