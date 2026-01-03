@@ -77,6 +77,11 @@ type AppConfig struct {
 	CurrentProject   string          `json:"current_project"` // ID of the current project
 	ActiveTool       string          `json:"active_tool"`     // "claude", "gemini", or "codex"
 	HideStartupPopup bool            `json:"hide_startup_popup"`
+	ShowGemini       bool            `json:"show_gemini"`
+	ShowCodex        bool            `json:"show_codex"`
+	ShowOpenCode     bool            `json:"show_opencode"`
+	ShowCodeBuddy    bool            `json:"show_codebuddy"`
+	ShowQoder        bool            `json:"show_qoder"`
 }
 
 // NewApp creates a new App application struct
@@ -1357,7 +1362,13 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		return defaultConfig, err
 	}
 
-	var config AppConfig
+	config := AppConfig{
+		ShowGemini:    true,
+		ShowCodex:     true,
+		ShowOpenCode:  true,
+		ShowCodeBuddy: true,
+		ShowQoder:     true,
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return config, err

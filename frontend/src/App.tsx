@@ -22,7 +22,7 @@ const subscriptionUrls: {[key: string]: string} = {
     "DeepSeek": "https://platform.deepseek.com/api_keys"
 };
 
-const APP_VERSION = "2.5.0.2049";
+const APP_VERSION = "2.5.0.2055";
 
 const translations: any = {
     "en": {
@@ -1026,21 +1026,31 @@ function App() {
                     <div className={`sidebar-item ${navTab === 'claude' ? 'active' : ''}`} onClick={() => switchTool('claude')}>
                         <span className="sidebar-icon">🤖</span> <span>Claude Code</span>
                     </div>
+                    {config?.show_gemini !== false && (
                     <div className={`sidebar-item ${navTab === 'gemini' ? 'active' : ''}`} onClick={() => switchTool('gemini')}>
                         <span className="sidebar-icon">♊</span> <span>Gemini CLI</span>
                     </div>
+                    )}
+                    {config?.show_codex !== false && (
                     <div className={`sidebar-item ${navTab === 'codex' ? 'active' : ''}`} onClick={() => switchTool('codex')}>
                         <span className="sidebar-icon">💻</span> <span>CodeX</span>
                     </div>
+                    )}
+                    {config?.show_opencode !== false && (
                     <div className={`sidebar-item ${navTab === 'opencode' ? 'active' : ''}`} onClick={() => switchTool('opencode')}>
                         <span className="sidebar-icon">🚀</span> <span>OpenCode</span>
                     </div>
+                    )}
+                    {config?.show_codebuddy !== false && (
                     <div className={`sidebar-item ${navTab === 'codebuddy' ? 'active' : ''}`} onClick={() => switchTool('codebuddy')}>
                         <span className="sidebar-icon">👨‍💻</span> <span>CodeBuddy</span>
                     </div>
+                    )}
+                    {config?.show_qoder !== false && (
                     <div className={`sidebar-item ${navTab === 'qoder' ? 'active' : ''}`} onClick={() => switchTool('qoder')}>
                         <span className="sidebar-icon">⚡</span> <span>Qoder CLI</span>
                     </div>
+                    )}
                 </div>
 
                 <div style={{height: '40px'}}></div>
@@ -1268,7 +1278,6 @@ function App() {
 
                     {navTab === 'settings' && (
                         <div style={{padding: '10px'}}>
-                            <h3>{t("globalSettings")}</h3>
                             <div style={{display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '20px', marginBottom: '25px'}}>
                                 <div className="form-group" style={{flex: '0 0 160px', marginBottom: 0}}>
                                     <label className="form-label">{t("language")}</label>
@@ -1287,8 +1296,89 @@ function App() {
                                 </button>
                             </div>
 
-                            <div className="form-group" style={{marginTop: '20px'}}>
-                                <label style={{display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer'}}>
+                            <div className="form-group" style={{marginTop: '15px', borderTop: '1px solid #f1f5f9', paddingTop: '15px'}}>
+                                <h4 style={{fontSize: '0.8rem', color: '#60a5fa', marginBottom: '12px', marginTop: 0, textTransform: 'uppercase', letterSpacing: '0.025em'}}>{lang === 'zh-Hans' ? '工具显示' : lang === 'zh-Hant' ? '工具顯示' : 'Tool Visibility'}</h4>
+                                <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px'}}>
+                                    <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={config?.show_gemini !== false}
+                                            onChange={(e) => {
+                                                if (config) {
+                                                    const newConfig = new main.AppConfig({...config, show_gemini: e.target.checked});
+                                                    setConfig(newConfig);
+                                                    SaveConfig(newConfig);
+                                                }
+                                            }}
+                                            style={{width: '16px', height: '16px'}}
+                                        />
+                                        <span style={{fontSize: '0.8rem', color: '#4b5563'}}>Gemini CLI</span>
+                                    </label>
+                                    <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={config?.show_codex !== false}
+                                            onChange={(e) => {
+                                                if (config) {
+                                                    const newConfig = new main.AppConfig({...config, show_codex: e.target.checked});
+                                                    setConfig(newConfig);
+                                                    SaveConfig(newConfig);
+                                                }
+                                            }}
+                                            style={{width: '16px', height: '16px'}}
+                                        />
+                                        <span style={{fontSize: '0.8rem', color: '#4b5563'}}>OpenAI Codex</span>
+                                    </label>
+                                    <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={config?.show_opencode !== false}
+                                            onChange={(e) => {
+                                                if (config) {
+                                                    const newConfig = new main.AppConfig({...config, show_opencode: e.target.checked});
+                                                    setConfig(newConfig);
+                                                    SaveConfig(newConfig);
+                                                }
+                                            }}
+                                            style={{width: '16px', height: '16px'}}
+                                        />
+                                        <span style={{fontSize: '0.8rem', color: '#4b5563'}}>OpenCode AI</span>
+                                    </label>
+                                    <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={config?.show_codebuddy !== false}
+                                            onChange={(e) => {
+                                                if (config) {
+                                                    const newConfig = new main.AppConfig({...config, show_codebuddy: e.target.checked});
+                                                    setConfig(newConfig);
+                                                    SaveConfig(newConfig);
+                                                }
+                                            }}
+                                            style={{width: '16px', height: '16px'}}
+                                        />
+                                        <span style={{fontSize: '0.8rem', color: '#4b5563'}}>CodeBuddy</span>
+                                    </label>
+                                    <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={config?.show_qoder !== false}
+                                            onChange={(e) => {
+                                                if (config) {
+                                                    const newConfig = new main.AppConfig({...config, show_qoder: e.target.checked});
+                                                    setConfig(newConfig);
+                                                    SaveConfig(newConfig);
+                                                }
+                                            }}
+                                            style={{width: '16px', height: '16px'}}
+                                        />
+                                        <span style={{fontSize: '0.8rem', color: '#4b5563'}}>Qoder CLI</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="form-group" style={{marginTop: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '15px'}}>
+                                <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
                                     <input 
                                         type="checkbox" 
                                         checked={!config?.hide_startup_popup}
@@ -1299,11 +1389,11 @@ function App() {
                                                 SaveConfig(newConfig);
                                             }
                                         }}
-                                        style={{width: '18px', height: '18px'}}
+                                        style={{width: '16px', height: '16px'}}
                                     />
-                                    <span style={{fontSize: '1rem', color: '#374151'}}>{t("showWelcomePage")}</span>
+                                    <span style={{fontSize: '0.9rem', color: '#374151'}}>{t("showWelcomePage")}</span>
                                 </label>
-                                <p style={{fontSize: '0.85rem', color: '#64748b', marginLeft: '28px', marginTop: '5px'}}>
+                                <p style={{fontSize: '0.75rem', color: '#64748b', marginLeft: '24px', marginTop: '4px'}}>
                                     {lang === 'zh-Hans' ? '开启后，程序启动时将显示新手教学和快速入门链接' : 
                                      lang === 'zh-Hant' ? '開啟後，程序啟動時將顯示新手教學和快速入門鏈接' : 
                                      'When enabled, a welcome popup with tutorial links will be shown at startup.'}

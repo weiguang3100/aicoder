@@ -83,6 +83,11 @@ export namespace main {
 	    current_project: string;
 	    active_tool: string;
 	    hide_startup_popup: boolean;
+	    show_gemini: boolean;
+	    show_codex: boolean;
+	    show_opencode: boolean;
+	    show_codebuddy: boolean;
+	    show_qoder: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppConfig(source);
@@ -100,6 +105,11 @@ export namespace main {
 	        this.current_project = source["current_project"];
 	        this.active_tool = source["active_tool"];
 	        this.hide_startup_popup = source["hide_startup_popup"];
+	        this.show_gemini = source["show_gemini"];
+	        this.show_codex = source["show_codex"];
+	        this.show_opencode = source["show_opencode"];
+	        this.show_codebuddy = source["show_codebuddy"];
+	        this.show_qoder = source["show_qoder"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
