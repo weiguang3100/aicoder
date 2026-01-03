@@ -603,6 +603,25 @@ request_max_retries = 4
 stream_max_retries = 8
 stream_idle_timeout_ms = 120000
 `, modelId, baseUrl)
+	} else if strings.ToLower(selectedModel.ModelName) == "coderelay" {
+		if baseUrl == "" {
+			baseUrl = "https://api.code-relay.com/"
+		}
+		modelId := selectedModel.ModelId
+		if modelId == "" {
+			modelId = "gpt-5.2-codex"
+		}
+		configToml = fmt.Sprintf(`model_provider = "coderelay"
+model = "%s"
+model_reasoning_effort = "xhigh"
+disable_response_storage = true
+preferred_auth_method = "apikey"
+
+[model_providers.coderelay]
+name = "coderelay"
+base_url = "%s"
+wire_api = "responses"
+`, modelId, baseUrl)
 	} else {
 		if baseUrl == "" {
 			baseUrl = "https://api.aicodemirror.com/api/codex/backend-api/codex"
@@ -630,6 +649,7 @@ wire_api = "responses"
 		strings.ToLower(selectedModel.ModelName) != "doubao" && 
 		strings.ToLower(selectedModel.ModelName) != "kimi" && 
 		strings.ToLower(selectedModel.ModelName) != "minimax" && 
+		strings.ToLower(selectedModel.ModelName) != "coderelay" && 
 		strings.ToLower(selectedModel.ModelName) != "aicodemirror") {
 		// --- CUSTOM OR OTHER PROVIDERS ---
 		wireApi := selectedModel.WireApi
