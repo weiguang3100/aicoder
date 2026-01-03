@@ -44,5 +44,8 @@ Please make sure you click the **"Launch"** button on the main interface to rest
 *   **Original**: Uses the default authentication method of Qoder CLI, which requires **logging in via a web browser**.
 *   **Qoder**: Uses a **Personal Access Token** for authentication. You can obtain a token from the Qoder website and enter it into AICoder. This method is ideal for environments where opening a browser is not possible or for faster deployment.
 
+## 13. How to use Chinese LLMs like DeepSeek in Gemini CLI?
+You need to set up a **liteLLM proxy** service yourself. In Gemini CLI, select **"Custom"** as the provider and enter the Gemini protocol-compatible endpoint address and the corresponding API Key provided by your liteLLM service.
+
 ---
 *For more issues, please visit GitHub Issues: [RapidAI/cceasy/issues](https://github.com/RapidAI/cceasy/issues)*

@@ -44,5 +44,8 @@ AICoder 的配置文件保存在您的用户主目录下，文件名为 `.aicode
 *   **原厂 (Original)**：表示使用 Qoder CLI 默认的认证方式，即通过**浏览器登录**进行授权。
 *   **Qoder**：表示使用**个人令牌 (Personal Access Token)** 进行认证。您可以在 Qoder 官网获取令牌并填入 AICoder，这种方式适合在无法打开浏览器或需要快速部署的环境下使用。
 
+## 13. 怎么在 Gemini CLI 中使用国产大模型，如 DeepSeek？
+需要自行架设 **liteLLM proxy** 服务。在 Gemini CLI 的服务商选择 **"Custom"**, 在其中填写上您的 liteLLM 提供的 Gemini 协议兼容地址（Endpoint）以及对应的 API Key 即可。
+
 ---
 *更多问题请访问 GitHub Issues：[RapidAI/cceasy/issues](https://github.com/RapidAI/cceasy/issues)*
