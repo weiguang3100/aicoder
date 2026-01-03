@@ -22,7 +22,7 @@ const subscriptionUrls: {[key: string]: string} = {
     "DeepSeek": "https://platform.deepseek.com/api_keys"
 };
 
-const APP_VERSION = "2.5.0.2070";
+const APP_VERSION = "2.5.0.2071";
 
 const translations: any = {
     "en": {
@@ -2027,7 +2027,6 @@ function App() {
                         <div style={{padding: '20px 25px'}}>
                             <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px'}}>
                                 <button 
-                                    className="btn-primary" 
                                     style={{
                                         width: '100%', 
                                         padding: '10px', 
@@ -2038,7 +2037,12 @@ function App() {
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         gap: '8px',
-                                        boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.3)'
+                                        background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+                                        color: '#1e40af',
+                                        border: '1px solid #bfdbfe',
+                                        boxShadow: '0 2px 4px rgba(59, 130, 246, 0.1)',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
                                     }}
                                     onClick={() => {
                                         BrowserOpenURL("https://www.bilibili.com/video/BV1wmvoBnEF1");
@@ -2054,12 +2058,13 @@ function App() {
                                         borderRadius: '10px',
                                         fontSize: '0.95rem',
                                         fontWeight: '500',
-                                        color: '#475569',
-                                        backgroundColor: '#f8fafc',
+                                        color: '#64748b',
+                                        backgroundColor: '#ffffff',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '8px'
+                                        gap: '8px',
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                                     }}
                                     onClick={() => {
                                         const manualUrl = (lang === 'zh-Hans' || lang === 'zh-Hant')
