@@ -22,7 +22,7 @@ const subscriptionUrls: {[key: string]: string} = {
     "DeepSeek": "https://platform.deepseek.com/api_keys"
 };
 
-const APP_VERSION = "2.6.0.2100";
+const APP_VERSION = "2.6.0.2101";
 
 const translations: any = {
     "en": {
@@ -352,7 +352,8 @@ const ToolConfiguration = ({
                         {model.model_name === "Original" ? t("original") : model.model_name}
                         {(model.model_name.toLowerCase().includes("aicodemirror") || 
                           model.model_name.toLowerCase().includes("aigocode") ||
-                          model.model_name.toLowerCase().includes("gaccode")) && (
+                          model.model_name.toLowerCase().includes("gaccode") ||
+                          model.model_name.toLowerCase().includes("coderelay")) && (
                             <span style={{
                                 position: 'absolute',
                                 top: '-8px',
@@ -751,10 +752,11 @@ function App() {
             if (p.includes("minimax")) return "MiniMax-M2.1";
             if (p.includes("aigocode")) return "claude-3-5-sonnet-20241022";
             if (p.includes("aicodemirror")) return "Haiku";
+            if (p.includes("coderelay")) return "claude-3-5-sonnet-20241022";
         } else if (tool === "gemini") {
             return "gemini-2.0-flash-exp";
         } else if (tool === "codex") {
-            if (p.includes("aigocode") || p.includes("aicodemirror")) return "gpt-5.2-codex";
+            if (p.includes("aigocode") || p.includes("aicodemirror") || p.includes("coderelay")) return "gpt-5.2-codex";
             if (p.includes("deepseek")) return "deepseek-chat";
             if (p.includes("glm")) return "glm-4.7";
             if (p.includes("doubao")) return "doubao-seed-code-preview-latest";
