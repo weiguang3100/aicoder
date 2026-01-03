@@ -605,7 +605,7 @@ stream_idle_timeout_ms = 120000
 `, modelId, baseUrl)
 	} else if strings.ToLower(selectedModel.ModelName) == "coderelay" {
 		if baseUrl == "" {
-			baseUrl = "https://api.code-relay.com/"
+			baseUrl = "https://api.code-relay.com/v1"
 		}
 		modelId := selectedModel.ModelId
 		if modelId == "" {
@@ -1269,7 +1269,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		{ModelName: "Original", ModelId: "", ModelUrl: "", ApiKey: ""},
 		{ModelName: "AIgoCode", ModelId: "gpt-5.2-codex", ModelUrl: "https://api.aigocode.com/openai", ApiKey: ""},
 		{ModelName: "AiCodeMirror", ModelId: "gpt-5.2-codex", ModelUrl: "https://api.aicodemirror.com/api/codex/backend-api/codex", ApiKey: ""},
-		{ModelName: "CodeRelay", ModelId: "gpt-5.2-codex", ModelUrl: "https://api.code-relay.com/", ApiKey: ""},
+		{ModelName: "CodeRelay", ModelId: "gpt-5.2-codex", ModelUrl: "https://api.code-relay.com/v1", ApiKey: ""},
 		{ModelName: "DeepSeek", ModelId: "deepseek-chat", ModelUrl: "https://api.deepseek.com/v1", ApiKey: ""},
 		{ModelName: "GLM", ModelId: "glm-4.7", ModelUrl: "https://open.bigmodel.cn/api/paas/v4", ApiKey: ""},
 		{ModelName: "Doubao", ModelId: "doubao-seed-code-preview-latest", ModelUrl: "https://ark.cn-beijing.volces.com/api/coding/v3", ApiKey: ""},
@@ -1478,7 +1478,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 
 	ensureModel(&config.Gemini.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/gemini")
 	ensureModel(&config.Codex.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/codex/backend-api/codex")
-	ensureModel(&config.Codex.Models, "CodeRelay", "https://api.code-relay.com/")
+	ensureModel(&config.Codex.Models, "CodeRelay", "https://api.code-relay.com/v1")
 	ensureModel(&config.Codex.Models, "DeepSeek", "https://api.deepseek.com/v1")
 	ensureModel(&config.Codex.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4")
 	ensureModel(&config.Codex.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3")
