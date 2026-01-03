@@ -330,10 +330,11 @@ body {
 
 /* Model Switcher */
 .model-switcher {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 12px;
-    padding: 0 2px; /* Visual balance */
+    display: grid;
+    gap: 12px;
+    margin-bottom: 15px;
+    padding: 8px 2px; /* Extra top padding for badges */
+    overflow: visible !important;
 }
 
 .model-btn {
@@ -465,7 +466,7 @@ body {
 }
 
 .markdown-content h1 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     font-weight: 600;
     margin-top: 20px;
     margin-bottom: 15px;
@@ -476,7 +477,7 @@ body {
 }
 
 .markdown-content h2 {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 600;
     margin-top: 18px;
     margin-bottom: 12px;
@@ -485,7 +486,7 @@ body {
 }
 
 .markdown-content h3 {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 600;
     margin-top: 16px;
     margin-bottom: 10px;

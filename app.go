@@ -351,6 +351,16 @@ func (a *App) syncToClaudeSettings(config AppConfig) error {
 		env["ANTHROPIC_DEFAULT_OPUS_MODEL"] = modelId
 		env["ANTHROPIC_DEFAULT_SONNET_MODEL"] = modelId
 		env["ANTHROPIC_MODEL"] = modelId
+	case "gaccode":
+		env["ANTHROPIC_BASE_URL"] = "https://gaccode.com/claudecode"
+		modelId := selectedModel.ModelId
+		if modelId == "" {
+			modelId = "sonnet"
+		}
+		env["ANTHROPIC_DEFAULT_HAIKU_MODEL"] = modelId
+		env["ANTHROPIC_DEFAULT_OPUS_MODEL"] = modelId
+		env["ANTHROPIC_DEFAULT_SONNET_MODEL"] = modelId
+		env["ANTHROPIC_MODEL"] = modelId
 	default:
 		env["ANTHROPIC_BASE_URL"] = selectedModel.ModelUrl
 		env["ANTHROPIC_MODEL"] = selectedModel.ModelId
@@ -999,6 +1009,8 @@ func getBaseUrl(selectedModel *ModelConfig) string {
 		baseUrl = "https://api.minimaxi.com/anthropic"
 	case "deepseek":
 		baseUrl = "https://api.deepseek.com/anthropic"
+	case "gaccode":
+		baseUrl = "https://gaccode.com/claudecode"
 	}
 	return baseUrl
 }
@@ -1215,12 +1227,13 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	defaultClaudeModels := []ModelConfig{
 		{ModelName: "Original", ModelId: "", ModelUrl: "", ApiKey: ""},
 		{ModelName: "GLM", ModelId: "glm-4.7", ModelUrl: "https://open.bigmodel.cn/api/anthropic", ApiKey: ""},
-		{ModelName: "kimi", ModelId: "kimi-k2-thinking", ModelUrl: "https://api.kimi.com/coding", ApiKey: ""},
-		{ModelName: "doubao", ModelId: "doubao-seed-code-preview-latest", ModelUrl: "https://ark.cn-beijing.volces.com/api/coding", ApiKey: ""},
+		{ModelName: "Kimi", ModelId: "kimi-k2-thinking", ModelUrl: "https://api.kimi.com/coding", ApiKey: ""},
+		{ModelName: "Doubao", ModelId: "doubao-seed-code-preview-latest", ModelUrl: "https://ark.cn-beijing.volces.com/api/coding", ApiKey: ""},
 		{ModelName: "MiniMax", ModelId: "MiniMax-M2.1", ModelUrl: "https://api.minimaxi.com/anthropic", ApiKey: ""},
 		{ModelName: "DeepSeek", ModelId: "deepseek-chat", ModelUrl: "https://api.deepseek.com/anthropic", ApiKey: ""},
-		{ModelName: "AIgoCode", ModelId: "claude-3-5-sonnet-20241022", ModelUrl: "https://api.aigocode.com/api", ApiKey: ""},
-		{ModelName: "AiCodeMirror", ModelId: "Haiku", ModelUrl: "https://api.aicodemirror.com/api/claudecode", ApiKey: ""},
+		{ModelName: "AIgoCode", ModelId: "sonnet", ModelUrl: "https://api.aigocode.com/api", ApiKey: ""},
+		{ModelName: "AiCodeMirror", ModelId: "sonnet", ModelUrl: "https://api.aicodemirror.com/api/claudecode", ApiKey: ""},
+		{ModelName: "GACCode", ModelId: "sonnet", ModelUrl: "https://gaccode.com/claudecode", ApiKey: ""},
 		{ModelName: "Custom", ModelId: "", ModelUrl: "", ApiKey: "", IsCustom: true},
 	}
 	defaultGeminiModels := []ModelConfig{
@@ -1365,16 +1378,13 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	
 	// Helper to ensure a model exists in the list
 	ensureModel := func(models *[]ModelConfig, name, url string) {
-		found := false
-		for _, m := range *models {
-			if m.ModelName == name {
-				found = true
-				break
+		for i := range *models {
+			if strings.EqualFold((*models)[i].ModelName, name) {
+				(*models)[i].ModelName = name // Update to canonical casing
+				return
 			}
 		}
-		if !found {
-			*models = append(*models, ModelConfig{ModelName: name, ModelUrl: url, ApiKey: ""})
-		}
+		*models = append(*models, ModelConfig{ModelName: name, ModelUrl: url, ApiKey: ""})
 	}
 
 	if config.Gemini.Models == nil || len(config.Gemini.Models) == 0 {
@@ -1399,7 +1409,12 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	}
 
 	ensureModel(&config.Claude.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/claudecode")
+	ensureModel(&config.Claude.Models, "GACCode", "https://gaccode.com/claudecode")
 	ensureModel(&config.Claude.Models, "DeepSeek", "https://api.deepseek.com/anthropic")
+	ensureModel(&config.Claude.Models, "Kimi", "https://api.kimi.com/coding")
+	ensureModel(&config.Claude.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding")
+	ensureModel(&config.Claude.Models, "GLM", "https://open.bigmodel.cn/api/anthropic")
+	ensureModel(&config.Claude.Models, "MiniMax", "https://api.minimaxi.com/anthropic")
 	
 	// Deduplicate AiCodeMirror for Claude if both AICodeMirror and AiCodeMirror exist
 	dedupeAiCodeMirror := func(models *[]ModelConfig) {
@@ -1581,6 +1596,22 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	if config.ActiveTool == "" {
 		config.ActiveTool = "message"
 	}
+
+	// Normalize CurrentModel casing for all tools
+	normalizeCurrentModel := func(toolCfg *ToolConfig) {
+		for _, m := range toolCfg.Models {
+			if strings.EqualFold(m.ModelName, toolCfg.CurrentModel) {
+				toolCfg.CurrentModel = m.ModelName
+				break
+			}
+		}
+	}
+	normalizeCurrentModel(&config.Claude)
+	normalizeCurrentModel(&config.Gemini)
+	normalizeCurrentModel(&config.Codex)
+	normalizeCurrentModel(&config.Opencode)
+	normalizeCurrentModel(&config.CodeBuddy)
+	normalizeCurrentModel(&config.Qoder)
 
 	return config, nil
 }
