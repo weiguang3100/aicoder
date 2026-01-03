@@ -23,7 +23,7 @@ const subscriptionUrls: {[key: string]: string} = {
     "CodeRelay": "https://api.code-relay.com/register?aff=0ZtO"
 };
 
-const APP_VERSION = "2.6.0.2102";
+const APP_VERSION = "2.6.1.2150";
 
 const translations: any = {
     "en": {
