@@ -21,7 +21,7 @@ const subscriptionUrls: {[key: string]: string} = {
     "deepseek": "https://platform.deepseek.com/api_keys"
 };
 
-const APP_VERSION = "2.5.0.2027";
+const APP_VERSION = "2.5.0.2028";
 
 const translations: any = {
     "en": {

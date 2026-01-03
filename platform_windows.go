@@ -123,6 +123,16 @@ func (a *App) CheckEnvironment() {
 
 		// 5. Check and Install AI Tools
 		tm := NewToolManager(a)
+
+		// Search for npm
+		npmExec, err := exec.LookPath("npm")
+		if err != nil {
+			npmExec, err = exec.LookPath("npm.cmd")
+		}
+		if npmExec == "" {
+			npmExec = "npm"
+		}
+
 		tools := []string{"claude", "gemini", "codex", "opencode", "codebuddy"}
 		
 		for _, tool := range tools {
