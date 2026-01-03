@@ -31,6 +31,9 @@ func (tm *ToolManager) GetToolStatus(name string) ToolStatus {
 	if name == "codex" {
 		binaryNames = append(binaryNames, "openai")
 	}
+	if name == "opencode" && runtime.GOOS == "windows" {
+		binaryNames = append(binaryNames, "opencode-windows-x64")
+	}
 	if name == "codebuddy" {
 		binaryNames = []string{"codebuddy", "codebuddy-code"}
 	}
@@ -57,6 +60,8 @@ func (tm *ToolManager) GetToolStatus(name string) ToolStatus {
 				filepath.Join(home, ".cceasy", "node", bn),
 				filepath.Join(home, ".cceasy", "node", "bin", bn+".cmd"),
 				filepath.Join(home, ".cceasy", "node", "bin", bn),
+				// Check for opencode-windows-x64 direct binary location
+				filepath.Join(home, ".cceasy", "node", "node_modules", "opencode-windows-x64", "bin", "opencode.exe"),
 			}
 			for _, p := range possiblePaths {
 				if _, err := os.Stat(p); err == nil {
@@ -139,7 +144,11 @@ func (tm *ToolManager) InstallTool(name string) error {
 	case "codex":
 		packageName = "@openai/codex"
 	case "opencode":
-		packageName = "opencode-ai"
+		if runtime.GOOS == "windows" {
+			packageName = "opencode-windows-x64"
+		} else {
+			packageName = "opencode-ai"
+		}
 	case "codebuddy":
 		packageName = "@tencent-ai/codebuddy-code"
 	case "qoder":
@@ -197,6 +206,9 @@ func (tm *ToolManager) GetPackageName(name string) string {
 	case "codex":
 		return "@openai/codex"
 	case "opencode":
+		if runtime.GOOS == "windows" {
+			return "opencode-windows-x64"
+		}
 		return "opencode-ai"
 	case "codebuddy":
 		return "@tencent-ai/codebuddy-code"

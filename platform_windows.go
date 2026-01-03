@@ -133,7 +133,7 @@ func (a *App) CheckEnvironment() {
 			npmExec = "npm"
 		}
 
-		tools := []string{"claude", "gemini", "codex", "opencode", "codebuddy"}
+		tools := []string{"claude", "gemini", "codex", "opencode", "codebuddy", "qoder"}
 		
 		for _, tool := range tools {
 			a.log(fmt.Sprintf("Checking %s...", tool))
@@ -151,7 +151,7 @@ func (a *App) CheckEnvironment() {
 			} else {
 				a.log(fmt.Sprintf("%s found (version: %s).", tool, status.Version))
 				// Check for updates for opencode and codebuddy
-				if tool == "opencode" || tool == "codebuddy" {
+				if tool == "opencode" || tool == "codebuddy" || tool == "qoder" {
 					a.log(fmt.Sprintf("Checking for %s updates...", tool))
 					latest, err := a.getLatestNpmVersion(npmExec, tm.GetPackageName(tool))
 					if err == nil && latest != "" && latest != status.Version {
