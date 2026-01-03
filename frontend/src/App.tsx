@@ -1999,7 +1999,7 @@ function App() {
                             <button 
                                 className="modal-close" 
                                 onClick={() => setShowStartupPopup(false)}
-                                style={{color: '#64748b', opacity: 0.8, top: '10px', right: '15px'}}
+                                style={{color: '#64748b', opacity: 0.8, top: '10px', right: '15px', zIndex: 10}}
                             >&times;</button>
                             <div style={{
                                 fontSize: '2.5rem', 
