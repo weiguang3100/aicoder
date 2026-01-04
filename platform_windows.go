@@ -721,3 +721,9 @@ func createNpmInstallCmd(npmPath string, args []string) *exec.Cmd {
 	return cmd
 }
 
+func createCondaEnvListCmd(condaCmd string) *exec.Cmd {
+	cmd := exec.Command("cmd", "/c", condaCmd, "env", "list")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	return cmd
+}
+

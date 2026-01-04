@@ -45,7 +45,13 @@ AICoder 的配置文件保存在您的用户主目录下，文件名为 `.aicode
 *   **Qoder**：表示使用**个人令牌 (Personal Access Token)** 进行认证。您可以在 Qoder 官网获取令牌并填入 AICoder，这种方式适合在无法打开浏览器或需要快速部署的环境下使用。
 
 ## 13. 怎么在 Gemini CLI 中使用国产大模型，如 DeepSeek？
-需要自行架设 **liteLLM proxy** 服务。在 Gemini CLI 的服务商选择 **"Custom"**, 在其中填写上您的 liteLLM 提供的 Gemini 协议兼容地址（Endpoint）以及对应的 API Key 即可。
+需要自行架设 **liteLLM proxy** 服务。在 Gemini CLI 的服务商选择 **"Custom"**, 在其中填写上您的 liteLLM 提供 Gemini 协议兼容地址（Endpoint）以及对应的 API Key 即可。
+
+## 14. 程序支持哪些 Python 环境？
+目前主要支持 **Conda/Anaconda** 环境。在项目设置中开启 “Python 项目” 后，AICoder 会扫描系统中的 conda 环境供您选择。启动时会自动执行环境切换。
+
+## 15. 为什么需要管理员权限启动？
+某些项目可能涉及系统级文件操作或受限目录访问，使用管理员权限启动可以避免工具因权限不足而报错。该功能目前仅支持 Windows 系统。
 
 ---
 *更多问题请访问 GitHub Issues：[RapidAI/cceasy/issues](https://github.com/RapidAI/cceasy/issues)*

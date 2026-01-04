@@ -2162,8 +2162,8 @@ func (a *App) detectCondaEnvironments() []PythonEnvironment {
 	// On Windows, we need to use cmd /c for proper execution
 	var cmd *exec.Cmd
 	if goruntime.GOOS == "windows" {
-		// Use cmd /c to run conda command
-		cmd = exec.Command("cmd", "/c", condaCmd, "env", "list")
+		// Use platform-specific function to create command with hidden window
+		cmd = createCondaEnvListCmd(condaCmd)
 	} else {
 		cmd = exec.Command(condaCmd, "env", "list")
 	}

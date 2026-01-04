@@ -47,5 +47,11 @@ Please make sure you click the **"Launch"** button on the main interface to rest
 ## 13. How to use Chinese LLMs like DeepSeek in Gemini CLI?
 You need to set up a **liteLLM proxy** service yourself. In Gemini CLI, select **"Custom"** as the provider and enter the Gemini protocol-compatible endpoint address and the corresponding API Key provided by your liteLLM service.
 
+## 14. Which Python environments are supported?
+AICoder currently supports **Conda/Anaconda** environments. After enabling "Python Project" in the project settings, AICoder scans for available conda environments on your system for selection. Environment switching is handled automatically upon launch.
+
+## 15. Why use Administrator privileges to launch?
+Some projects may involve system-level file operations or access to restricted directories. Launching with administrator privileges can prevent tools from failing due to insufficient permissions. This feature is currently only supported on Windows.
+
 ---
 *For more issues, please visit GitHub Issues: [RapidAI/cceasy/issues](https://github.com/RapidAI/cceasy/issues)*

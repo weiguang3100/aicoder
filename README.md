@@ -14,6 +14,8 @@ AICoder 是一款基于 Wails + Go + React 开发的桌面 AI 编程辅助工具
 *   **📂 多项目管理 (Vibe Coding)**：
     *   **多标签页切换**：支持同时管理多个项目，通过顶部标签页快速切换工作上下文。
     *   **独立配置**：每个项目可独立设置工作目录和启动参数（如 Yolo 模式）。
+    *   **Python 环境支持**：深度集成 Conda/Anaconda，支持为不同项目选择独立的 Python 运行环境。
+    *   **管理员权限启动**：支持在 Windows 下以管理员权限启动工具，解决部分项目权限不足的问题。
 *   **🔄 多模型 & 跨平台支持**：
     *   集成 **Claude Code**, **OpenAI Codex**, **Google Gemini CLI**, **OpenCode**, **CodeBuddy**, **Qoder CLI** 等主流工具。
     *   **"原厂" (Original) 模式**：支持一键切换回官方原始配置，自动清除自定义代理设置，确保官方工具的纯净运行。

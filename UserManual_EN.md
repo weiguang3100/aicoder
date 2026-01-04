@@ -48,7 +48,12 @@ Click the **"Manage Projects"** button in the project area:
 ## 5. Setting Project Parameters
 After selecting a project, configure its specific settings:
 1.  **Project Directory**: Click **"Change"** to pick the folder where your code resides.
-2.  **Launch Parameters**: For example, **Yolo Mode** for Claude, which skips permission prompts when checked.
+2.  **Launch Parameters**:
+    *   **Yolo Mode**: For example, in Claude, this skips all permission prompts (use with caution).
+    *   **Administrator Privileges (Windows)**: When checked, the tool will launch with administrator rights, useful for projects requiring elevated permissions.
+3.  **Python Environment**:
+    *   If your project is Python-based, check the **"Python Project"** option.
+    *   **Environment Selection**: The program automatically detects Conda/Anaconda environments on your system. Select the desired environment from the dropdown list, and AICoder will automatically run `conda activate` upon launch.
 
 ## 6. Launching AI Tools
 1.  Ensure you have selected a valid **Model** and **Project**.

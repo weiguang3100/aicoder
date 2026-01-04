@@ -387,3 +387,7 @@ func createVersionCmd(path string) *exec.Cmd {
 func createNpmInstallCmd(npmPath string, args []string) *exec.Cmd {
 	return exec.Command(npmPath, args...)
 }
+
+func createCondaEnvListCmd(condaCmd string) *exec.Cmd {
+	return exec.Command(condaCmd, "env", "list")
+}

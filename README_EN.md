@@ -11,9 +11,11 @@ This application is deeply integrated with popular AI programming models, suppor
 
 *   **🚀 Automatic Environment Preparation**: Automatically detects and prepares the required AI CLI environments (Claude Code, Codex, Gemini, OpenCode, CodeBuddy, Qoder CLI) upon startup, supporting automatic installation and version updates.
 *   **🖼️ Unified Sidebar UI**: Features a modern vertical sidebar navigation for quick switching between different AI programming tools.
-*   **📂 Multi-Project Management (Vibe Coding)**:
+*   **📂 Multi-Project Management (Vibe Coding)**：
     *   **Tabbed Interface**: Manage multiple projects simultaneously and switch contexts quickly using tabs.
     *   **Independent Configuration**: Each project can have its own working directory and launch parameters (e.g., Yolo Mode).
+    *   **Python Environment Support**: Deeply integrated with Conda/Anaconda, allowing independent Python environments for different projects.
+    *   **Administrator Launch**: Supports launching tools with administrator privileges on Windows to resolve permission issues.
 *   **🔄 Multi-Model & Cross-Platform Support**:
     *   Integrated with **Claude Code**, **OpenAI Codex**, **Google Gemini CLI**, **OpenCode**, **CodeBuddy**, and **Qoder CLI**.
     *   **"Original" Provider Mode**: One-click switch back to official configurations. Automatically clears custom proxy settings to ensure a pure official tool experience.
