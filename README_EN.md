@@ -48,7 +48,7 @@ Select a provider and enter your API Key in the configuration panel for each too
 
 ## About
 
-*   **Version**: V2.5.0.2026
+*   **Version**: V2.6.2.2200
 *   **Author**: Dr. Daniel
 *   **GitHub**: [RapidAI/aicoder](https://github.com/RapidAI/aicoder)
 *   **Resources**: [CS146s Chinese Version](https://github.com/BIT-ENGD/cs146s_cn)

@@ -48,7 +48,7 @@ AICoder 是一款基于 Wails + Go + React 开发的桌面 AI 编程辅助工具
 
 ## 关于
 
-*   **版本**：V2.5.0.2026
+*   **版本**：V2.6.2.2200
 *   **作者**：Dr. Daniel
 *   **GitHub**：[RapidAI/aicoder](https://github.com/RapidAI/aicoder)
 *   **资源**：[CS146s 中文版](https://github.com/BIT-ENGD/cs146s_cn)
