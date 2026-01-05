@@ -2,7 +2,7 @@ import {useEffect, useState, useRef} from 'react';
 import './App.css';
 import {buildNumber} from './version';
 import appIcon from './assets/images/appicon.png';
-import {CheckToolsStatus, InstallTool, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ClipboardGetText, ListPythonEnvironments} from "../wailsjs/go/main/App";
+import {CheckToolsStatus, InstallTool, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl} from "../wailsjs/go/main/App";
 import {WindowHide, EventsOn, EventsOff, BrowserOpenURL, Quit} from "../wailsjs/runtime";
 import {main} from "../wailsjs/go/models";
 import ReactMarkdown from 'react-markdown';
@@ -24,13 +24,14 @@ const subscriptionUrls: {[key: string]: string} = {
 };
 
 
-const APP_VERSION = "2.6.1.2104";
+const APP_VERSION = "2.6.1.2188";
 
 const translations: any = {
     "en": {
         "title": "AICoder",
         "about": "About",
-        "cs146s": "Online Course",
+        "cs146s": "Course",
+        "introVideo": "Beginner",
         "faq": "FAQ",
         "hide": "Hide",
         "launch": "Start Coding",
@@ -79,11 +80,12 @@ const translations: any = {
         "settings": "Settings",
         "globalSettings": "Global Settings",
         "language": "Language",
-        "runnerStatus": "Current Environment",
-        "yoloModeLabel": "Yolo Mode (Skip Permissions)",
+        "runnerStatus": "Tool Set",
+        "yoloModeLabel": "Yolo Mode (No Ask)",
         "adminModeLabel": "Administrator Privileges",
+        "rootModeLabel": "As root",
         "pythonProjectLabel": "Python Project",
-        "pythonEnvLabel": "Environment",
+        "pythonEnvLabel": "Env",
         "customProviderPlaceholder": "Custom Provider Name",
         "version": "Version",
         "author": "Author",
@@ -106,24 +108,35 @@ const translations: any = {
         "contextPaste": "Paste",
         "forward": "Relay",
         "quickStart": "Tutorial",
-        "manual": "Documentation",
+        "manual": "Materials",
         "officialWebsite": "Official Website",
         "dontShowAgain": "Don't show again",
         "showWelcomePage": "Show Welcome Page",
-        "refreshMessage": "Refresh Message",
+        "refreshMessage": "Refresh",
         "refreshing": "🔄 Fetching latest messages...",
         "refreshSuccess": "✅ Refresh successful!",
         "refreshFailed": "❌ Refresh failed: ",
         "lastUpdate": "Last Update: ",
         "startupTitle": "Welcome to AICoder",
         "showMore": "Show More",
-        "showLess": "Show Less"
+        "showLess": "Show Less",
+        "installLog": "View Log",
+        "installLogTitle": "Installation Logs",
+        "sendLog": "Send Log",
+        "sendLogSubject": "AICoder Environment Log",
+        "confirmDelete": "Confirm Delete",
+        "confirmDeleteMessage": "Are you sure you want to delete provider \"{name}\"?",
+        "confirmSendLog": "Confirm Send",
+        "confirmSendLogMessage": "No errors detected in logs. Send anyway?",
+        "cancel": "Cancel",
+        "confirm": "Confirm"
     },
     "zh-Hans": {
         "title": "AICoder",
         "about": "关于",
         "manual": "文档指南",
         "cs146s": "在线课程",
+        "introVideo": "入门视频",
         "faq": "常见问题",
         "hide": "隐藏",
         "launch": "开始编程",
@@ -175,6 +188,7 @@ const translations: any = {
         "runnerStatus": "当前环境",
         "yoloModeLabel": "Yolo 模式",
         "adminModeLabel": "管理员权限",
+        "rootModeLabel": "Root 权限",
         "pythonProjectLabel": "Python 项目",
         "pythonEnvLabel": "环境",
         "customProviderPlaceholder": "自定义服务商名称",
@@ -197,7 +211,7 @@ const translations: any = {
         "copy": "复制",
         "cut": "剪切",
         "contextPaste": "粘贴",
-        "refreshMessage": "刷新消息",
+        "refreshMessage": "刷新",
         "refreshing": "🔄 正在从服务器获取最新消息...",
         "refreshSuccess": "✅ 获取新消息成功",
         "refreshFailed": "❌ 刷新失败：",
@@ -209,13 +223,24 @@ const translations: any = {
         "showWelcomePage": "显示欢迎页",
         "startupTitle": "欢迎使用 AICoder",
         "showMore": "更多",
-        "showLess": "收起"
+        "showLess": "收起",
+        "installLog": "查看日志",
+        "installLogTitle": "环境检查与安装日志",
+        "sendLog": "发送日志",
+        "sendLogSubject": "AICoder环境安装日志",
+        "confirmDelete": "确认删除",
+        "confirmDeleteMessage": "确定要删除服务商 \"{name}\" 吗？",
+        "confirmSendLog": "确认发送",
+        "confirmSendLogMessage": "日志中没有检测到错误，是否仍要发送日志？",
+        "cancel": "取消",
+        "confirm": "确定"
     },
     "zh-Hant": {
         "title": "AICoder",
         "about": "關於",
         "manual": "文檔指南",
         "cs146s": "線上課程",
+        "introVideo": "入門視頻",
         "faq": "常見問題",
         "hide": "隱藏",
         "launch": "開始編程",
@@ -265,6 +290,7 @@ const translations: any = {
         "runnerStatus": "目前環境",
         "yoloModeLabel": "Yolo 模式",
         "adminModeLabel": "管理員權限",
+        "rootModeLabel": "Root 權限",
         "pythonProjectLabel": "Python 項目",
         "pythonEnvLabel": "環境",
         "customProviderPlaceholder": "自定義服務商名稱",
@@ -287,7 +313,7 @@ const translations: any = {
         "copy": "複製",
         "cut": "剪切",
         "contextPaste": "粘貼",
-        "refreshMessage": "刷新消息",
+        "refreshMessage": "刷新",
         "refreshing": "🔄 正在从服务器获取最新消息...",
         "refreshSuccess": "✅ 獲取新消息成功",
         "refreshFailed": "❌ 刷新失敗：",
@@ -299,7 +325,17 @@ const translations: any = {
         "showWelcomePage": "顯示歡迎頁",
         "startupTitle": "歡迎使用 AICoder",
         "showMore": "更多",
-        "showLess": "收起"
+        "showLess": "收起",
+        "installLog": "查看日誌",
+        "installLogTitle": "環境檢查與安裝日誌",
+        "sendLog": "發送日誌",
+        "sendLogSubject": "AICoder環境安裝日誌",
+        "confirmDelete": "確認刪除",
+        "confirmDeleteMessage": "確定要刪除服務商 \"{name}\" 嗎？",
+        "confirmSendLog": "確認發送",
+        "confirmSendLogMessage": "日誌中沒有檢測到錯誤，是否仍要發送日誌？",
+        "cancel": "取消",
+        "confirm": "確定"
     }
 };
 
@@ -434,13 +470,28 @@ function App() {
     const [yoloMode, setYoloMode] = useState(false);
     const [selectedProjectForLaunch, setSelectedProjectForLaunch] = useState<string>("");
     const [showAbout, setShowAbout] = useState(false);
+    const [showInstallLog, setShowInstallLog] = useState(false);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
     const [updateResult, setUpdateResult] = useState<any>(null);
     const [projectOffset, setProjectOffset] = useState(0);
     const [lang, setLang] = useState("en");
+    const [toastMessage, setToastMessage] = useState<string>("");
+    const [showToast, setShowToast] = useState(false);
 
     const [contextMenu, setContextMenu] = useState<{x: number, y: number, visible: boolean, target: HTMLInputElement | null}>({
         x: 0, y: 0, visible: false, target: null
+    });
+
+    const [confirmDialog, setConfirmDialog] = useState<{
+        show: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+    }>({
+        show: false,
+        title: "",
+        message: "",
+        onConfirm: () => {}
     });
 
     const handleContextMenu = (e: React.MouseEvent, target: HTMLInputElement) => {
@@ -455,6 +506,14 @@ function App() {
 
     const closeContextMenu = () => {
         setContextMenu({...contextMenu, visible: false});
+    };
+
+    const showToastMessage = (message: string, duration: number = 3000) => {
+        setToastMessage(message);
+        setShowToast(true);
+        setTimeout(() => {
+            setShowToast(false);
+        }, duration);
     };
 
     const handleWindowHide = (e: React.MouseEvent) => {
@@ -740,21 +799,27 @@ function App() {
         const modelToDelete = toolCfg.models[activeTab];
         if (modelToDelete.model_name === "Original") return;
 
-        if (window.confirm(lang === 'zh-Hans' ? `确定要删除服务商 "${modelToDelete.model_name}" 吗？` : 
-                          lang === 'zh-Hant' ? `確定要刪除服務商 "${modelToDelete.model_name}" 嗎？` : 
-                          `Are you sure you want to delete provider "${modelToDelete.model_name}"?`)) {
-            const newModels = toolCfg.models.filter((_: any, i: number) => i !== activeTab);
-            const newConfig = new main.AppConfig({...config, [activeTool]: {...toolCfg, models: newModels}});
-            
-            // Adjust active tab if it was the last one
-            const newActiveTab = Math.max(0, activeTab - 1);
-            setActiveTab(newActiveTab);
-            
-            setConfig(newConfig);
-            // We don't save immediately here to allow user to cancel or make other changes, 
-            // but the "Save Changes" button will call SaveConfig which triggers sync.
-            // Actually, for sync to work, we need to save.
-        }
+        const message = t("confirmDeleteMessage").replace("{name}", modelToDelete.model_name);
+
+        setConfirmDialog({
+            show: true,
+            title: t("confirmDelete"),
+            message: message,
+            onConfirm: () => {
+                const newModels = toolCfg.models.filter((_: any, i: number) => i !== activeTab);
+                const newConfig = new main.AppConfig({...config, [activeTool]: {...toolCfg, models: newModels}});
+
+                // Adjust active tab if it was the last one
+                const newActiveTab = Math.max(0, activeTab - 1);
+                setActiveTab(newActiveTab);
+
+                setConfig(newConfig);
+                setConfirmDialog({...confirmDialog, show: false});
+                // We don't save immediately here to allow user to cancel or make other changes,
+                // but the "Save Changes" button will call SaveConfig which triggers sync.
+                // Actually, for sync to work, we need to save.
+            }
+        });
     };
 
     const handleModelUrlChange = (newUrl: string) => {
@@ -944,6 +1009,53 @@ function App() {
         }).catch(err => {
             setStatus("Error saving: " + err);
         });
+    };
+
+    const performSendLog = async () => {
+        const subject = t("sendLogSubject");
+        const logContent = envLogs.join('\n');
+
+        try {
+            // Get correct OS info from backend with fallback
+            let sysInfo = { os: "unknown", arch: "unknown", os_version: "unknown" };
+            try {
+                sysInfo = await GetSystemInfo();
+            } catch (e) {
+                console.error("GetSystemInfo failed:", e);
+                // Fallback if backend call fails
+                sysInfo.os = /mac/i.test(navigator.platform) ? "darwin" : navigator.platform;
+            }
+
+            // Pack log to zip
+            const zipPath = await PackLog(logContent);
+
+            // Show in folder
+            await ShowItemInFolder(zipPath);
+
+            // Prepare mailto body
+            const instruction = lang === 'zh-Hans'
+                ? `请将刚刚打开的文件夹中的压缩包（aicoder_log_....zip）作为附件添加到此邮件中发送。\n\n`
+                : lang === 'zh-Hant'
+                ? `請將剛剛打開的文件夾中的壓縮包（aicoder_log_....zip）作為附件添加到此郵件中發送。\n\n`
+                : `Please attach the zip file (aicoder_log_....zip) from the opened folder to this email.\n\n`;
+
+            const body = `Product: AICoder
+Version: ${APP_VERSION}
+
+System Information:
+OS: ${sysInfo.os}
+OS Version: ${sysInfo.os_version}
+Architecture: ${sysInfo.arch}
+
+${instruction}`;
+
+            const mailtoLink = `mailto:znsoft@163.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+            await OpenSystemUrl(mailtoLink);
+        } catch (e) {
+            console.error("Failed to pack/send log:", e);
+            alert("Failed to send log: " + e);
+        }
     };
 
     if (isLoading) {
@@ -1165,7 +1277,7 @@ function App() {
                                                                         gap: '8px',
                                                                         marginBottom: '5px',
                                                                         position: 'relative'
-                                                                    }}>                                                                                                                                            <div style={{display: 'flex', gap: '10px', width: '70%', margin: '0 auto', justifyContent: 'space-between'}}>
+                                                                    }}>                                                                                                                                            <div style={{display: 'flex', gap: '10px', width: '85%', margin: '0 auto', justifyContent: 'space-between'}}>
                                                                                                                                                 <button className="btn-link" style={{flex: 1, justifyContent: 'center', height: '20px', fontSize: '0.7rem', padding: '0 5px', borderRadius: '10px'}} onClick={async () => {
                                                                                                                                                     try {
                                                                                                                                                         setRefreshStatus(t("refreshing"));
@@ -1191,6 +1303,7 @@ function App() {
                                                                                                                                                         setTimeout(() => setRefreshStatus(''), 5000);
                                                                                                                                                     }
                                                                                                                                                 }}>{t("refreshMessage")}</button>
+                                                                                                                                                <button className="btn-link" style={{flex: 1, justifyContent: 'center', height: '20px', fontSize: '0.7rem', padding: '0 5px', borderRadius: '10px'}} onClick={() => BrowserOpenURL("https://www.bilibili.com/video/BV1wmvoBnEF1")}>{t("introVideo")}</button>
                                                                                                                                                 <button className="btn-link" style={{flex: 1, justifyContent: 'center', height: '20px', fontSize: '0.7rem', padding: '0 5px', borderRadius: '10px'}} onClick={() => {
                                                                                                                                                     const manualUrl = (lang === 'zh-Hans' || lang === 'zh-Hant')
                                                                                                                                                         ? "https://github.com/RapidAI/aicoder/blob/main/UserManual_CN.md"
@@ -1626,34 +1739,38 @@ function App() {
                                                     <div style={{fontSize: '0.9rem', color: '#64748b', marginBottom: '5px'}}>{t("businessCooperation")}</div>
                                                     <div style={{fontSize: '0.9rem', color: '#6b7280', marginBottom: '20px'}}>{t("author")}: Dr. Daniel</div>
                             
-                            <div style={{display: 'flex', gap: '15px'}}>
-                                <button className="btn-link" onClick={() => BrowserOpenURL("https://aicoder.rapidai.tech/")}>{t("officialWebsite")}</button>
-                                <button
-                                    className="btn-link"
-                                    onClick={() => {
-                                        setStatus(t("checkingUpdate"));
-                                        CheckUpdate(APP_VERSION).then(res => {
-                                            console.log("CheckUpdate result:", res);
-                                            setUpdateResult(res);
-                                            setShowUpdateModal(true);
-                                            setStatus("");
-                                        }).catch(err => {
-                                            console.error("CheckUpdate error:", err);
-                                            setStatus("检查更新失败: " + err);
-                                            // 显示一个错误结果
-                                            setUpdateResult({
-                                                has_update: false,
-                                                latest_version: "获取失败",
-                                                release_url: ""
+                            <div style={{display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center'}}>
+                                <div style={{display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap'}}>
+                                    <button className="btn-link" style={{fontSize: '0.75rem', padding: '2px 6px'}} onClick={() => BrowserOpenURL("https://aicoder.rapidai.tech/")}>{t("officialWebsite")}</button>
+                                    <button
+                                        className="btn-link"
+                                        style={{fontSize: '0.75rem', padding: '2px 6px'}}
+                                        onClick={() => {
+                                            setStatus(t("checkingUpdate"));
+                                            CheckUpdate(APP_VERSION).then(res => {
+                                                console.log("CheckUpdate result:", res);
+                                                setUpdateResult(res);
+                                                setShowUpdateModal(true);
+                                                setStatus("");
+                                            }).catch(err => {
+                                                console.error("CheckUpdate error:", err);
+                                                setStatus("检查更新失败: " + err);
+                                                // 显示一个错误结果
+                                                setUpdateResult({
+                                                    has_update: false,
+                                                    latest_version: "获取失败",
+                                                    release_url: ""
+                                                });
+                                                setShowUpdateModal(true);
                                             });
-                                            setShowUpdateModal(true);
-                                        });
-                                    }}
-                                >
-                                    {t("checkUpdate")}
-                                </button>
-                                <button className="btn-link" onClick={() => BrowserOpenURL("https://github.com/RapidAI/aicoder/issues/new")}>{t("bugReport")}</button>
-                                <button className="btn-link" onClick={() => BrowserOpenURL("https://github.com/RapidAI/aicoder")}>GitHub</button>
+                                        }}
+                                    >
+                                        {t("checkUpdate")}
+                                    </button>
+                                    <button className="btn-link" style={{fontSize: '0.75rem', padding: '2px 6px'}} onClick={() => setShowInstallLog(true)}>{t("installLog")}</button>
+                                    <button className="btn-link" style={{fontSize: '0.75rem', padding: '2px 6px'}} onClick={() => BrowserOpenURL("https://github.com/RapidAI/aicoder/issues/new")}>{t("bugReport")}</button>
+                                    <button className="btn-link" style={{fontSize: '0.75rem', padding: '2px 6px'}} onClick={() => BrowserOpenURL("https://github.com/RapidAI/aicoder")}>GitHub</button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1679,9 +1796,18 @@ function App() {
                                         onChange={(e) => {
                                             const proj = config?.projects?.find((p: any) => p.id === selectedProjectForLaunch);
                                             if (proj) {
-                                                const newProjects = config.projects.map((p: any) =>
-                                                    p.id === proj.id ? { ...p, yolo_mode: e.target.checked } : p
-                                                );
+                                                const isWindows = /window/i.test(navigator.userAgent);
+                                                const newProjects = config.projects.map((p: any) => {
+                                                    if (p.id === proj.id) {
+                                                        const updated = { ...p, yolo_mode: e.target.checked };
+                                                        // On non-Windows, yolo and admin are mutually exclusive
+                                                        if (!isWindows && e.target.checked) {
+                                                            updated.admin_mode = false;
+                                                        }
+                                                        return updated;
+                                                    }
+                                                    return p;
+                                                });
                                                 const newConfig = new main.AppConfig({...config, projects: newProjects});
                                                 setConfig(newConfig);
                                                 SaveConfig(newConfig);
@@ -1713,9 +1839,18 @@ function App() {
                                         onChange={(e) => {
                                             const proj = config?.projects?.find((p: any) => p.id === selectedProjectForLaunch);
                                             if (proj) {
-                                                const newProjects = config.projects.map((p: any) =>
-                                                    p.id === proj.id ? { ...p, admin_mode: e.target.checked } : p
-                                                );
+                                                const isWindows = /window/i.test(navigator.userAgent);
+                                                const newProjects = config.projects.map((p: any) => {
+                                                    if (p.id === proj.id) {
+                                                        const updated = { ...p, admin_mode: e.target.checked };
+                                                        // On non-Windows, yolo and admin are mutually exclusive
+                                                        if (!isWindows && e.target.checked) {
+                                                            updated.yolo_mode = false;
+                                                        }
+                                                        return updated;
+                                                    }
+                                                    return p;
+                                                });
                                                 const newConfig = new main.AppConfig({...config, projects: newProjects});
                                                 setConfig(newConfig);
                                                 SaveConfig(newConfig);
@@ -1723,7 +1858,7 @@ function App() {
                                         }}
                                         style={{marginRight: '6px'}}
                                     />
-                                    <span>{t("adminModeLabel")}</span>
+                                    <span>{/window/i.test(navigator.userAgent) ? t("adminModeLabel") : t("rootModeLabel")}</span>
                                 </label>
                                 <label style={{display:'flex', alignItems:'center', cursor:'pointer', fontSize: '0.8rem', color: '#6b7280'}}>
                                     <input
@@ -1780,64 +1915,66 @@ function App() {
                                     </div>
                                 )}
                             </div>
-                            <div style={{display: 'flex', alignItems: 'center', gap: '15px', justifyContent: 'flex-start'}}>
-                                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                                    <span style={{fontSize: '0.8rem', color: '#6b7280'}}>{t("project")}:</span>
-                                    <select
-                                        value={selectedProjectForLaunch}
-                                        onChange={(e) => setSelectedProjectForLaunch(e.target.value)}
+                            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
+                                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                                    <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                        <span style={{fontSize: '0.8rem', color: '#6b7280'}}>{t("project")}:</span>
+                                        <select
+                                            value={selectedProjectForLaunch}
+                                            onChange={(e) => setSelectedProjectForLaunch(e.target.value)}
+                                            style={{
+                                                padding: '5px 8px',
+                                                borderRadius: '4px',
+                                                border: '1px solid #d1d5db',
+                                                backgroundColor: '#ffffff',
+                                                fontSize: '0.85rem',
+                                                color: '#374151',
+                                                cursor: 'pointer',
+                                                maxWidth: '200px'
+                                            }}
+                                        >
+                                            {config?.projects?.map((proj: any) => (
+                                                <option key={proj.id} value={proj.id}>
+                                                    {proj.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <button
+                                        onClick={() => switchTool('projects')}
                                         style={{
-                                            padding: '5px 8px',
-                                            borderRadius: '4px',
+                                            padding: '0',
+                                            height: '20px',
+                                            borderRadius: '6px',
                                             border: '1px solid #d1d5db',
-                                            backgroundColor: '#ffffff',
+                                            backgroundColor: '#f3f4f6',
+                                            color: '#6b7280',
                                             fontSize: '0.85rem',
-                                            color: '#374151',
+                                            fontWeight: '500',
                                             cursor: 'pointer',
-                                            maxWidth: '200px'
+                                            transition: 'all 0.2s',
+                                            whiteSpace: 'normal',
+                                            textAlign: 'center',
+                                            width: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#e5e7eb';
+                                            e.currentTarget.style.color = '#4b5563';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#f3f4f6';
+                                            e.currentTarget.style.color = '#6b7280';
                                         }}
                                     >
-                                        {config?.projects?.map((proj: any) => (
-                                            <option key={proj.id} value={proj.id}>
-                                                {proj.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        ...
+                                    </button>
                                 </div>
                                 <button
-                                    onClick={() => switchTool('projects')}
-                                    style={{
-                                        padding: '4px 14px',
-                                        borderRadius: '6px',
-                                        border: '1px solid #d1d5db',
-                                        backgroundColor: '#f3f4f6',
-                                        color: '#6b7280',
-                                        fontSize: '0.85rem',
-                                        fontWeight: '500',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        whiteSpace: 'normal',
-                                        textAlign: 'left',
-                                        lineHeight: '1.2',
-                                        width: lang === 'en' ? '100px' : 'auto',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'flex-start'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#e5e7eb';
-                                        e.currentTarget.style.color = '#4b5563';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#f3f4f6';
-                                        e.currentTarget.style.color = '#6b7280';
-                                    }}
-                                >
-                                    ...
-                                </button>
-                                <button
                                     className="btn-launch"
-                                    style={{padding: '8px 45px', textAlign: 'center'}}
+                                    style={{padding: '8px 24px', textAlign: 'center'}}
                                     onClick={() => {
                                         const selectedProj = config?.projects?.find((p: any) => p.id === selectedProjectForLaunch);
                                         if (selectedProj) {
@@ -1851,7 +1988,7 @@ function App() {
                                         }
                                     }}
                                 >
-                                    <span style={{marginRight: '6px'}}>✈️</span>{t("launch")}
+                                    <span style={{marginRight: '6px'}}>🚀</span>{t("launch")}
                                 </button>
                             </div>
                         </div>
@@ -1881,6 +2018,94 @@ function App() {
                         }}>AICoder</h3>
                         <p>Version {APP_VERSION}</p>
                         <button className="btn-primary" onClick={() => BrowserOpenURL("https://github.com/RapidAI/cceasy")}>GitHub</button>
+                    </div>
+                </div>
+            )}
+
+            {showInstallLog && (
+                <div className="modal-overlay" onClick={() => setShowInstallLog(false)}>
+                    <div style={{position: 'relative', width: '600px', maxWidth: '90vw', margin: '50px auto'}}>
+                        <div className="modal-content" style={{width: '100%', paddingBottom: '60px'}} onClick={e => e.stopPropagation()}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                                <h3 style={{margin: 0, color: '#60a5fa'}}>{t("installLogTitle")}</h3>
+                                <button className="modal-close" onClick={() => setShowInstallLog(false)}>&times;</button>
+                            </div>
+                            <div style={{
+                                backgroundColor: '#1e293b',
+                                color: '#e2e8f0',
+                                padding: '15px',
+                                borderRadius: '8px',
+                                height: '250px',
+                                overflowY: 'auto',
+                                fontFamily: 'monospace',
+                                fontSize: '0.85rem',
+                                whiteSpace: 'pre-wrap',
+                                textAlign: 'left'
+                            }}>
+                                {envLogs.map((log, index) => {
+                                    const isError = /error|failed/i.test(log);
+                                    return (
+                                        <div key={index} style={{
+                                            color: isError ? '#ef4444' : 'inherit',
+                                            marginBottom: '4px'
+                                        }}>
+                                            {isError ? `** ${log}` : log}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div style={{
+                            position: 'absolute',
+                            bottom: '15px',
+                            left: '20px',
+                            right: '20px',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: '10px',
+                            backgroundColor: 'white',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            zIndex: 10
+                        }} onClick={e => e.stopPropagation()}>
+                            <button
+                                className="btn-link"
+                                onClick={() => {
+                                    const logText = envLogs.join('\n');
+                                    navigator.clipboard.writeText(logText).then(() => {
+                                        alert(lang === 'zh-Hans' ? '日志已复制到剪贴板' : 'Logs copied to clipboard');
+                                    });
+                                }}
+                            >
+                                {lang === 'zh-Hans' ? '复制日志' : lang === 'zh-Hant' ? '複製日誌' : 'Copy Log'}
+                            </button>
+                            <button
+                                className="btn-link"
+                                onClick={async () => {
+                                    console.log('Send log button clicked');
+                                    const hasError = envLogs.some(log => /error|failed/i.test(log));
+
+                                    if (hasError) {
+                                        // 有错误，直接发送
+                                        await performSendLog();
+                                    } else {
+                                        // 没有错误，询问用户
+                                        setConfirmDialog({
+                                            show: true,
+                                            title: t("confirmSendLog"),
+                                            message: t("confirmSendLogMessage"),
+                                            onConfirm: async () => {
+                                                setConfirmDialog({...confirmDialog, show: false});
+                                                await performSendLog();
+                                            }
+                                        });
+                                    }
+                                }}
+                            >
+                                {t("sendLog")}
+                            </button>
+                            <button className="btn-primary" style={{marginLeft: 'auto'}} onClick={() => setShowInstallLog(false)}>{t("close")}</button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -2270,6 +2495,99 @@ function App() {
                                     {t("dontShowAgain")}
                                 </label>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirm Dialog */}
+            {confirmDialog.show && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10000
+                }}>
+                    <div style={{
+                        backgroundColor: 'var(--surface-color)',
+                        borderRadius: '12px',
+                        padding: '24px',
+                        minWidth: '400px',
+                        maxWidth: '500px',
+                        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+                        border: '1px solid var(--border-color)'
+                    }}>
+                        <h3 style={{
+                            margin: '0 0 16px 0',
+                            fontSize: '1.2rem',
+                            color: 'var(--text-color)',
+                            fontWeight: '600'
+                        }}>
+                            {confirmDialog.title}
+                        </h3>
+                        <p style={{
+                            margin: '0 0 24px 0',
+                            color: 'var(--text-secondary)',
+                            fontSize: '0.95rem',
+                            lineHeight: '1.5'
+                        }}>
+                            {confirmDialog.message}
+                        </p>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: '12px'
+                        }}>
+                            <button
+                                onClick={() => setConfirmDialog({...confirmDialog, show: false})}
+                                style={{
+                                    padding: '8px 20px',
+                                    backgroundColor: 'transparent',
+                                    color: 'var(--text-secondary)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    fontWeight: '500',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'var(--accent-bg)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
+                            >
+                                {t("cancel")}
+                            </button>
+                            <button
+                                onClick={confirmDialog.onConfirm}
+                                style={{
+                                    padding: '8px 20px',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    fontWeight: '500',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#dc2626';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#ef4444';
+                                }}
+                            >
+                                {t("confirm")}
+                            </button>
                         </div>
                     </div>
                 </div>

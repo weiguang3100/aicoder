@@ -59,6 +59,133 @@ CGO_ENABLED=1 CGO_LDFLAGS="-weak_framework UniformTypeIdentifiers" GOOS=darwin G
 echo "  - Building for arm64..."
 CGO_ENABLED=1 CGO_LDFLAGS="-weak_framework UniformTypeIdentifiers" GOOS=darwin GOARCH=arm64 go build -tags desktop,production -o "${BIN_DIR}/${APP_NAME}_arm64"
 
+# Generate Windows Resources
+echo "  - Generating Windows Resources..."
+RSRC_TOOL=$(go env GOPATH)/bin/rsrc
+if [ ! -x "$RSRC_TOOL" ]; then
+    RSRC_TOOL=rsrc
+fi
+
+if command -v "$RSRC_TOOL" &> /dev/null; then
+    # Create temporary manifest with substituted values
+    # Replace template variables with actual values to prevent "Side-by-side configuration is incorrect" error
+    sed -e "s/{{.Name}}/$APP_NAME/g" \
+        -e "s/{{.Info.ProductVersion}}.0/$VERSION/g" \
+        build/windows/wails.exe.manifest > build/windows/wails.exe.manifest.tmp
+
+    "$RSRC_TOOL" -manifest build/windows/wails.exe.manifest.tmp -ico build/windows/icon.ico -arch amd64 -o resource_windows_amd64.syso
+    "$RSRC_TOOL" -manifest build/windows/wails.exe.manifest.tmp -ico build/windows/icon.ico -arch arm64 -o resource_windows_arm64.syso
+    
+    rm build/windows/wails.exe.manifest.tmp
+else
+    echo "Warning: rsrc tool not found. Windows executables will not have icons."
+fi
+
+# Build Windows AMD64
+echo "  - Building for Windows amd64..."
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -tags desktop,production -ldflags "-s -w -H windowsgui" -o "${BIN_DIR}/${APP_NAME}_amd64.exe"
+
+# Build Windows ARM64
+echo "  - Building for Windows arm64..."
+CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -tags desktop,production -ldflags "-s -w -H windowsgui" -o "${BIN_DIR}/${APP_NAME}_arm64.exe"
+
+# Cleanup Windows Resources
+rm -f resource_windows_amd64.syso resource_windows_arm64.syso
+
+# Export PATH for nfpm
+export PATH=$PATH:$(go env GOPATH)/bin
+
+# Build Linux
+build_linux() {
+    ARCH=$1
+    echo "  - Building for Linux $ARCH..."
+    
+    # Check for cross-compiler if on macOS
+    CC_CMD=""
+    if [ "$(uname)" == "Darwin" ]; then
+        if [ "$ARCH" == "amd64" ]; then
+            if command -v x86_64-linux-gnu-gcc &> /dev/null; then
+                CC_CMD="CC=x86_64-linux-gnu-gcc"
+            else
+                echo "    Skipping Linux $ARCH build: x86_64-linux-gnu-gcc not found."
+                return
+            fi
+        elif [ "$ARCH" == "arm64" ]; then
+             if command -v aarch64-linux-gnu-gcc &> /dev/null; then
+                CC_CMD="CC=aarch64-linux-gnu-gcc"
+             else
+                echo "    Skipping Linux $ARCH build: aarch64-linux-gnu-gcc not found."
+                return
+            fi
+        fi
+    fi
+
+    # Build binary
+    # Note: On Linux/macOS cross-compile, CGO is required for Wails.
+    if [ -n "$CC_CMD" ]; then
+        eval $CC_CMD CGO_ENABLED=1 GOOS=linux GOARCH=$ARCH go build -tags desktop,production -o "${BIN_DIR}/${APP_NAME}_${ARCH}_linux"
+    elif [ "$(uname)" == "Linux" ]; then
+        CGO_ENABLED=1 GOOS=linux GOARCH=$ARCH go build -tags desktop,production -o "${BIN_DIR}/${APP_NAME}_${ARCH}_linux"
+    fi
+    
+    # Package
+    if [ -f "${BIN_DIR}/${APP_NAME}_${ARCH}_linux" ]; then
+        APP_DIR="build/linux/AppDir_${ARCH}"
+        rm -rf "$APP_DIR"
+        mkdir -p "$APP_DIR/usr/bin"
+        mkdir -p "$APP_DIR/usr/share/icons/hicolor/512x512/apps"
+        
+        # Copy binary
+        cp "${BIN_DIR}/${APP_NAME}_${ARCH}_linux" "$APP_DIR/usr/bin/aicoder"
+        
+        # Copy desktop file
+        cp "build/linux/aicoder.desktop" "$APP_DIR/"
+        
+        # Copy icon
+        cp "build/appicon.png" "$APP_DIR/aicoder.png"
+        cp "build/appicon.png" "$APP_DIR/.DirIcon"
+        
+        # Create AppRun
+        cat > "$APP_DIR/AppRun" <<EOF
+#!/bin/bash
+HERE="\$(dirname "\$(readlink -f "\${0}")")"
+export PATH="\${HERE}/usr/bin:\${PATH}"
+exec aicoder "\$@"
+EOF
+        chmod +x "$APP_DIR/AppRun"
+        
+        # Check and setup appimagetool
+        if ! command -v appimagetool &> /dev/null; then
+            if [ "$(uname)" == "Linux" ]; then
+                echo "    appimagetool not found. Downloading..."
+                wget -q -O appimagetool "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage"
+                chmod +x appimagetool
+                export PATH="$(pwd):$PATH"
+            fi
+        fi
+
+        if command -v appimagetool &> /dev/null; then
+            echo "    Generating AppImage for Linux $ARCH..."
+            # appimagetool requires ARCH variable to be set correctly
+            AI_ARCH=$ARCH
+            if [ "$ARCH" == "amd64" ]; then AI_ARCH="x86_64"; fi
+            if [ "$ARCH" == "arm64" ]; then AI_ARCH="aarch64"; fi
+            
+            # Try running normally, if fails (no FUSE), try extract-and-run
+            if ! ARCH=$AI_ARCH appimagetool "$APP_DIR" "${OUTPUT_DIR}/AICoder-${VERSION}-${AI_ARCH}.AppImage"; then
+                echo "    Standard run failed (likely no FUSE), trying --appimage-extract-and-run..."
+                ARCH=$AI_ARCH appimagetool --appimage-extract-and-run "$APP_DIR" "${OUTPUT_DIR}/AICoder-${VERSION}-${AI_ARCH}.AppImage"
+            fi
+        else
+            echo "    Skipping AppImage generation: appimagetool not found (and could not be downloaded/run on this OS)."
+            echo "    AppDir prepared at $APP_DIR"
+        fi
+    fi
+}
+
+build_linux amd64
+build_linux arm64
+
 # Generate ICNS
 echo "  - Generating .icns file..."
 if [ -f "build/appicon.png" ]; then
@@ -191,6 +318,8 @@ create_pkg() {
 }
 
 echo "[4/4] Creating Packages..."
+cp "${BIN_DIR}/${APP_NAME}_amd64.exe" "${OUTPUT_DIR}/"
+cp "${BIN_DIR}/${APP_NAME}_arm64.exe" "${OUTPUT_DIR}/"
 create_pkg amd64
 create_pkg arm64
 create_pkg universal

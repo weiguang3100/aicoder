@@ -22,6 +22,10 @@ export function GetCurrentProjectPath() {
   return window['go']['main']['App']['GetCurrentProjectPath']();
 }
 
+export function GetSystemInfo() {
+  return window['go']['main']['App']['GetSystemInfo']();
+}
+
 export function GetUserHomeDir() {
   return window['go']['main']['App']['GetUserHomeDir']();
 }
@@ -44,6 +48,14 @@ export function ListPythonEnvironments() {
 
 export function LoadConfig() {
   return window['go']['main']['App']['LoadConfig']();
+}
+
+export function OpenSystemUrl(arg1) {
+  return window['go']['main']['App']['OpenSystemUrl'](arg1);
+}
+
+export function PackLog(arg1) {
+  return window['go']['main']['App']['PackLog'](arg1);
 }
 
 export function ReadBBS() {
@@ -72,6 +84,10 @@ export function SelectProjectDir() {
 
 export function SetLanguage(arg1) {
   return window['go']['main']['App']['SetLanguage'](arg1);
+}
+
+export function ShowItemInFolder(arg1) {
+  return window['go']['main']['App']['ShowItemInFolder'](arg1);
 }
 
 export function ShowMessage(arg1, arg2) {

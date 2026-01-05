@@ -265,11 +265,6 @@ func (a *App) restartApp() {
 func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, pythonEnv string, projectDir string, env map[string]string, modelId string) {
 	a.log(fmt.Sprintf("Launching %s...", binaryName))
 
-	// Note: adminMode is currently only supported on Windows
-	if adminMode {
-		a.log("Administrator mode is not supported on macOS. Launching normally.")
-	}
-
 	// Activate Python environment if specified
 	if pythonEnv != "" && pythonEnv != "None (Default)" {
 		a.log(fmt.Sprintf("Using Python environment: %s", pythonEnv))
@@ -352,13 +347,18 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 	safeLaunchPath := strings.ReplaceAll(launchScriptPath, "\"", "\\\"")
 	var terminalCmd string
 	
+	cmdPrefix := ""
+	if adminMode {
+		cmdPrefix = "sudo "
+	}
+
 	if projectDir != "" {
 		safeProjectDir := strings.ReplaceAll(projectDir, "\"", "\\\"")
-		// Construct command: cd "projectDir" && "launchScriptPath"
+		// Construct command: cd "projectDir" && [sudo] "launchScriptPath"
 		// We use backslash escaping for the AppleScript string context
-		terminalCmd = fmt.Sprintf("cd \\\"%s\\\" && \\\"%s\\\"", safeProjectDir, safeLaunchPath)
+		terminalCmd = fmt.Sprintf("cd \\\"%s\\\" && %s\\\"%s\\\"", safeProjectDir, cmdPrefix, safeLaunchPath)
 	} else {
-		terminalCmd = fmt.Sprintf("\\\"%s\\\"", safeLaunchPath)
+		terminalCmd = fmt.Sprintf("%s\\\"%s\\\"", cmdPrefix, safeLaunchPath)
 	}
 
 	appleScript := fmt.Sprintf(`try

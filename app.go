@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -2482,10 +2483,272 @@ func (a *App) getCondaRoot() string {
 		}
 
 		activateScript = filepath.Join(path, "bin", "activate")
-		if _, err := os.Stat(activateScript); err == nil {
-			return path
+
+				if _, err := os.Stat(activateScript); err == nil {
+
+					return path
+
+				}
+
+			}
+
+		
+
+			return ""
+
+		}
+
+		
+
+		type SystemInfo struct {
+	OS        string `json:"os"`
+	Arch      string `json:"arch"`
+	OSVersion string `json:"os_version"`
+}
+
+func (a *App) GetSystemInfo() SystemInfo {
+	return SystemInfo{
+		OS:        goruntime.GOOS,
+		Arch:      goruntime.GOARCH,
+		OSVersion: a.getOSVersion(),
+	}
+}
+
+func (a *App) getOSVersion() string {
+	switch goruntime.GOOS {
+	case "darwin":
+		out, err := exec.Command("sw_vers", "-productVersion").Output()
+		if err == nil {
+			return strings.TrimSpace(string(out))
+		}
+	case "windows":
+		// Simple version check for Windows
+		cmd := exec.Command("cmd", "/c", "ver")
+		out, err := cmd.Output()
+		if err == nil {
+			// Sanitize output to ASCII only to avoid encoding issues with localized Windows
+			verStr := string(out)
+			safeVer := ""
+			for _, r := range verStr {
+				if r >= 32 && r <= 126 {
+					safeVer += string(r)
+				}
+			}
+			return strings.TrimSpace(safeVer)
+		}
+	case "linux":
+		// Try /etc/os-release
+		if data, err := os.ReadFile("/etc/os-release"); err == nil {
+			for _, line := range strings.Split(string(data), "\n") {
+				if strings.HasPrefix(line, "PRETTY_NAME=") {
+					return strings.Trim(line[12:], "\"")
+				}
+			}
 		}
 	}
-
-	return ""
+	return "Unknown"
 }
+
+func (a *App) PackLog(logContent string) (string, error) {
+
+			// Create a temp file for the zip
+
+			timestamp := time.Now().Format("20060102_150405")
+
+			fileName := fmt.Sprintf("aicoder_log_%s.zip", timestamp)
+
+			tempDir := os.TempDir()
+
+			zipPath := filepath.Join(tempDir, fileName)
+
+		
+
+			// Create the zip file
+
+			zipFile, err := os.Create(zipPath)
+
+			if err != nil {
+
+				return "", fmt.Errorf("failed to create zip file: %w", err)
+
+			}
+
+			defer zipFile.Close()
+
+		
+
+			// Initialize zip writer
+
+			archive := zip.NewWriter(zipFile)
+
+			defer archive.Close()
+
+		
+
+			// Create file inside zip
+
+			f, err := archive.Create("install_log.txt")
+
+			if err != nil {
+
+				return "", fmt.Errorf("failed to create file in zip: %w", err)
+
+			}
+
+		
+
+			// Write content
+
+			_, err = f.Write([]byte(logContent))
+
+			if err != nil {
+
+				return "", fmt.Errorf("failed to write content to zip: %w", err)
+
+			}
+
+		
+
+			return zipPath, nil
+
+		}
+
+		
+
+		func (a *App) ShowItemInFolder(path string) error {
+
+		
+
+			var cmd *exec.Cmd
+
+		
+
+			switch goruntime.GOOS {
+
+		
+
+			case "darwin":
+
+		
+
+				cmd = exec.Command("open", "-R", path)
+
+		
+
+			case "windows":
+
+		
+
+				path = filepath.FromSlash(path)
+
+		
+
+				cmd = exec.Command("explorer", "/select,", path)
+
+		
+
+			case "linux":
+
+		
+
+				cmd = exec.Command("xdg-open", filepath.Dir(path))
+
+		
+
+			default:
+
+		
+
+				return fmt.Errorf("unsupported platform")
+
+		
+
+			}
+
+		
+
+			// Use Start instead of Run to avoid waiting for the process and ignoring exit codes (like 1 on Windows)
+
+		
+
+				return cmd.Start()
+
+		
+
+			}
+
+		
+
+			
+
+		
+
+			func (a *App) OpenSystemUrl(url string) error {
+
+		
+
+				var cmd *exec.Cmd
+
+		
+
+				switch goruntime.GOOS {
+
+		
+
+												case "darwin":
+
+		
+
+													a.log("Opening URL on macOS: " + url)
+
+		
+
+													cmd = exec.Command("open", url)
+
+		
+
+												case "windows":
+
+		
+
+													a.log("Opening URL on Windows: " + url)
+
+		
+
+													// Escape & to ^& for cmd.exe
+
+		
+
+													escapedUrl := strings.ReplaceAll(url, "&", "^&")
+
+		
+
+													cmd = exec.Command("cmd", "/c", "start", "", escapedUrl)
+
+		
+
+												case "linux":
+
+		
+
+													cmd = exec.Command("xdg-open", url)
+
+		
+
+				default:
+
+		
+
+					return fmt.Errorf("unsupported platform")
+
+		
+
+				}
+
+		
+
+				return cmd.Start()
+
+		
+
+			}

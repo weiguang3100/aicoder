@@ -236,11 +236,6 @@ func contains(slice []string, item string) bool {
 func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, pythonEnv string, projectDir string, env map[string]string, modelId string) {
 	a.log(fmt.Sprintf("Launching %s...", binaryName))
 
-	// Note: adminMode is currently only supported on Windows
-	if adminMode {
-		a.log("Administrator mode is not supported on Linux. Launching normally.")
-	}
-
 	// Activate Python environment if specified
 	if pythonEnv != "" && pythonEnv != "None (Default)" {
 		a.log(fmt.Sprintf("Using Python environment: %s", pythonEnv))
@@ -304,8 +299,13 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 		}
 	}
 
+	cmdPrefix := ""
+	if adminMode {
+		cmdPrefix = "sudo -E "
+	}
+
 	safeProjectDir := strings.ReplaceAll(projectDir, "\"", "\\\"")
-	cmdStr := fmt.Sprintf("cd \"%s\" && %s%s", safeProjectDir, exports, finalCmd)
+	cmdStr := fmt.Sprintf("cd \"%s\" && %s%s%s", safeProjectDir, exports, cmdPrefix, finalCmd)
 	cmdStr += "; echo 'Press any key to exit...'; read -n 1"
 
 	var cmd *exec.Cmd

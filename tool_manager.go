@@ -159,7 +159,38 @@ func (tm *ToolManager) InstallTool(name string) error {
 
 	// Use --prefix to install to our local folder, avoiding sudo/permission issues
 	// This works with both system npm and local npm.
-	args := []string{"install", "-g", packageName, "--prefix", localNodeDir, "--loglevel", "info"}
+	
+	packages := []string{packageName}
+	if name == "opencode" && runtime.GOOS != "windows" {
+		var platformPkg string
+		if runtime.GOOS == "darwin" {
+			if runtime.GOARCH == "arm64" {
+				platformPkg = "opencode-darwin-arm64"
+			} else {
+				platformPkg = "opencode-darwin-x64"
+			}
+		} else if runtime.GOOS == "linux" {
+			if runtime.GOARCH == "arm64" {
+				platformPkg = "opencode-linux-arm64"
+			} else {
+				platformPkg = "opencode-linux-x64"
+			}
+		}
+		
+		if platformPkg != "" {
+			packages = append(packages, platformPkg)
+		}
+	}
+
+	// Use a local cache directory to avoid permission issues with system/user cache
+	localCacheDir := filepath.Join(home, ".cceasy", "npm_cache")
+	if err := os.MkdirAll(localCacheDir, 0755); err != nil {
+		tm.app.log(fmt.Sprintf("Warning: Failed to create local npm cache dir: %v", err))
+	}
+
+	args := []string{"install", "-g"}
+	args = append(args, packages...)
+	args = append(args, "--prefix", localNodeDir, "--cache", localCacheDir, "--loglevel", "info")
 	
 	if strings.HasPrefix(strings.ToLower(tm.app.CurrentLanguage), "zh") {
 		args = append(args, "--registry=https://registry.npmmirror.com")
@@ -192,6 +223,32 @@ func (tm *ToolManager) InstallTool(name string) error {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
+		outputStr := string(out)
+		// Check for cache permission issues
+		if strings.Contains(outputStr, "EACCES") || strings.Contains(outputStr, "EEXIST") {
+			tm.app.log("Detected npm cache permission issue. Attempting to clear cache...")
+			
+			// Try to clean cache
+			cleanArgs := []string{"cache", "clean", "--force"}
+			if strings.HasPrefix(strings.ToLower(tm.app.CurrentLanguage), "zh") {
+				cleanArgs = append(cleanArgs, "--registry=https://registry.npmmirror.com")
+			}
+			
+			cleanCmd := createNpmInstallCmd(npmPath, cleanArgs)
+			cleanCmd.Env = env
+			cleanCmd.CombinedOutput() // Ignore error on clean
+			
+			tm.app.log("Retrying installation after cache clean...")
+			// Retry installation
+			cmd = createNpmInstallCmd(npmPath, args)
+			cmd.Env = env
+			out, err = cmd.CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("failed to install %s (retry): %v\nOutput: %s", name, err, string(out))
+			}
+			return nil
+		}
+		
 		return fmt.Errorf("failed to install %s: %v\nOutput: %s", name, err, string(out))
 	}
 	return nil

@@ -12,6 +12,8 @@ export function ClipboardGetText():Promise<string>;
 
 export function GetCurrentProjectPath():Promise<string>;
 
+export function GetSystemInfo():Promise<main.SystemInfo>;
+
 export function GetUserHomeDir():Promise<string>;
 
 export function Greet(arg1:string):Promise<string>;
@@ -23,6 +25,10 @@ export function LaunchTool(arg1:string,arg2:boolean,arg3:boolean,arg4:boolean,ar
 export function ListPythonEnvironments():Promise<Array<main.PythonEnvironment>>;
 
 export function LoadConfig():Promise<main.AppConfig>;
+
+export function OpenSystemUrl(arg1:string):Promise<void>;
+
+export function PackLog(arg1:string):Promise<string>;
 
 export function ReadBBS():Promise<string>;
 
@@ -37,5 +43,7 @@ export function SaveConfig(arg1:main.AppConfig):Promise<void>;
 export function SelectProjectDir():Promise<string>;
 
 export function SetLanguage(arg1:string):Promise<void>;
+
+export function ShowItemInFolder(arg1:string):Promise<void>;
 
 export function ShowMessage(arg1:string,arg2:string):Promise<void>;
