@@ -2,8 +2,8 @@ import {useEffect, useState, useRef} from 'react';
 import './App.css';
 import {buildNumber} from './version';
 import appIcon from './assets/images/appicon.png';
-import {CheckToolsStatus, InstallTool, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl} from "../wailsjs/go/main/App";
-import {WindowHide, EventsOn, EventsOff, BrowserOpenURL, Quit} from "../wailsjs/runtime";
+import {CheckToolsStatus, InstallTool, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl} from "../wailsjs/go/main/App";
+import {EventsOn, EventsOff, BrowserOpenURL, Quit} from "../wailsjs/runtime";
 import {main} from "../wailsjs/go/models";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -20,7 +20,8 @@ const subscriptionUrls: {[key: string]: string} = {
     "AIgoCode": "https://aigocode.com/invite/TCFQQCCK",
     "GACCode": "https://gaccode.com/signup?ref=FVMCU97H",
     "DeepSeek": "https://platform.deepseek.com/api_keys",
-    "CodeRelay": "https://api.code-relay.com/register?aff=0ZtO"
+    "CodeRelay": "https://api.code-relay.com/register?aff=0ZtO",
+    "ChatFire": "https://api.chatfire.cn/register?aff=jira"
 };
 
 
@@ -520,6 +521,7 @@ const ToolConfiguration = ({
                             (model.model_name.toLowerCase().includes("aicodemirror") || 
                              model.model_name.toLowerCase().includes("aigocode") ||
                              model.model_name.toLowerCase().includes("gaccode") ||
+                             model.model_name.toLowerCase().includes("chatfire") ||
                              model.model_name.toLowerCase().includes("coderelay")) && (
                                 <span style={{
                                     position: 'absolute',

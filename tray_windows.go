@@ -186,48 +186,93 @@ func setupTray(app *App, appOptions *options.App) {
 				})
 			}
 
-			systray.AddSeparator()
-			mQuit := systray.AddMenuItem("Quit", "Quit Application")
+							systray.AddSeparator()
 
-			// Register update function
-			UpdateTrayMenu = func(lang string) {
-				t, ok := trayTranslations[lang]
-				if !ok {
-					t = trayTranslations["en"]
-				}
-				systray.SetTitle(t["title"])
-				systray.SetTooltip(t["title"])
-				mShow.SetTitle(t["show"])
-				mLaunch.SetTitle(t["launch"])
-				mQuit.SetTitle(t["quit"])
-			}
+							mQuit := systray.AddMenuItem("Quit", "Quit Application")
 
-			// Register config change listener
-			OnConfigChanged = func(cfg AppConfig) {
-				if toolItems == nil {
-					return
-				}
-				for key, item := range toolItems {
-					// Only check the currently active tool's current model
-					if (cfg.ActiveTool == "claude" && key == "claude-"+cfg.Claude.CurrentModel) ||
-						(cfg.ActiveTool == "gemini" && key == "gemini-"+cfg.Gemini.CurrentModel) ||
-						(cfg.ActiveTool == "codex" && key == "codex-"+cfg.Codex.CurrentModel) ||
-						(cfg.ActiveTool == "opencode" && key == "opencode-"+cfg.Opencode.CurrentModel) ||
-						(cfg.ActiveTool == "codebuddy" && key == "codebuddy-"+cfg.CodeBuddy.CurrentModel) ||
-						(cfg.ActiveTool == "qoder" && key == "qoder-"+cfg.Qoder.CurrentModel) {
-						item.Check()
-					} else {
-						item.Uncheck()
-					}
-				}
-				runtime.EventsEmit(app.ctx, "config-changed", cfg)
-			}
+				
 
-			// Handle menu clicks
-			mShow.Click(func() {
-				go runtime.WindowShow(app.ctx)
-			})
+							var isVisible bool = true
 
+				
+
+							// Register update function
+
+							UpdateTrayMenu = func(lang string) {
+
+								t, ok := trayTranslations[lang]
+
+								if !ok {
+
+									t = trayTranslations["en"]
+
+								}
+
+								systray.SetTitle(t["title"])
+
+								systray.SetTooltip(t["title"])
+
+								if isVisible {
+
+									mShow.SetTitle(t["hide"])
+
+								} else {
+
+									mShow.SetTitle(t["show"])
+
+								}
+
+								mLaunch.SetTitle(t["launch"])
+
+												mQuit.SetTitle(t["quit"])
+
+											}
+
+								
+
+											UpdateTrayVisibility = func(visible bool) {
+
+												isVisible = visible
+
+												UpdateTrayMenu(app.CurrentLanguage)
+
+											}
+
+								
+
+											// Handle menu clicks
+
+								
+
+							mShow.Click(func() {
+
+								go func() {
+
+									if isVisible {
+
+										runtime.WindowHide(app.ctx)
+
+										isVisible = false
+
+									} else {
+
+										runtime.WindowShow(app.ctx)
+
+										runtime.WindowSetAlwaysOnTop(app.ctx, true)
+
+										runtime.WindowSetAlwaysOnTop(app.ctx, false)
+
+										isVisible = true
+
+									}
+
+									UpdateTrayMenu(app.CurrentLanguage)
+
+								}()
+
+							})
+
+				
 			mLaunch.Click(func() {
 				go func() {
 					currentConfig, _ := app.LoadConfig()

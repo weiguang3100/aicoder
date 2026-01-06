@@ -30,6 +30,7 @@ type App struct {
 
 var OnConfigChanged func(AppConfig)
 var UpdateTrayMenu func(string)
+var UpdateTrayVisibility func(bool)
 
 type ModelConfig struct {
 	ModelName string `json:"model_name"`
@@ -194,6 +195,13 @@ func (a *App) Greet(name string) string {
 func (a *App) ResizeWindow(width, height int) {
 	runtime.WindowSetSize(a.ctx, width, height)
 	runtime.WindowCenter(a.ctx)
+}
+
+func (a *App) WindowHide() {
+	runtime.WindowHide(a.ctx)
+	if UpdateTrayVisibility != nil {
+		UpdateTrayVisibility(false)
+	}
 }
 
 func (a *App) SelectProjectDir() string {
@@ -1365,12 +1373,14 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		{ModelName: "AiCodeMirror", ModelId: "sonnet", ModelUrl: "https://api.aicodemirror.com/api/claudecode", ApiKey: ""},
 		{ModelName: "GACCode", ModelId: "sonnet", ModelUrl: "https://gaccode.com/claudecode", ApiKey: ""},
 		{ModelName: "CodeRelay", ModelId: "claude-3-5-sonnet-20241022", ModelUrl: "https://api.code-relay.com/", ApiKey: ""},
+		{ModelName: "ChatFire", ModelId: "sonnet", ModelUrl: "https://api.chatfire.cn", ApiKey: ""},
 		{ModelName: "Custom", ModelId: "", ModelUrl: "", ApiKey: "", IsCustom: true},
 	}
 	defaultGeminiModels := []ModelConfig{
 		{ModelName: "Original", ModelId: "", ModelUrl: "", ApiKey: ""},
 		{ModelName: "AIgoCode", ModelId: "gemini-2.0-flash-exp", ModelUrl: "https://api.aigocode.com/gemini", ApiKey: ""},
 		{ModelName: "AiCodeMirror", ModelId: "gemini-2.0-flash-exp", ModelUrl: "https://api.aicodemirror.com/api/gemini", ApiKey: ""},
+		{ModelName: "ChatFire", ModelId: "gemini-2.5-pro", ModelUrl: "https://api.chatfire.cn/v1beta/models/gemini-2.5-pro:generateContent", ApiKey: ""},
 		{ModelName: "Custom", ModelId: "", ModelUrl: "", ApiKey: "", IsCustom: true},
 	}
 	defaultCodexModels := []ModelConfig{
@@ -1378,6 +1388,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		{ModelName: "AIgoCode", ModelId: "gpt-5.2-codex", ModelUrl: "https://api.aigocode.com/openai", ApiKey: ""},
 		{ModelName: "AiCodeMirror", ModelId: "gpt-5.2-codex", ModelUrl: "https://api.aicodemirror.com/api/codex/backend-api/codex", ApiKey: ""},
 		{ModelName: "CodeRelay", ModelId: "gpt-5.2-codex", ModelUrl: "https://api.code-relay.com/v1", ApiKey: ""},
+		{ModelName: "ChatFire", ModelId: "gpt-5.1-codex-mini", ModelUrl: "https://api.chatfire.cn/v1", ApiKey: "", WireApi: "responses"},
 		{ModelName: "DeepSeek", ModelId: "deepseek-chat", ModelUrl: "https://api.deepseek.com/v1", ApiKey: ""},
 		{ModelName: "GLM", ModelId: "glm-4.7", ModelUrl: "https://open.bigmodel.cn/api/paas/v4", ApiKey: ""},
 		{ModelName: "Doubao", ModelId: "doubao-seed-code-preview-latest", ModelUrl: "https://ark.cn-beijing.volces.com/api/coding/v3", ApiKey: ""},
@@ -1387,6 +1398,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	}
 	defaultOpencodeModels := []ModelConfig{
 		{ModelName: "Original", ModelId: "", ModelUrl: "", ApiKey: ""},
+		{ModelName: "ChatFire", ModelId: "gpt-4o", ModelUrl: "https://api.chatfire.cn/v1", ApiKey: ""},
 		{ModelName: "DeepSeek", ModelId: "deepseek-chat", ModelUrl: "https://api.deepseek.com/v1", ApiKey: ""},
 		{ModelName: "GLM", ModelId: "glm-4.7", ModelUrl: "https://open.bigmodel.cn/api/paas/v4", ApiKey: ""},
 		{ModelName: "Doubao", ModelId: "doubao-seed-code-preview-latest", ModelUrl: "https://ark.cn-beijing.volces.com/api/coding/v3", ApiKey: ""},
@@ -1525,14 +1537,17 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	}
 	
 	// Helper to ensure a model exists in the list
-	ensureModel := func(models *[]ModelConfig, name, url string) {
+	ensureModel := func(models *[]ModelConfig, name, url, id, wireApi string) {
 		for i := range *models {
 			if strings.EqualFold((*models)[i].ModelName, name) {
 				(*models)[i].ModelName = name // Update to canonical casing
+				if url != "" { (*models)[i].ModelUrl = url }
+				if id != "" { (*models)[i].ModelId = id }
+				if wireApi != "" { (*models)[i].WireApi = wireApi }
 				return
 			}
 		}
-		*models = append(*models, ModelConfig{ModelName: name, ModelUrl: url, ApiKey: ""})
+		*models = append(*models, ModelConfig{ModelName: name, ModelUrl: url, ModelId: id, WireApi: wireApi, ApiKey: ""})
 	}
 
 	if config.Gemini.Models == nil || len(config.Gemini.Models) == 0 {
@@ -1556,14 +1571,15 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		config.Qoder.CurrentModel = "Original"
 	}
 
-	ensureModel(&config.Claude.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/claudecode")
-	ensureModel(&config.Claude.Models, "CodeRelay", "https://api.code-relay.com/")
-	ensureModel(&config.Claude.Models, "GACCode", "https://gaccode.com/claudecode")
-	ensureModel(&config.Claude.Models, "DeepSeek", "https://api.deepseek.com/anthropic")
-	ensureModel(&config.Claude.Models, "Kimi", "https://api.kimi.com/coding")
-	ensureModel(&config.Claude.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding")
-	ensureModel(&config.Claude.Models, "GLM", "https://open.bigmodel.cn/api/anthropic")
-	ensureModel(&config.Claude.Models, "MiniMax", "https://api.minimaxi.com/anthropic")
+	ensureModel(&config.Claude.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/claudecode", "sonnet", "")
+	ensureModel(&config.Claude.Models, "CodeRelay", "https://api.code-relay.com/", "claude-3-5-sonnet-20241022", "")
+	ensureModel(&config.Claude.Models, "ChatFire", "https://api.chatfire.cn", "sonnet", "")
+	ensureModel(&config.Claude.Models, "GACCode", "https://gaccode.com/claudecode", "sonnet", "")
+	ensureModel(&config.Claude.Models, "DeepSeek", "https://api.deepseek.com/anthropic", "deepseek-chat", "")
+	ensureModel(&config.Claude.Models, "Kimi", "https://api.kimi.com/coding", "kimi-k2-thinking", "")
+	ensureModel(&config.Claude.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding", "doubao-seed-code-preview-latest", "")
+	ensureModel(&config.Claude.Models, "GLM", "https://open.bigmodel.cn/api/anthropic", "glm-4.7", "")
+	ensureModel(&config.Claude.Models, "MiniMax", "https://api.minimaxi.com/anthropic", "MiniMax-M2.1", "")
 	
 	// Deduplicate AiCodeMirror for Claude if both AICodeMirror and AiCodeMirror exist
 	dedupeAiCodeMirror := func(models *[]ModelConfig) {
@@ -1584,26 +1600,46 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	}
 	dedupeAiCodeMirror(&config.Claude.Models)
 
-	ensureModel(&config.Gemini.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/gemini")
-	ensureModel(&config.Codex.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/codex/backend-api/codex")
-	ensureModel(&config.Codex.Models, "CodeRelay", "https://api.code-relay.com/v1")
-	ensureModel(&config.Codex.Models, "DeepSeek", "https://api.deepseek.com/v1")
-	ensureModel(&config.Codex.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4")
-	ensureModel(&config.Codex.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3")
-	ensureModel(&config.Codex.Models, "Kimi", "https://api.kimi.com/coding/v1")
-	ensureModel(&config.Codex.Models, "MiniMax", "https://api.minimaxi.com/v1")
+	ensureModel(&config.Gemini.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/gemini", "gemini-2.0-flash-exp", "")
+	ensureModel(&config.Gemini.Models, "ChatFire", "https://api.chatfire.cn/v1beta/models/gemini-2.5-pro:generateContent", "gemini-2.5-pro", "")
+	ensureModel(&config.Codex.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/codex/backend-api/codex", "gpt-5.2-codex", "responses")
+	ensureModel(&config.Codex.Models, "CodeRelay", "https://api.code-relay.com/v1", "gpt-5.2-codex", "responses")
+	ensureModel(&config.Codex.Models, "ChatFire", "https://api.chatfire.cn/v1", "gpt-5.1-codex-mini", "responses")
+	ensureModel(&config.Codex.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
+	ensureModel(&config.Codex.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
+	ensureModel(&config.Codex.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
+	ensureModel(&config.Codex.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
+	ensureModel(&config.Codex.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
 
-	ensureModel(&config.Opencode.Models, "DeepSeek", "https://api.deepseek.com/v1")
-	ensureModel(&config.Opencode.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4")
-	ensureModel(&config.Opencode.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3")
-	ensureModel(&config.Opencode.Models, "Kimi", "https://api.kimi.com/coding/v1")
-	ensureModel(&config.Opencode.Models, "MiniMax", "https://api.minimaxi.com/v1")
+	ensureModel(&config.Opencode.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
+	ensureModel(&config.Opencode.Models, "ChatFire", "https://api.chatfire.cn/v1", "gpt-4o", "")
+	ensureModel(&config.Opencode.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
+	ensureModel(&config.Opencode.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
+	ensureModel(&config.Opencode.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
+	ensureModel(&config.Opencode.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
 
-	ensureModel(&config.CodeBuddy.Models, "DeepSeek", "https://api.deepseek.com/v1")
-	ensureModel(&config.CodeBuddy.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4")
-	ensureModel(&config.CodeBuddy.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3")
-	ensureModel(&config.CodeBuddy.Models, "Kimi", "https://api.kimi.com/coding/v1")
-	ensureModel(&config.CodeBuddy.Models, "MiniMax", "https://api.minimaxi.com/v1")
+	ensureModel(&config.CodeBuddy.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
+	ensureModel(&config.CodeBuddy.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
+	ensureModel(&config.CodeBuddy.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
+	ensureModel(&config.CodeBuddy.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
+	ensureModel(&config.CodeBuddy.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+	ensureModel(&config.Codex.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
+	ensureModel(&config.Codex.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
+	ensureModel(&config.Codex.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
+	ensureModel(&config.Codex.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+
+	ensureModel(&config.Opencode.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
+	ensureModel(&config.Opencode.Models, "ChatFire", "https://api.chatfire.cn/v1", "gpt-4o", "")
+	ensureModel(&config.Opencode.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
+	ensureModel(&config.Opencode.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
+	ensureModel(&config.Opencode.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
+	ensureModel(&config.Opencode.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+
+	ensureModel(&config.CodeBuddy.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
+	ensureModel(&config.CodeBuddy.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
+	ensureModel(&config.CodeBuddy.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
+	ensureModel(&config.CodeBuddy.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
+	ensureModel(&config.CodeBuddy.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
 
 	// Ensure 'Original' is always present and first
 	ensureOriginal := func(models *[]ModelConfig) {
