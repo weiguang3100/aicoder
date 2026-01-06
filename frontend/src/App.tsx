@@ -25,7 +25,7 @@ const subscriptionUrls: {[key: string]: string} = {
 };
 
 
-const APP_VERSION = "2.6.4.$buildNum"
+const APP_VERSION = "2.6.4.2356"
 
 const translations: any = {
     "en": {

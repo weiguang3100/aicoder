@@ -29,7 +29,7 @@ mkdir "%OUTPUT_DIR%"
 
 REM -- Increment build number and set version --
 echo [Step 2/7] Updating version number...
-powershell -Command "if (Test-Path 'build_number') { $buildNum = [int](Get-Content 'build_number') + 1 } else { $buildNum = 1 }; Set-Content -Path 'build_number' -Value $buildNum; '$buildNum' | Out-File -FilePath 'temp_build_num.txt' -Encoding ascii"
+powershell -NoProfile -Command "if (Test-Path 'build_number') { $n = [int](Get-Content 'build_number') + 1 } else { $n = 1 }; Set-Content -Path 'build_number' -Value $n -NoNewline; Set-Content -Path 'temp_build_num.txt' -Value $n -NoNewline"
 set /p BUILD_NUM=<temp_build_num.txt
 del temp_build_num.txt
 set "VERSION=2.6.4.%BUILD_NUM%"
@@ -55,20 +55,18 @@ if %errorlevel% neq 0 (
 )
 cd "%~dp0"
 
-REM -- Generate Windows Resources --
+REM -- Generate Windows Resources (icon only) --
 echo [Step 5/7] Generating Windows resources...
-powershell -Command "[IO.File]::WriteAllText('%~dp0build\windows\wails.exe.manifest.tmp', [IO.File]::ReadAllText('%~dp0build\windows\wails.exe.manifest').Replace('{{.Name}}', '%APP_NAME%').Replace('{{.Info.ProductVersion}}', '%VERSION%'))"
-"%GOPATH%\bin\rsrc.exe" -manifest "%~dp0build\windows\wails.exe.manifest.tmp" -ico "%~dp0build\windows\icon.ico" -arch amd64 -o "%~dp0resource_windows_amd64.syso"
+"%GOPATH%\bin\rsrc.exe" -ico "%~dp0build\windows\icon.ico" -arch amd64 -o "%~dp0resource_windows_amd64.syso"
 if %errorlevel% neq 0 (
     echo [ERROR] Failed to generate amd64 resources.
     goto :error
 )
-"%GOPATH%\bin\rsrc.exe" -manifest "%~dp0build\windows\wails.exe.manifest.tmp" -ico "%~dp0build\windows\icon.ico" -arch arm64 -o "%~dp0resource_windows_arm64.syso"
+"%GOPATH%\bin\rsrc.exe" -ico "%~dp0build\windows\icon.ico" -arch arm64 -o "%~dp0resource_windows_arm64.syso"
 if %errorlevel% neq 0 (
     echo [ERROR] Failed to generate arm64 resources.
     goto :error
 )
-del "%~dp0build\windows\wails.exe.manifest.tmp"
 
 REM -- Build Go Binaries --
 echo [Step 6/7] Compiling Go binaries...
