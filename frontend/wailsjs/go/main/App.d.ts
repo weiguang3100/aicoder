@@ -32,6 +32,8 @@ export function PackLog(arg1:string):Promise<string>;
 
 export function ReadBBS():Promise<string>;
 
+export function ReadThanks():Promise<string>;
+
 export function ReadTutorial():Promise<string>;
 
 export function RecoverCC():Promise<void>;

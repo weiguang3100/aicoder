@@ -1322,7 +1322,7 @@ ${instruction}`;
                     </div>
                 </div>
 
-                <div className={`main-content no-scrollbar ${navTab === 'settings' || navTab === 'about' ? '' : ''}`} style={{overflowY: 'auto', paddingBottom: '20px'}}>
+                <div className={`main-content ${navTab === 'tutorial' || navTab === 'message' ? 'elegant-scrollbar' : 'no-scrollbar'} ${navTab === 'settings' || navTab === 'about' ? '' : ''}`} style={{overflowY: 'auto', paddingBottom: '20px'}}>
                                                             {navTab === 'message' && (
                                                                 <div style={{
                                                                     width: '100%', 
@@ -1445,7 +1445,7 @@ ${instruction}`;
                                         )}
                                         {showThanksModal && (
                 <div className="modal-backdrop">
-                    <div className="modal-content" style={{width: '80%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto'}}>
+                    <div className="modal-content elegant-scrollbar" style={{width: '80%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto'}}>
                         <div className="modal-header">
                             <h3 style={{margin: 0}}>{t("thanks")}</h3>
                             <button onClick={() => setShowThanksModal(false)} className="btn-close">&times;</button>
@@ -1453,6 +1453,7 @@ ${instruction}`;
                         <div className="modal-body markdown-content" style={{textAlign: 'left', fontSize: '0.8rem'}}>
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
+                                // @ts-ignore
                                 rehypePlugins={[rehypeRaw]}
                                 components={{
                                     a: ({node, ...props}) => (
@@ -2194,7 +2195,9 @@ ${instruction}`;
                                 <h3 style={{margin: 0, color: '#60a5fa'}}>{t("installLogTitle")}</h3>
                                 <button className="modal-close" onClick={() => setShowInstallLog(false)}>&times;</button>
                             </div>
-                            <div style={{
+                            <div 
+                                className="elegant-scrollbar"
+                                style={{
                                 backgroundColor: '#1e293b',
                                 color: '#e2e8f0',
                                 padding: '15px',
@@ -2664,12 +2667,10 @@ ${instruction}`;
                 </div>
             )}
 
-            </div>
-
             {/* Thanks Modal */}
             {showThanksModal && (
                 <div className="modal-overlay">
-                    <div className="modal-content" style={{maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto'}}>
+                    <div className="modal-content elegant-scrollbar" style={{maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto'}}>
                         <h3 style={{marginTop: 0, marginBottom: '15px', color: '#60a5fa'}}>{t("thanks")}</h3>
                         <div className="markdown-content" style={{
                             backgroundColor: '#fff',

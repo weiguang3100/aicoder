@@ -149,6 +149,29 @@ body {
     display: none; /* Chrome, Safari and Opera */
 }
 
+.elegant-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.elegant-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.elegant-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
+.elegant-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}
+
+/* For Firefox */
+.elegant-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #e2e8f0 transparent;
+}
+
 .global-action-bar {
     flex: 0 0 auto;
     width: 100%;

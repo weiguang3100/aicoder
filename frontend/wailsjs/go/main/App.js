@@ -62,6 +62,10 @@ export function ReadBBS() {
   return window['go']['main']['App']['ReadBBS']();
 }
 
+export function ReadThanks() {
+  return window['go']['main']['App']['ReadThanks']();
+}
+
 export function ReadTutorial() {
   return window['go']['main']['App']['ReadTutorial']();
 }
