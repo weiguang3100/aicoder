@@ -32,7 +32,6 @@ const translations: any = {
         "about": "About",
         "cs146s": "Course",
         "introVideo": "Beginner",
-        "faq": "FAQ",
         "thanks": "Thanks",
         "hide": "Hide",
         "launch": "Start Coding",
@@ -149,7 +148,7 @@ const translations: any = {
         "manual": "文档指南",
         "cs146s": "在线课程",
         "introVideo": "入门视频",
-        "faq": "常见问题",
+        "thanks": "鸣谢",
         "hide": "隐藏",
         "launch": "开始编程",
         "project": "项目",
@@ -264,7 +263,7 @@ const translations: any = {
         "manual": "文檔指南",
         "cs146s": "線上課程",
         "introVideo": "入門視頻",
-        "faq": "常見問題",
+        "thanks": "鳴謝",
         "hide": "隱藏",
         "launch": "開始編程",
         "project": "專案",
@@ -1444,6 +1443,36 @@ ${instruction}`;
                                                 </div>
                                             </div>
                                         )}
+                                        {showThanksModal && (
+                <div className="modal-backdrop">
+                    <div className="modal-content" style={{width: '80%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto'}}>
+                        <div className="modal-header">
+                            <h3 style={{margin: 0}}>{t("thanks")}</h3>
+                            <button onClick={() => setShowThanksModal(false)} className="btn-close">&times;</button>
+                        </div>
+                        <div className="modal-body markdown-content" style={{textAlign: 'left', fontSize: '0.8rem'}}>
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeRaw]}
+                                components={{
+                                    a: ({node, ...props}) => (
+                                        <a
+                                            {...props}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                if (props.href) BrowserOpenURL(props.href);
+                                            }}
+                                            style={{cursor: 'pointer', color: '#3b82f6', textDecoration: 'underline'}}
+                                        />
+                                    )
+                                }}
+                            >
+                                {thanksContent}
+                            </ReactMarkdown>
+                        </div>
+                    </div>
+                </div>
+            )}
                                         {navTab === 'tutorial' && (
                                             <div style={{
                                                 width: '100%', 
