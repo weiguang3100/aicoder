@@ -40,6 +40,9 @@ func (tm *ToolManager) GetToolStatus(name string) ToolStatus {
 	if name == "qoder" {
 		binaryNames = []string{"qodercli", "qoder"}
 	}
+	if name == "iflow" {
+		binaryNames = []string{"iflow"}
+	}
 
 	var path string
 	var err error
@@ -53,24 +56,40 @@ func (tm *ToolManager) GetToolStatus(name string) ToolStatus {
 		// Fallback: Check local node bin directly
 		home, _ := os.UserHomeDir()
 		
-		if runtime.GOOS == "windows" {
-			// Check prefix root and bin folder
-			possiblePaths := []string{
-				filepath.Join(home, ".cceasy", "node", bn+".cmd"),
-				filepath.Join(home, ".cceasy", "node", bn),
-				filepath.Join(home, ".cceasy", "node", "bin", bn+".cmd"),
-				filepath.Join(home, ".cceasy", "node", "bin", bn),
-				// Check for opencode-windows-x64 direct binary location
-				filepath.Join(home, ".cceasy", "node", "node_modules", "opencode-windows-x64", "bin", "opencode.exe"),
-			}
-			for _, p := range possiblePaths {
-				if _, err := os.Stat(p); err == nil {
-					path = p
-					break
-				}
-			}
-		} else {
-			localBin := filepath.Join(home, ".cceasy", "node", "bin", bn)
+		        if runtime.GOOS == "windows" {
+		            // Check prefix root and bin folder
+		            // Prioritize .cmd, .exe, .bat. 
+		            // Also check .ps1 and extensionless (shell scripts) as fallback
+		            possiblePaths := []string{
+		                filepath.Join(home, ".cceasy", "tools", bn+".cmd"),
+		                filepath.Join(home, ".cceasy", "tools", bn+".exe"),
+		                filepath.Join(home, ".cceasy", "tools", bn+".bat"),
+		                filepath.Join(home, ".cceasy", "tools", bn+".ps1"),
+		                filepath.Join(home, ".cceasy", "tools", "bin", bn+".cmd"),
+		                filepath.Join(home, ".cceasy", "tools", "bin", bn+".exe"),
+		                filepath.Join(home, ".cceasy", "tools", bn),
+		                filepath.Join(home, ".cceasy", "tools", "bin", bn),
+		            }
+		
+		            // Special case for opencode specific binary path
+		            if name == "opencode" {
+		                possiblePaths = append(possiblePaths, filepath.Join(home, ".cceasy", "tools", "node_modules", "opencode-windows-x64", "bin", "opencode.exe"))
+		            }
+
+		            // Generic node_modules check using package name
+		            if pkgName := tm.GetPackageName(name); pkgName != "" {
+						base := filepath.Join(home, ".cceasy", "tools", "node_modules", pkgName, "bin", bn)
+		                possiblePaths = append(possiblePaths, base)
+						possiblePaths = append(possiblePaths, base+".js")
+		            }
+		
+		            for _, p := range possiblePaths {
+		                if info, err := os.Stat(p); err == nil && !info.IsDir() {
+		                    path = p
+		                    break
+		                }
+		            }
+		        } else {			localBin := filepath.Join(home, ".cceasy", "tools", "bin", bn)
 			if _, err := os.Stat(localBin); err == nil {
 				path = localBin
 			}
@@ -128,7 +147,7 @@ func (tm *ToolManager) InstallTool(name string) error {
 	}
 
 	home, _ := os.UserHomeDir()
-	localNodeDir := filepath.Join(home, ".cceasy", "node")
+	localNodeDir := filepath.Join(home, ".cceasy", "tools")
 	
 	// Ensure the local node directory exists for prefix usage
 	if err := os.MkdirAll(localNodeDir, 0755); err != nil {
@@ -153,6 +172,8 @@ func (tm *ToolManager) InstallTool(name string) error {
 		packageName = "@tencent-ai/codebuddy-code"
 	case "qoder":
 		packageName = "@qoder-ai/qodercli"
+	case "iflow":
+		packageName = "@iflow-ai/iflow-cli"
 	default:
 		return fmt.Errorf("unknown tool: %s", name)
 	}
@@ -184,7 +205,7 @@ func (tm *ToolManager) InstallTool(name string) error {
 	}
 
 	// Use a local cache directory to avoid permission issues with system/user cache
-	localCacheDir := filepath.Join(home, ".cceasy", "npm_cache")
+	localCacheDir := tm.app.GetLocalCacheDir()
 	if err := os.MkdirAll(localCacheDir, 0755); err != nil {
 		tm.app.log(fmt.Sprintf("Warning: Failed to create local npm cache dir: %v", err))
 	}
@@ -230,7 +251,7 @@ func (tm *ToolManager) InstallTool(name string) error {
 			tm.app.log("Detected npm cache permission issue. Attempting to clear cache...")
 			
 			// Try to clean cache
-			cleanArgs := []string{"cache", "clean", "--force"}
+			cleanArgs := []string{"cache", "clean", "--force", "--cache", localCacheDir}
 			if strings.HasPrefix(strings.ToLower(tm.app.CurrentLanguage), "zh") {
 				cleanArgs = append(cleanArgs, "--registry=https://registry.npmmirror.com")
 			}
@@ -255,6 +276,35 @@ func (tm *ToolManager) InstallTool(name string) error {
 	return nil
 }
 
+func (tm *ToolManager) UpdateTool(name string) error {
+	var cmd *exec.Cmd
+
+	switch name {
+	case "codebuddy", "claude", "qoder":
+		status := tm.GetToolStatus(name)
+		if !status.Installed {
+			return fmt.Errorf("tool %s is not installed", name)
+		}
+		
+		cmd = exec.Command(status.Path, "update")
+		
+	case "iflow":
+		return tm.InstallTool(name)
+		
+	default:
+		return tm.InstallTool(name)
+	}
+
+	if cmd != nil {
+		tm.app.log(fmt.Sprintf("Running update: %s %s", cmd.Path, strings.Join(cmd.Args[1:], " ")))
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to update %s: %v\nOutput: %s", name, err, string(out))
+		}
+	}
+	return nil
+}
+
 func (tm *ToolManager) GetPackageName(name string) string {
 	switch name {
 	case "claude":
@@ -272,6 +322,8 @@ func (tm *ToolManager) GetPackageName(name string) string {
 		return "@tencent-ai/codebuddy-code"
 	case "qoder":
 		return "@qoder-ai/qodercli"
+	case "iflow":
+		return "@iflow-ai/iflow-cli"
 	default:
 		return ""
 	}
@@ -282,9 +334,9 @@ func (tm *ToolManager) getNpmPath() string {
 	home, _ := os.UserHomeDir()
 	var localNpm string
 	if runtime.GOOS == "windows" {
-		localNpm = filepath.Join(home, ".cceasy", "node", "npm.cmd")
+		localNpm = filepath.Join(home, ".cceasy", "tools", "npm.cmd")
 	} else {
-		localNpm = filepath.Join(home, ".cceasy", "node", "bin", "npm")
+		localNpm = filepath.Join(home, ".cceasy", "tools", "bin", "npm")
 	}
 
 	if _, err := os.Stat(localNpm); err == nil {
@@ -305,9 +357,14 @@ func (a *App) InstallTool(name string) error {
 	return tm.InstallTool(name)
 }
 
+func (a *App) UpdateTool(name string) error {
+	tm := NewToolManager(a)
+	return tm.UpdateTool(name)
+}
+
 func (a *App) CheckToolsStatus() []ToolStatus {
 	tm := NewToolManager(a)
-	tools := []string{"claude", "gemini", "codex", "opencode", "codebuddy", "qoder"}
+	tools := []string{"claude", "gemini", "codex", "opencode", "codebuddy", "qoder", "iflow"}
 	statuses := make([]ToolStatus, len(tools))
 	for i, name := range tools {
 		statuses[i] = tm.GetToolStatus(name)

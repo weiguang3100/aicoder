@@ -22,6 +22,10 @@ export function GetCurrentProjectPath() {
   return window['go']['main']['App']['GetCurrentProjectPath']();
 }
 
+export function GetLocalCacheDir() {
+  return window['go']['main']['App']['GetLocalCacheDir']();
+}
+
 export function GetSystemInfo() {
   return window['go']['main']['App']['GetSystemInfo']();
 }

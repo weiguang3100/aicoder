@@ -92,6 +92,7 @@ type AppConfig struct {
 	Opencode         ToolConfig      `json:"opencode"`
 	CodeBuddy        ToolConfig      `json:"codebuddy"`
 	Qoder            ToolConfig      `json:"qoder"`
+	IFlow            ToolConfig      `json:"iflow"`
 	Projects         []ProjectConfig `json:"projects"`
 	CurrentProject   string          `json:"current_project"` // ID of the current project
 	ActiveTool       string          `json:"active_tool"`     // "claude", "gemini", or "codex"
@@ -101,6 +102,7 @@ type AppConfig struct {
 	ShowOpenCode     bool            `json:"show_opencode"`
 	ShowCodeBuddy    bool            `json:"show_codebuddy"`
 	ShowQoder        bool            `json:"show_qoder"`
+	ShowIFlow        bool            `json:"show_iflow"`
 	Language         string          `json:"language"`
 	// Proxy settings (global default)
 	DefaultProxyHost     string `json:"default_proxy_host"`
@@ -222,6 +224,11 @@ func (a *App) GetUserHomeDir() string {
 	return home
 }
 
+func (a *App) GetLocalCacheDir() string {
+	home := a.GetUserHomeDir()
+	return filepath.Join(home, ".cceasy", "npm_cache")
+}
+
 func (a *App) GetCurrentProjectPath() string {
 	config, err := a.LoadConfig()
 	if err != nil {
@@ -273,6 +280,13 @@ func (a *App) getOpencodeConfigPaths() (string, string) {
 	return dir, config
 }
 
+func (a *App) getIFlowConfigPaths() (string, string) {
+	home, _ := os.UserHomeDir()
+	dir := filepath.Join(home, ".iflow")
+	config := filepath.Join(dir, "settings.json")
+	return dir, config
+}
+
 func (a *App) clearClaudeConfig() {
 	dir, _, legacy := a.getClaudeConfigPaths()
 	home, _ := os.UserHomeDir()
@@ -302,6 +316,12 @@ func (a *App) clearOpencodeConfig() {
 	a.log("Cleared Opencode configuration directory")
 }
 
+func (a *App) clearIFlowConfig() {
+	dir, _ := a.getIFlowConfigPaths()
+	os.RemoveAll(dir)
+	a.log("Cleared iFlow configuration directory")
+}
+
 func (a *App) clearEnvVars() {
 	vars := []string{
 		"ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN",
@@ -309,7 +329,8 @@ func (a *App) clearEnvVars() {
 		"GEMINI_API_KEY", "GOOGLE_GEMINI_BASE_URL",
 		"OPENCODE_API_KEY", "OPENCODE_BASE_URL",
 		"CODEBUDDY_API_KEY", "CODEBUDDY_BASE_URL", "CODEBUDDY_CODE_MAX_OUTPUT_TOKENS",
-		"QODER_API_KEY", "QODER_BASE_URL",
+		"QODER_PERSONAL_ACCESS_TOKEN", "QODER_BASE_URL",
+		"IFLOW_API_KEY", "IFLOW_BASE_URL",
 	}
 	for _, v := range vars {
 		os.Unsetenv(v)
@@ -862,6 +883,76 @@ func (a *App) syncToGeminiSettings(config AppConfig) error {
 	return os.WriteFile(configPath, configJson, 0644)
 }
 
+func (a *App) syncToIFlowSettings(config AppConfig) error {
+	var selectedModel *ModelConfig
+	for _, m := range config.IFlow.Models {
+		if m.ModelName == config.IFlow.CurrentModel {
+			selectedModel = &m
+			break
+		}
+	}
+
+	if selectedModel == nil {
+		return fmt.Errorf("selected iflow model not found")
+	}
+
+	dir, configPath := a.getIFlowConfigPaths()
+
+	if strings.ToLower(selectedModel.ModelName) == "original" {
+		a.clearIFlowConfig()
+		return nil
+	}
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	// Prepare defaults
+	baseUrl := selectedModel.ModelUrl
+	modelId := selectedModel.ModelId
+	providerName := strings.ToLower(selectedModel.ModelName)
+
+	// Fallback logic for iFlow (align with Codex providers)
+	if modelId == "" {
+		switch providerName {
+		case "deepseek":
+			modelId = "deepseek-chat"
+			if baseUrl == "" { baseUrl = "https://api.deepseek.com/v1" }
+		case "glm":
+			modelId = "glm-4.7"
+			if baseUrl == "" { baseUrl = "https://open.bigmodel.cn/api/paas/v4" }
+		case "doubao":
+			modelId = "doubao-seed-code-preview-latest"
+			if baseUrl == "" { baseUrl = "https://ark.cn-beijing.volces.com/api/coding/v3" }
+		case "kimi":
+			modelId = "kimi-for-coding"
+			if baseUrl == "" { baseUrl = "https://api.kimi.com/coding/v1" }
+		case "minimax":
+			modelId = "MiniMax-M2.1"
+			if baseUrl == "" { baseUrl = "https://api.minimaxi.com/v1" }
+		default:
+			modelId = "gpt-4o"
+		}
+	}
+
+	// Build the JSON structure for settings.json
+	settings := map[string]string{
+		"theme":            "Default",
+		"selectedAuthType": "iflow",
+		"apiKey":           selectedModel.ApiKey,
+		"baseUrl":          baseUrl,
+		"modelName":        modelId,
+		"searchApiKey":     selectedModel.ApiKey,
+	}
+
+	data, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(configPath, data, 0644)
+}
+
 func (a *App) syncToCodeBuddySettings(config AppConfig, projectPath string) error {
 	if projectPath == "" {
 		projectPath = a.GetCurrentProjectPath()
@@ -1119,6 +1210,11 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 		envKey = "OPENAI_API_KEY"
 		envBaseUrl = "OPENAI_BASE_URL"
 		binaryName = "codex"
+	case "iflow":
+		toolCfg = config.IFlow
+		envKey = "IFLOW_API_KEY"
+		envBaseUrl = "IFLOW_BASE_URL"
+		binaryName = "iflow"
 	case "opencode":
 		toolCfg = config.Opencode
 		envKey = "OPENCODE_API_KEY"
@@ -1132,10 +1228,9 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 	case "qoder":
 		toolCfg = config.Qoder
 		envKey = "QODER_PERSONAL_ACCESS_TOKEN"
-		envBaseUrl = "" // Qoder doesn't use a base URL env var in this context
-		binaryName = "qodercli"
+		envBaseUrl = "QODER_BASE_URL"
+		binaryName = "qoder"
 	default:
-		a.log("Unknown tool: " + toolName)
 		return
 	}
 
@@ -1167,8 +1262,8 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 
 	env := make(map[string]string)
 
-	// Proxy settings (macOS/Linux only)
-	if useProxy && goruntime.GOOS != "windows" {
+	// Proxy settings
+	if useProxy {
 		var proxyHost, proxyPort, proxyUsername, proxyPassword string
 
 		// Get proxy configuration (matching project path > global default)
@@ -1266,6 +1361,10 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 				// env["CODEBUDDY_MODEL"] = selectedModel.ModelId
 			case "qoder":
 				// Qoder doesn't use model env var
+			case "iflow":
+				// iFlow uses settings.json, but maybe env var too?
+				os.Setenv("IFLOW_MODEL", selectedModel.ModelId)
+				env["IFLOW_MODEL"] = selectedModel.ModelId
 			}
 		}
 
@@ -1294,6 +1393,15 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 			// a.syncToCodeBuddySettings(config, projectDir)
 		case "qoder":
 			a.syncToQoderSettings(config, projectDir)
+		case "iflow":
+			// Ensure OpenAI standard vars for iFlow (compatibility)
+			os.Setenv("OPENAI_API_KEY", selectedModel.ApiKey)
+			env["OPENAI_API_KEY"] = selectedModel.ApiKey
+			if selectedModel.ModelUrl != "" {
+				os.Setenv("OPENAI_BASE_URL", selectedModel.ModelUrl)
+				env["OPENAI_BASE_URL"] = selectedModel.ModelUrl
+			}
+			a.syncToIFlowSettings(config)
 		}
 	} else {
 		// --- ORIGINAL MODE: CLEANUP SPECIFIC TOOL ONLY ---
@@ -1326,7 +1434,11 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 			// Codebuddy might need cleanup too if we added a clear function
 		} else if strings.ToLower(toolName) == "qoder" {
 			os.Unsetenv("QODER_PERSONAL_ACCESS_TOKEN")
-			// No base URL to unset for Qoder
+			os.Unsetenv("QODER_BASE_URL")
+			// Qoder cleanup if needed
+		} else if strings.ToLower(toolName) == "iflow" {
+			os.Unsetenv("IFLOW_MODEL")
+			a.clearIFlowConfig()
 		}
 
 		a.log(fmt.Sprintf("Running %s in Original mode: Custom configurations cleared.", toolName))
@@ -1410,6 +1522,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		{ModelName: "Original", ModelId: "", ModelUrl: "", ApiKey: ""},
 		{ModelName: "Qoder", ModelId: "qoder-1.0", ModelUrl: "https://api.qoder.com/v1", ApiKey: ""},
 	}
+	defaultIFlowModels := defaultCodexModels // iFlow shares providers with Codex
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		// Check for old config file for migration
@@ -1451,6 +1564,10 @@ func (a *App) LoadConfig() (AppConfig, error) {
 							CurrentModel: "Original",
 							Models:       defaultQoderModels,
 						},
+						IFlow: ToolConfig{
+							CurrentModel: "Original",
+							Models:       defaultIFlowModels,
+						},
 						Projects:       oldConfig.Projects,
 						CurrentProject: oldConfig.CurrentProj,
 						ActiveTool:     "claude",
@@ -1459,6 +1576,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 						ShowOpenCode:   true,
 						ShowCodeBuddy:  true,
 						ShowQoder:      true,
+						ShowIFlow:      true,
 					}
 					a.SaveConfig(config)
 					// Optional: os.Remove(oldPath)
@@ -1493,6 +1611,10 @@ func (a *App) LoadConfig() (AppConfig, error) {
 				CurrentModel: "Original",
 				Models:       defaultQoderModels,
 			},
+			IFlow: ToolConfig{
+				CurrentModel: "Original",
+				Models:       defaultIFlowModels,
+			},
 			Projects: []ProjectConfig{
 				{
 					Id:       "default",
@@ -1508,6 +1630,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 			ShowOpenCode:   true,
 			ShowCodeBuddy:  true,
 			ShowQoder:      true,
+			ShowIFlow:      true,
 		}
 
 		err = a.SaveConfig(defaultConfig)
@@ -1520,6 +1643,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		ShowOpenCode:  true,
 		ShowCodeBuddy: true,
 		ShowQoder:     true,
+		ShowIFlow:     true,
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -1569,6 +1693,10 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	if config.Qoder.Models == nil || len(config.Qoder.Models) == 0 {
 		config.Qoder.Models = defaultQoderModels
 		config.Qoder.CurrentModel = "Original"
+	}
+	if config.IFlow.Models == nil || len(config.IFlow.Models) == 0 {
+		config.IFlow.Models = defaultIFlowModels
+		config.IFlow.CurrentModel = "Original"
 	}
 
 	ensureModel(&config.Claude.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/claudecode", "sonnet", "")
@@ -1641,6 +1769,15 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureModel(&config.CodeBuddy.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
 	ensureModel(&config.CodeBuddy.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
 
+	ensureModel(&config.IFlow.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/codex/backend-api/codex", "gpt-5.2-codex", "responses")
+	ensureModel(&config.IFlow.Models, "CodeRelay", "https://api.code-relay.com/v1", "gpt-5.2-codex", "responses")
+	ensureModel(&config.IFlow.Models, "ChatFire", "https://api.chatfire.cn/v1", "gpt-5.1-codex-mini", "responses")
+	ensureModel(&config.IFlow.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
+	ensureModel(&config.IFlow.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
+	ensureModel(&config.IFlow.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
+	ensureModel(&config.IFlow.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
+	ensureModel(&config.IFlow.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+
 	// Ensure 'Original' is always present and first
 	ensureOriginal := func(models *[]ModelConfig) {
 		found := false
@@ -1673,6 +1810,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureOriginal(&config.Opencode.Models)
 	ensureOriginal(&config.CodeBuddy.Models)
 	ensureOriginal(&config.Qoder.Models)
+	ensureOriginal(&config.IFlow.Models)
 
 	cleanOpencodeModels(&config.Opencode.Models)
 	cleanOpencodeModels(&config.CodeBuddy.Models)
@@ -1695,6 +1833,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureCustom(&config.Codex.Models)
 	ensureCustom(&config.Opencode.Models)
 	ensureCustom(&config.CodeBuddy.Models)
+	ensureCustom(&config.IFlow.Models)
 	// Qoder only has Original and Qoder
 	// Preserve existing Qoder key if present
 	var existingQoderKey string
@@ -1754,6 +1893,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	moveCustomToLast(&config.Codex.Models)
 	moveCustomToLast(&config.Opencode.Models)
 	moveCustomToLast(&config.CodeBuddy.Models)
+	moveCustomToLast(&config.IFlow.Models)
 
 	ensureOriginalFirst(&config.Claude.Models)
 	ensureOriginalFirst(&config.Gemini.Models)
@@ -1761,6 +1901,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureOriginalFirst(&config.Opencode.Models)
 	ensureOriginalFirst(&config.CodeBuddy.Models)
 	ensureOriginalFirst(&config.Qoder.Models)
+	ensureOriginalFirst(&config.IFlow.Models)
 
 	// Ensure CurrentModel is valid
 	if config.Gemini.CurrentModel == "" {
@@ -1777,6 +1918,9 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	}
 	if config.Qoder.CurrentModel == "" {
 		config.Qoder.CurrentModel = "Original"
+	}
+	if config.IFlow.CurrentModel == "" {
+		config.IFlow.CurrentModel = "Original"
 	}
 
 	if config.ActiveTool == "" {
@@ -1798,6 +1942,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	normalizeCurrentModel(&config.Opencode)
 	normalizeCurrentModel(&config.CodeBuddy)
 	normalizeCurrentModel(&config.Qoder)
+	normalizeCurrentModel(&config.IFlow)
 
 	return config, nil
 }
@@ -1822,6 +1967,7 @@ func syncAllProviderApiKeys(a *App, oldConfig, newConfig *AppConfig) {
 		"opencode":  &newConfig.Opencode,
 		"codebuddy": &newConfig.CodeBuddy,
 		"qoder":     &newConfig.Qoder,
+		"iflow":     &newConfig.IFlow,
 	}
 	oldTools := map[string]*ToolConfig{
 		"claude":    &oldConfig.Claude,
@@ -1830,6 +1976,7 @@ func syncAllProviderApiKeys(a *App, oldConfig, newConfig *AppConfig) {
 		"opencode":  &oldConfig.Opencode,
 		"codebuddy": &oldConfig.CodeBuddy,
 		"qoder":     &oldConfig.Qoder,
+		"iflow":     &oldConfig.IFlow,
 	}
 
 	// providerName (lower) -> intended API key
@@ -1909,6 +2056,7 @@ func (a *App) SaveConfig(config AppConfig) error {
 	sanitizeCustomNames(config.Opencode.Models)
 	sanitizeCustomNames(config.CodeBuddy.Models)
 	sanitizeCustomNames(config.Qoder.Models)
+	sanitizeCustomNames(config.IFlow.Models)
 
 	// Load old config to compare for sync logic
 	var oldConfig AppConfig
@@ -2349,7 +2497,11 @@ func (a *App) getInstalledClaudeVersion(claudePath string) (string, error) {
 func (a *App) getLatestNpmVersion(npmPath string, packageName string) (string, error) {
 	var cmd *exec.Cmd
 	// Use npm view <package> version
-	args := []string{"view", packageName, "version"}
+	localCacheDir := a.GetLocalCacheDir()
+	if err := os.MkdirAll(localCacheDir, 0755); err != nil {
+		a.log(fmt.Sprintf("Warning: Failed to create local npm cache dir: %v", err))
+	}
+	args := []string{"view", packageName, "version", "--cache", localCacheDir}
 	if strings.HasPrefix(strings.ToLower(a.CurrentLanguage), "zh") {
 		args = append(args, "--registry=https://registry.npmmirror.com")
 	}
@@ -2384,73 +2536,116 @@ func (a *App) ListPythonEnvironments() []PythonEnvironment {
 // detectCondaEnvironments finds all Anaconda/Miniconda environments
 func (a *App) detectCondaEnvironments() []PythonEnvironment {
 	envs := []PythonEnvironment{}
-
-	// Try to find conda executable
-	condaCmd := a.findCondaCommand()
-	if condaCmd == "" {
-		a.log("Conda command not found")
-		return envs
-	}
-
-	a.log("Using conda command: " + condaCmd)
-
-	// Run 'conda env list' to get all environments
-	// On Windows, we need to use cmd /c for proper execution
-	var cmd *exec.Cmd
-	if goruntime.GOOS == "windows" {
-		// Use platform-specific function to create command with hidden window
-		cmd = createCondaEnvListCmd(condaCmd)
-	} else {
-		cmd = exec.Command(condaCmd, "env", "list")
-	}
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		a.log("Failed to list conda environments: " + err.Error())
-		a.log("Command output: " + string(output))
-		return envs
-	}
-
-	a.log("Conda env list output: " + string(output))
-
-	// Use a map to deduplicate environments by name
 	envMap := make(map[string]PythonEnvironment)
 
-	// Parse the output
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-
-		// Skip comments and empty lines
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
+	// Helper to add env
+	addEnv := func(name, path string) {
+		if name == "" || path == "" {
+			return
 		}
-
-		// Parse line format: "envname  *  /path/to/env" or "envname  /path/to/env"
-		parts := strings.Fields(line)
-		if len(parts) < 2 {
-			continue
-		}
-
-		envName := parts[0]
-		envPath := ""
-
-		// Find the path (skip the * marker if present)
-		for i := 1; i < len(parts); i++ {
-			if parts[i] != "*" && (strings.Contains(parts[i], "/") || strings.Contains(parts[i], "\\") || strings.Contains(parts[i], ":")) {
-				envPath = parts[i]
-				break
+		if _, exists := envMap[name]; !exists {
+			a.log(fmt.Sprintf("Found conda environment: %s at %s", name, path))
+			envMap[name] = PythonEnvironment{
+				Name: name,
+				Path: path,
+				Type: "conda",
 			}
 		}
+	}
 
-		if envPath != "" {
-			// Only add if not already in map (deduplicate by name)
-			if _, exists := envMap[envName]; !exists {
-				a.log(fmt.Sprintf("Found conda environment: %s at %s", envName, envPath))
-				envMap[envName] = PythonEnvironment{
-					Name: envName,
-					Path: envPath,
-					Type: "conda",
+	// 1. Try 'conda env list'
+	condaCmd := a.findCondaCommand()
+	if condaCmd != "" {
+		a.log("Using conda command: " + condaCmd)
+		
+		var cmd *exec.Cmd
+		if goruntime.GOOS == "windows" {
+			// Use platform-specific function to create command with hidden window
+			cmd = createCondaEnvListCmd(condaCmd)
+		} else {
+			cmd = exec.Command(condaCmd, "env", "list")
+		}
+
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			lines := strings.Split(string(output), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+
+				// Skip comments and empty lines
+				if line == "" || strings.HasPrefix(line, "#") {
+					continue
+				}
+
+				parts := strings.Fields(line)
+				if len(parts) == 0 {
+					continue
+				}
+
+				var name, path string
+				
+				// Handle parsing
+				// Case 1: "* /path" (unnamed, active)
+				// Case 2: "/path" (unnamed)
+				// Case 3: "name * /path" (named, active)
+				// Case 4: "name /path" (named)
+				
+				firstIsPath := strings.Contains(parts[0], "/") || strings.Contains(parts[0], "\\") || (goruntime.GOOS == "windows" && strings.Contains(parts[0], ":"))
+				
+				if parts[0] == "*" {
+					// Case 1
+					if len(parts) > 1 {
+						path = strings.Join(parts[1:], " ")
+						name = filepath.Base(path)
+					}
+				} else if firstIsPath {
+					// Case 2
+					path = strings.Join(parts, " ")
+					name = filepath.Base(path)
+				} else {
+					// Case 3 or 4
+					name = parts[0]
+					if len(parts) > 1 {
+						startIdx := 1
+						if parts[1] == "*" {
+							startIdx = 2
+						}
+						if startIdx < len(parts) {
+							path = strings.Join(parts[startIdx:], " ")
+						}
+					}
+				}
+				
+				addEnv(name, path)
+			}
+		} else {
+			a.log("Failed to list conda environments: " + err.Error())
+		}
+	}
+
+	// 2. Scan common env directories (Fallback/Augment)
+	roots := []string{}
+	
+	// Conda installation root envs
+	condaRoot := a.getCondaRoot()
+	if condaRoot != "" {
+		roots = append(roots, filepath.Join(condaRoot, "envs"))
+		// Add root itself as 'base' if not present
+		addEnv("base", condaRoot)
+	}
+	
+	// User .conda envs
+	home := a.GetUserHomeDir()
+	roots = append(roots, filepath.Join(home, ".conda", "envs"))
+
+	for _, root := range roots {
+		entries, err := os.ReadDir(root)
+		if err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					name := entry.Name()
+					path := filepath.Join(root, name)
+					addEnv(name, path)
 				}
 			}
 		}

@@ -95,6 +95,7 @@ export namespace main {
 	    opencode: ToolConfig;
 	    codebuddy: ToolConfig;
 	    qoder: ToolConfig;
+	    iflow: ToolConfig;
 	    projects: ProjectConfig[];
 	    current_project: string;
 	    active_tool: string;
@@ -104,6 +105,7 @@ export namespace main {
 	    show_opencode: boolean;
 	    show_codebuddy: boolean;
 	    show_qoder: boolean;
+	    show_iflow: boolean;
 	    language: string;
 	    default_proxy_host: string;
 	    default_proxy_port: string;
@@ -122,6 +124,7 @@ export namespace main {
 	        this.opencode = this.convertValues(source["opencode"], ToolConfig);
 	        this.codebuddy = this.convertValues(source["codebuddy"], ToolConfig);
 	        this.qoder = this.convertValues(source["qoder"], ToolConfig);
+	        this.iflow = this.convertValues(source["iflow"], ToolConfig);
 	        this.projects = this.convertValues(source["projects"], ProjectConfig);
 	        this.current_project = source["current_project"];
 	        this.active_tool = source["active_tool"];
@@ -131,6 +134,7 @@ export namespace main {
 	        this.show_opencode = source["show_opencode"];
 	        this.show_codebuddy = source["show_codebuddy"];
 	        this.show_qoder = source["show_qoder"];
+	        this.show_iflow = source["show_iflow"];
 	        this.language = source["language"];
 	        this.default_proxy_host = source["default_proxy_host"];
 	        this.default_proxy_port = source["default_proxy_port"];

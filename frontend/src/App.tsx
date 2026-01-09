@@ -97,6 +97,8 @@ const translations: any = {
         "codebuddyDesc": "CodeBuddy AI Assistant",
         "qoder": "Qoder CLI",
         "qoderDesc": "Qoder AI Programming Assistant",
+        "iflow": "iFlow CLI",
+        "iflowDesc": "iFlow AI Programming Assistant",
         "bugReport": "Problem Feedback",
         "businessCooperation": "Business: WeChat znsoft",
         "original": "Original",
@@ -217,6 +219,8 @@ const translations: any = {
         "codebuddyDesc": "CodeBuddy 编程助手",
         "qoder": "Qoder CLI",
         "qoderDesc": "Qoder AI 辅助编程",
+        "iflow": "iFlow CLI",
+        "iflowDesc": "iFlow AI 辅助编程",
         "bugReport": "问题反馈",
         "businessCooperation": "商业合作：微信 znsoft",
         "original": "原厂",
@@ -334,6 +338,8 @@ const translations: any = {
         "codebuddyDesc": "CodeBuddy 編程助手",
         "qoder": "Qoder CLI",
         "qoderDesc": "Qoder AI 輔助編程",
+        "iflow": "iFlow CLI",
+        "iflowDesc": "iFlow AI 輔助編程",
         "bugReport": "問題反饋",
         "businessCooperation": "商業合作：微信 znsoft",
         "original": "原廠",
@@ -806,7 +812,7 @@ function App() {
                 
                 // Keep track of the last active tool for settings/launch logic
                 const lastActiveTool = cfg.active_tool || "claude";
-                if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder') {
+                if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder' || lastActiveTool === 'iflow') {
                     setActiveTool(lastActiveTool);
                 }
                 
@@ -818,7 +824,7 @@ function App() {
                     if (idx !== -1) setActiveTab(idx);
 
                     // Check if any model has an API key configured for the active tool
-                    if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder') {
+                    if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder' || lastActiveTool === 'iflow') {
                         const hasAnyApiKey = toolCfg.models.some((m: any) => m.api_key && m.api_key.trim() !== "");
                         if (!hasAnyApiKey) {
                             setShowModelSettings(true);
@@ -836,7 +842,7 @@ function App() {
             // Sync with tray menu changes
             const tool = cfg.active_tool || "message";
             setNavTab(tool);
-            if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy') {
+            if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy' || tool === 'iflow') {
                 setActiveTool(tool);
                 const toolCfg = (cfg as any)[tool];
                 if (toolCfg && toolCfg.models) {
@@ -880,6 +886,13 @@ function App() {
                 await InstallTool("qoder");
             }
 
+            // Add iflow check and installation if missing
+            const iflowStatus = statuses?.find((s: any) => s.name === "iflow");
+            if (iflowStatus && !iflowStatus.installed) {
+                setEnvLogs(prev => [...prev, lang === 'zh-Hans' ? "正在安装 iFlow CLI..." : "Installing iFlow CLI..."]);
+                await InstallTool("iflow");
+            }
+
             // Re-check after installation
             const updatedStatuses = await CheckToolsStatus();
             setToolStatuses(updatedStatuses);
@@ -901,7 +914,7 @@ function App() {
 
     const switchTool = (tool: string) => {
         setNavTab(tool);
-        if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy' || tool === 'qoder') {
+        if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy' || tool === 'qoder' || tool === 'iflow') {
             setActiveTool(tool);
             setActiveTab(0); // Reset to Original when switching tools
         }
@@ -965,7 +978,7 @@ function App() {
 
         // Skip syncing for "Original" model and custom models
         if (providerPrefix !== "Original" && !isCurrentCustom) {
-            const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder'];
+            const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow'];
             let syncCount = 0;
 
             tools.forEach(tool => {
@@ -1081,7 +1094,7 @@ function App() {
             if (p.includes("doubao")) return "doubao-seed-code-preview-latest";
             if (p.includes("kimi")) return "kimi-for-coding";
             if (p.includes("minimax")) return "MiniMax-M2.1";
-        } else if (tool === "opencode" || tool === "codebuddy" || tool === "qoder") {
+        } else if (tool === "opencode" || tool === "codebuddy" || tool === "qoder" || tool === "iflow") {
             if (p.includes("deepseek")) return "deepseek-chat";
             if (p.includes("glm")) return "glm-4.7";
             if (p.includes("doubao")) return "doubao-seed-code-preview-latest";
@@ -1210,7 +1223,7 @@ function App() {
 
         // Sanitize: Ensure Custom models have a name (prevent empty tab button)
         const configCopy = JSON.parse(JSON.stringify(config));
-        const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder'];
+        const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow'];
         tools.forEach(tool => {
             if (configCopy[tool] && configCopy[tool].models) {
                 configCopy[tool].models.forEach((model: any) => {
@@ -1386,7 +1399,7 @@ ${instruction}`;
 
     if (!config) return <div className="main-content" style={{display:'flex', justifyContent:'center', alignItems:'center'}}>{t("loadingConfig")}</div>;
 
-            const toolCfg = (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder')
+            const toolCfg = (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow')
                 ? (config as any)[navTab]
                 : null;
 
@@ -1429,7 +1442,7 @@ ${instruction}`;
                     </div>
                     {config?.show_gemini !== false && (
                     <div className={`sidebar-item ${navTab === 'gemini' ? 'active' : ''}`} onClick={() => switchTool('gemini')}>
-                        <span className="sidebar-icon">✨</span> <span>Gemini CLI</span>
+                        <span className="sidebar-icon">♊</span> <span>Gemini CLI</span>
                     </div>
                     )}
                     {config?.show_codex !== false && (
@@ -1439,7 +1452,7 @@ ${instruction}`;
                     )}
                     {config?.show_opencode !== false && (
                     <div className={`sidebar-item ${navTab === 'opencode' ? 'active' : ''}`} onClick={() => switchTool('opencode')}>
-                        <span className="sidebar-icon">🚀</span> <span>OpenCode</span>
+                        <span className="sidebar-icon">🔳</span> <span>OpenCode</span>
                     </div>
                     )}
                     {config?.show_codebuddy !== false && (
@@ -1449,7 +1462,12 @@ ${instruction}`;
                     )}
                     {config?.show_qoder !== false && (
                     <div className={`sidebar-item ${navTab === 'qoder' ? 'active' : ''}`} onClick={() => switchTool('qoder')}>
-                        <span className="sidebar-icon">⚡</span> <span>Qoder CLI</span>
+                        <span className="sidebar-icon">🔲</span> <span>Qoder CLI</span>
+                    </div>
+                    )}
+                    {config?.show_iflow !== false && (
+                    <div className={`sidebar-item ${navTab === 'iflow' ? 'active' : ''}`} onClick={() => switchTool('iflow')}>
+                        <span className="sidebar-icon">🌊</span> <span>iFlow CLI</span>
                     </div>
                     )}
                 </div>
@@ -1474,6 +1492,7 @@ ${instruction}`;
                              navTab === 'opencode' ? 'OpenCode AI' :
                              navTab === 'codebuddy' ? 'CodeBuddy AI' :
                              navTab === 'qoder' ? 'Qoder CLI' :
+                             navTab === 'iflow' ? 'iFlow CLI' :
                              navTab === 'projects' ? t("projectManagement") :
                              navTab === 'settings' ? t("globalSettings") : t("about")}
                         </h2>
@@ -1726,7 +1745,7 @@ ${instruction}`;
                                                     </ReactMarkdown>
                                                 </div>
                                             </div>
-                                        )}                        {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder') && (
+                                        )}                        {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow') && (
                             <ToolConfiguration 
                                 toolName={navTab} 
                                 toolCfg={toolCfg} 
@@ -1785,17 +1804,7 @@ ${instruction}`;
                                         </div>
 
                                         <div style={{display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0}}>
-                                            <button
-                                                className="btn-link"
-                                                onClick={() => {
-                                                    setSelectedProjectForLaunch(proj.id);
-                                                    setProxyEditMode('project');
-                                                    setShowProxySettings(true);
-                                                }}
-                                                style={{display: 'flex', alignItems: 'center', gap: '4px'}}
-                                            >
-                                                <span>🌐</span>
-                                            </button>
+
                                             <button className="btn-link" onClick={() => {
                                                 SelectProjectDir().then(dir => {
                                                     if (dir) {
@@ -1846,7 +1855,6 @@ ${instruction}`;
                                 >
                                     <span>📂</span> {t("manageProjects")}
                                 </button>
-                                {!/window/i.test(navigator.userAgent) && (
                                     <button
                                         className="btn-link"
                                         onClick={() => {
@@ -1857,7 +1865,6 @@ ${instruction}`;
                                     >
                                         <span>🌐</span> {t("proxySettings")}
                                     </button>
-                                )}
                             </div>
 
                             <div className="form-group" style={{marginTop: '15px', borderTop: '1px solid #f1f5f9', paddingTop: '15px'}}>
@@ -1937,6 +1944,21 @@ ${instruction}`;
                                             style={{width: '16px', height: '16px'}}
                                         />
                                         <span style={{fontSize: '0.8rem', color: '#4b5563'}}>Qoder CLI</span>
+                                    </label>
+                                    <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={config?.show_iflow !== false}
+                                            onChange={(e) => {
+                                                if (config) {
+                                                    const newConfig = new main.AppConfig({...config, show_iflow: e.target.checked});
+                                                    setConfig(newConfig);
+                                                    SaveConfig(newConfig);
+                                                }
+                                            }}
+                                            style={{width: '16px', height: '16px'}}
+                                        />
+                                        <span style={{fontSize: '0.8rem', color: '#4b5563'}}>iFlow CLI</span>
                                     </label>
                                 </div>
                             </div>
@@ -2051,7 +2073,7 @@ ${instruction}`;
                 </div>
 
                 {/* Global Action Bar (Footer) */}
-                {config && (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder') && (
+                {config && (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow') && (
                     <div className="global-action-bar">
                         <div style={{display: 'flex', flexDirection: 'column', gap: '5px', width: '100%', padding: '2px 0'}}>
                             <div style={{display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'flex-start'}}>
@@ -2110,7 +2132,6 @@ ${instruction}`;
                                                                         </span>
                                                                     )}
                                                                 </label>
-                                                                {!/window/i.test(navigator.userAgent) && (
                                                                     <label style={{display:'flex', alignItems:'center', cursor:'pointer', fontSize: '0.8rem', color: '#6b7280'}}>
                                                                         <input
                                                                             type="checkbox"
@@ -2149,7 +2170,6 @@ ${instruction}`;
                                                                             ⚙️
                                                                         </span>
                                                                     </label>
-                                                                )}
                                                             </div>
                                                             <div style={{display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '15px'}}>
                                                                 <label style={{display:'flex', alignItems:'center', cursor:'pointer', fontSize: '0.8rem', color: '#6b7280'}}>

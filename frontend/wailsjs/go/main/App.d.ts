@@ -12,6 +12,8 @@ export function ClipboardGetText():Promise<string>;
 
 export function GetCurrentProjectPath():Promise<string>;
 
+export function GetLocalCacheDir():Promise<string>;
+
 export function GetSystemInfo():Promise<main.SystemInfo>;
 
 export function GetUserHomeDir():Promise<string>;

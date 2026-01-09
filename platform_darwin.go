@@ -24,7 +24,7 @@ func (a *App) CheckEnvironment() {
 		a.log("Checking Node.js installation...")
 		
 		home, _ := os.UserHomeDir()
-		localNodeDir := filepath.Join(home, ".cceasy", "node")
+		localNodeDir := filepath.Join(home, ".cceasy", "tools")
 		localBinDir := filepath.Join(localNodeDir, "bin")
 
 		// 1. Setup PATH correctly for GUI apps on macOS
@@ -148,9 +148,9 @@ func (a *App) CheckEnvironment() {
 					a.log(fmt.Sprintf("%s installed successfully.", tool))
 				}
 			} else {
-				a.log(fmt.Sprintf("%s found (version: %s).", tool, status.Version))
-				// Check for updates for codex, opencode, codebuddy and qoder
-				if tool == "codex" || tool == "opencode" || tool == "codebuddy" || tool == "qoder" {
+				a.log(fmt.Sprintf("%s found at %s (version: %s).", tool, status.Path, status.Version))
+				// Check for updates for all tools
+				if tool == "codex" || tool == "opencode" || tool == "codebuddy" || tool == "qoder" || tool == "iflow" || tool == "gemini" || tool == "claude" {
 					a.log(fmt.Sprintf("Checking for %s updates...", tool))
 					latest, err := a.getLatestNpmVersion(npmExec, tm.GetPackageName(tool))
 					if err == nil && latest != "" && latest != status.Version {
@@ -288,7 +288,7 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 
 	// Prepare the launch script
 	home, _ := os.UserHomeDir()
-	localBinDir := filepath.Join(home, ".cceasy", "node", "bin")
+	localBinDir := filepath.Join(home, ".cceasy", "tools", "bin")
 	scriptsDir := filepath.Join(home, ".cceasy", "scripts")
 	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
 		a.log("Failed to create scripts dir: " + err.Error())
@@ -332,7 +332,9 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 			finalCmd += " --full-auto"
 		case "codebuddy":
 			finalCmd += " -y"
-		case "qodercli":
+		case "iflow":
+			finalCmd += " -y"
+		case "qodercli", "qoder":
 			finalCmd += " --yolo"
 		}
 	}

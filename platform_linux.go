@@ -25,7 +25,7 @@ func (a *App) CheckEnvironment() {
 		a.log("Checking Node.js installation...")
 		
 		home, _ := os.UserHomeDir()
-		localNodeDir := filepath.Join(home, ".cceasy", "node")
+		localNodeDir := filepath.Join(home, ".cceasy", "tools")
 		localBinDir := filepath.Join(localNodeDir, "bin")
 
 		// 1. Setup PATH
@@ -104,7 +104,7 @@ func (a *App) CheckEnvironment() {
 
 		        // 5. Check and Install AI Tools
 				tm := NewToolManager(a)
-				tools := []string{"claude", "gemini", "codex", "opencode", "codebuddy", "qoder"}
+				tools := []string{"claude", "gemini", "codex", "opencode", "codebuddy", "qoder", "iflow"}
 				
 				for _, tool := range tools {
 					a.log(fmt.Sprintf("Checking %s...", tool))
@@ -118,12 +118,11 @@ func (a *App) CheckEnvironment() {
 						} else {
 							a.log(fmt.Sprintf("%s installed successfully.", tool))
 						}
-					} else {
-						a.log(fmt.Sprintf("%s found (version: %s).", tool, status.Version))
-						// Check for updates for codex, opencode, codebuddy and qoder
-						if tool == "codex" || tool == "opencode" || tool == "codebuddy" || tool == "qoder" {
-							a.log(fmt.Sprintf("Checking for %s updates...", tool))
-							latest, err := a.getLatestNpmVersion(npmExec, tm.GetPackageName(tool))
+					                    } else {
+					                        a.log(fmt.Sprintf("%s found at %s (version: %s).", tool, status.Path, status.Version))
+					                        // Check for updates for all tools
+					                        if tool == "codex" || tool == "opencode" || tool == "codebuddy" || tool == "qoder" || tool == "iflow" || tool == "gemini" || tool == "claude" {
+					                            a.log(fmt.Sprintf("Checking for %s updates...", tool))							latest, err := a.getLatestNpmVersion(npmExec, tm.GetPackageName(tool))
 							if err == nil && latest != "" && latest != status.Version {
 								a.log(fmt.Sprintf("New version available for %s: %s (current: %s). Updating...", tool, latest, status.Version))
 								if err := tm.InstallTool(tool); err != nil {
@@ -294,7 +293,9 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 			finalCmd += " --full-auto"
 		case "codebuddy":
 			finalCmd += " -y"
-		case "qodercli":
+		case "iflow":
+			finalCmd += " -y"
+		case "qodercli", "qoder":
 			finalCmd += " --yolo"
 		}
 	}
