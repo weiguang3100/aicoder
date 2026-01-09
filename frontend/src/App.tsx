@@ -2,6 +2,13 @@ import {useEffect, useState, useRef} from 'react';
 import './App.css';
 import {buildNumber} from './version';
 import appIcon from './assets/images/appicon.png';
+import claudecodeIcon from './assets/images/claudecode.png';
+import codebuddyIcon from './assets/images/Codebuddy.png';
+import codexIcon from './assets/images/Codex.png';
+import geminiIcon from './assets/images/gemincli.png';
+import iflowIcon from './assets/images/iflow.png';
+import opencodeIcon from './assets/images/opencode.png';
+import qoderIcon from './assets/images/qodercli.png';
 import {CheckToolsStatus, InstallTool, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl} from "../wailsjs/go/main/App";
 import {EventsOn, EventsOff, BrowserOpenURL, Quit} from "../wailsjs/runtime";
 import {main} from "../wailsjs/go/models";
@@ -21,11 +28,12 @@ const subscriptionUrls: {[key: string]: string} = {
     "GACCode": "https://gaccode.com/signup?ref=FVMCU97H",
     "DeepSeek": "https://platform.deepseek.com/api_keys",
     "CodeRelay": "https://api.code-relay.com/register?aff=0ZtO",
-    "ChatFire": "https://api.chatfire.cn/register?aff=jira"
+    "ChatFire": "https://api.chatfire.cn/register?aff=jira",
+    "XiaoMi": "https://platform.xiaomimimo.com/#/console/api-keys"
 };
 
 
-const APP_VERSION = "2.6.4.2356"
+const APP_VERSION = "2.7.5.2500"
 
 const translations: any = {
     "en": {
@@ -42,7 +50,6 @@ const translations: any = {
         "yoloMode": "Yolo Mode",
         "dangerouslySkip": "(Dangerously Skip Permissions)",
         "launchBtn": "Launch Tool",
-        "activeModel": "ACTIVE PROVIDER",
         "modelSettings": "PROVIDER SETTINGS",
         "providerName": "Provider Name",
         "modelName": "Model ID",
@@ -164,8 +171,7 @@ const translations: any = {
         "yoloMode": "Yolo 模式",
         "dangerouslySkip": "(危险：跳过权限检查)",
         "launchBtn": "启动工具",
-        "activeModel": "服务商选择",
-        "modelSettings": "服务商设置",
+        "modelSettings": "服务商配置",
         "providerName": "服务商名称",
         "modelName": "模型名称/ID",
         "apiKey": "API Key",
@@ -412,20 +418,6 @@ const ToolConfiguration = ({
             border: '1px solid rgba(96, 165, 250, 0.1)',
             marginBottom: '15px'
         }}>
-            <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'
-            }}>
-                <h3 style={{
-                    fontSize: '0.9rem', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0
-                }}>{t("activeModel")}</h3>
-                <button 
-                    className="btn-link" 
-                    onClick={() => setShowModelSettings(true)}
-                    style={{borderColor: '#60a5fa', color: '#60a5fa'}}
-                >
-                    {t("editConfig")}
-                </button>
-            </div>
             <div className="model-switcher" style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
@@ -1460,14 +1452,18 @@ ${instruction}`;
                         <span className="sidebar-icon">👨‍💻</span> <span>CodeBuddy</span>
                     </div>
                     )}
-                    {config?.show_qoder !== false && (
-                    <div className={`sidebar-item ${navTab === 'qoder' ? 'active' : ''}`} onClick={() => switchTool('qoder')}>
-                        <span className="sidebar-icon">🔲</span> <span>Qoder CLI</span>
-                    </div>
-                    )}
                     {config?.show_iflow !== false && (
                     <div className={`sidebar-item ${navTab === 'iflow' ? 'active' : ''}`} onClick={() => switchTool('iflow')}>
-                        <span className="sidebar-icon">🌊</span> <span>iFlow CLI</span>
+                        <span className="sidebar-icon">
+                            <img src="https://img.alicdn.com/imgextra/i1/O1CN01nulwex1q7Eq1TVqUh_!!6000000005448-55-tps-32-32.svg" style={{width: '1em', height: '1em', verticalAlign: 'middle'}} alt="iFlow" />
+                        </span> <span>iFlow CLI</span>
+                    </div>
+                    )}
+                    {config?.show_qoder !== false && (
+                    <div className={`sidebar-item ${navTab === 'qoder' ? 'active' : ''}`} onClick={() => switchTool('qoder')}>
+                        <span className="sidebar-icon">
+                            <img src="https://img.alicdn.com/imgextra/i4/O1CN01LfldL32AI2X3bg2ot_!!6000000008179-55-tps-640-180.svg" style={{width: '1em', height: '1em', verticalAlign: 'middle'}} alt="Qoder" />
+                        </span> <span>Qoder CLI</span>
                     </div>
                     )}
                 </div>
@@ -1484,7 +1480,8 @@ ${instruction}`;
             <div className="main-container">
                 <div className="top-header" style={{'--wails-draggable': 'no-drag'} as any}>
                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%'}}>
-                        <h2 style={{margin: 0, fontSize: '1.1rem', color: '#60a5fa', fontWeight: 'bold', marginLeft: '20px', '--wails-draggable': 'drag', flex: 1} as any}>
+                        <h2 style={{margin: 0, fontSize: '1.1rem', color: '#60a5fa', fontWeight: 'bold', marginLeft: '20px', '--wails-draggable': 'drag', flex: 1, display: 'flex', alignItems: 'center'} as any}>
+                            <span>
                             {navTab === 'message' ? t("message") :
                              navTab === 'claude' ? 'Claude Code' :
                              navTab === 'gemini' ? 'Gemini CLI' :
@@ -1495,6 +1492,23 @@ ${instruction}`;
                              navTab === 'iflow' ? 'iFlow CLI' :
                              navTab === 'projects' ? t("projectManagement") :
                              navTab === 'settings' ? t("globalSettings") : t("about")}
+                            </span>
+                            {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow') && (
+                                <button 
+                                    className="btn-link" 
+                                    onClick={() => setShowModelSettings(true)}
+                                    style={{
+                                        marginLeft: '10px', 
+                                        padding: '2px 8px', 
+                                        fontSize: '0.8rem',
+                                        borderColor: '#60a5fa', 
+                                        color: '#60a5fa',
+                                        '--wails-draggable': 'no-drag'
+                                    } as any}
+                                >
+                                    {lang === 'zh-Hans' || lang === 'zh-Hant' ? '服务商配置' : 'Provider Config'}
+                                </button>
+                            )}
                         </h2>
                         <div style={{display: 'flex', gap: '10px', '--wails-draggable': 'no-drag', marginRight: '5px', pointerEvents: 'auto', position: 'relative', zIndex: 10000} as any}>
                             <button
@@ -2672,6 +2686,8 @@ ${instruction}`;
                                         placeholder="https://api.example.com/v1"
                                         spellCheck={false}
                                         autoComplete="off"
+                                        readOnly={!(config as any)[activeTool].models[activeTab].is_custom}
+                                        style={!(config as any)[activeTool].models[activeTab].is_custom ? {backgroundColor: '#f3f4f6', cursor: 'not-allowed', color: '#9ca3af'} : {}}
                                     />
                                 </div>
                                 )}

@@ -937,12 +937,10 @@ func (a *App) syncToIFlowSettings(config AppConfig) error {
 
 	// Build the JSON structure for settings.json
 	settings := map[string]string{
-		"theme":            "Default",
-		"selectedAuthType": "iflow",
+		"selectedAuthType": "openai-compatible",
 		"apiKey":           selectedModel.ApiKey,
 		"baseUrl":          baseUrl,
 		"modelName":        modelId,
-		"searchApiKey":     selectedModel.ApiKey,
 	}
 
 	data, err := json.MarshalIndent(settings, "", "  ")
@@ -1522,7 +1520,16 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		{ModelName: "Original", ModelId: "", ModelUrl: "", ApiKey: ""},
 		{ModelName: "Qoder", ModelId: "qoder-1.0", ModelUrl: "https://api.qoder.com/v1", ApiKey: ""},
 	}
-	defaultIFlowModels := defaultCodexModels // iFlow shares providers with Codex
+	defaultIFlowModels := []ModelConfig{
+		{ModelName: "Original", ModelId: "", ModelUrl: "", ApiKey: ""},
+		{ModelName: "DeepSeek", ModelId: "deepseek-chat", ModelUrl: "https://api.deepseek.com/v1", ApiKey: ""},
+		{ModelName: "GLM", ModelId: "glm-4.7", ModelUrl: "https://open.bigmodel.cn/api/paas/v4", ApiKey: ""},
+		{ModelName: "Doubao", ModelId: "doubao-seed-code-preview-latest", ModelUrl: "https://ark.cn-beijing.volces.com/api/coding/v3", ApiKey: ""},
+		{ModelName: "Kimi", ModelId: "kimi-for-coding", ModelUrl: "https://api.kimi.com/coding/v1", ApiKey: ""},
+		{ModelName: "MiniMax", ModelId: "MiniMax-M2.1", ModelUrl: "https://api.minimaxi.com/v1", ApiKey: ""},
+		{ModelName: "XiaoMi", ModelId: "mimo-v2-flash", ModelUrl: "https://api.xiaomimimo.com/v1", ApiKey: ""},
+		{ModelName: "Custom", ModelId: "", ModelUrl: "", ApiKey: "", IsCustom: true},
+	}
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		// Check for old config file for migration
@@ -1708,6 +1715,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureModel(&config.Claude.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.Claude.Models, "GLM", "https://open.bigmodel.cn/api/anthropic", "glm-4.7", "")
 	ensureModel(&config.Claude.Models, "MiniMax", "https://api.minimaxi.com/anthropic", "MiniMax-M2.1", "")
+	ensureModel(&config.Claude.Models, "XiaoMi", "https://api.xiaomimimo.com/anthropic", "mimo-v2-flash", "")
 	
 	// Deduplicate AiCodeMirror for Claude if both AICodeMirror and AiCodeMirror exist
 	dedupeAiCodeMirror := func(models *[]ModelConfig) {
@@ -1738,6 +1746,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureModel(&config.Codex.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.Codex.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
 	ensureModel(&config.Codex.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+	ensureModel(&config.Codex.Models, "XiaoMi", "https://api.xiaomimimo.com/v1", "mimo-v2-flash", "")
 
 	ensureModel(&config.Opencode.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
 	ensureModel(&config.Opencode.Models, "ChatFire", "https://api.chatfire.cn/v1", "gpt-4o", "")
@@ -1745,12 +1754,14 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureModel(&config.Opencode.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.Opencode.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
 	ensureModel(&config.Opencode.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+	ensureModel(&config.Opencode.Models, "XiaoMi", "https://api.xiaomimimo.com/v1", "mimo-v2-flash", "")
 
 	ensureModel(&config.CodeBuddy.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
 	ensureModel(&config.CodeBuddy.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
 	ensureModel(&config.CodeBuddy.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.CodeBuddy.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
 	ensureModel(&config.CodeBuddy.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+	ensureModel(&config.CodeBuddy.Models, "XiaoMi", "https://api.xiaomimimo.com/v1", "mimo-v2-flash", "")
 	ensureModel(&config.Codex.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
 	ensureModel(&config.Codex.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.Codex.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
@@ -1769,14 +1780,12 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureModel(&config.CodeBuddy.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
 	ensureModel(&config.CodeBuddy.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
 
-	ensureModel(&config.IFlow.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/codex/backend-api/codex", "gpt-5.2-codex", "responses")
-	ensureModel(&config.IFlow.Models, "CodeRelay", "https://api.code-relay.com/v1", "gpt-5.2-codex", "responses")
-	ensureModel(&config.IFlow.Models, "ChatFire", "https://api.chatfire.cn/v1", "gpt-5.1-codex-mini", "responses")
 	ensureModel(&config.IFlow.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
 	ensureModel(&config.IFlow.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
 	ensureModel(&config.IFlow.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.IFlow.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
 	ensureModel(&config.IFlow.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+	ensureModel(&config.IFlow.Models, "XiaoMi", "https://api.xiaomimimo.com/v1", "mimo-v2-flash", "")
 
 	// Ensure 'Original' is always present and first
 	ensureOriginal := func(models *[]ModelConfig) {
@@ -1797,7 +1806,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		var newModels []ModelConfig
 		for _, m := range *models {
 			name := strings.ToLower(m.ModelName)
-			if name != "aigocode" && name != "aicodemirror" {
+			if name != "aigocode" && name != "aicodemirror" && name != "coderelay" && name != "chatfire" {
 				newModels = append(newModels, m)
 			}
 		}
@@ -1814,6 +1823,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 
 	cleanOpencodeModels(&config.Opencode.Models)
 	cleanOpencodeModels(&config.CodeBuddy.Models)
+	cleanOpencodeModels(&config.IFlow.Models)
 
 	// Ensure 'Custom' is always present
 	ensureCustom := func(models *[]ModelConfig) {
@@ -2796,13 +2806,14 @@ func (a *App) getCommonCondaPaths() []string {
 
 	// Common drive root installations
 	for _, drive := range []string{"C:", "D:", "E:"} {
+		root := drive + string(filepath.Separator)
 		paths = append(paths,
-			filepath.Join(drive, "anaconda3"),
-			filepath.Join(drive, "miniconda3"),
-			filepath.Join(drive, "Anaconda3"),
-			filepath.Join(drive, "Miniconda3"),
-			filepath.Join(drive, "ProgramData", "anaconda3"),
-			filepath.Join(drive, "ProgramData", "miniconda3"),
+			filepath.Join(root, "anaconda3"),
+			filepath.Join(root, "miniconda3"),
+			filepath.Join(root, "Anaconda3"),
+			filepath.Join(root, "Miniconda3"),
+			filepath.Join(root, "ProgramData", "anaconda3"),
+			filepath.Join(root, "ProgramData", "miniconda3"),
 		)
 	}
 

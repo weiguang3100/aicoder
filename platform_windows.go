@@ -493,7 +493,9 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 	batchContent += "  echo.\r\n"
 	batchContent += "  echo Process exited with error code %errorlevel%.\r\n"
 	batchContent += "  pause\r\n"
+	batchContent += "  exit /b %errorlevel%\r\n"
 	batchContent += ")\r\n"
+	batchContent += "exit /b 0\r\n"
 
 	// Create a temporary batch file
 	tempBatchPath := filepath.Join(os.TempDir(), fmt.Sprintf("aicoder_launch_%d.bat", time.Now().UnixNano()))
@@ -537,7 +539,7 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 		}
 	} else {
 		// Normal launch
-		cmdLine := fmt.Sprintf(`cmd /c start "AICoder - %s" /d "%s" cmd /c "%s"`, binaryName, projectDir, tempBatchPath)
+		cmdLine := fmt.Sprintf(`cmd /c start "AICoder - %s" /d "%s" cmd /k "%s"`, binaryName, projectDir, tempBatchPath)
 		
 		cmd := exec.Command("cmd")
 		cmd.SysProcAttr = &syscall.SysProcAttr{
