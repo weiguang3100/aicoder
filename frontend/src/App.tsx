@@ -9,7 +9,7 @@ import geminiIcon from './assets/images/gemincli.png';
 import iflowIcon from './assets/images/iflow.png';
 import opencodeIcon from './assets/images/opencode.png';
 import qoderIcon from './assets/images/qodercli.png';
-import {CheckToolsStatus, InstallTool, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl} from "../wailsjs/go/main/App";
+import {CheckToolsStatus, InstallTool, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl, DownloadUpdate, CancelDownload, LaunchInstallerAndExit} from "../wailsjs/go/main/App";
 import {EventsOn, EventsOff, BrowserOpenURL, Quit} from "../wailsjs/runtime";
 import {main} from "../wailsjs/go/models";
 import ReactMarkdown from 'react-markdown';
@@ -645,7 +645,12 @@ function App() {
     const [showInstallLog, setShowInstallLog] = useState(false);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
     const [updateResult, setUpdateResult] = useState<any>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState(0);
+    const [downloadError, setDownloadError] = useState("");
+    const [installerPath, setInstallerPath] = useState("");
     const [isStartupUpdateCheck, setIsStartupUpdateCheck] = useState(false);
+    const isWindows = /window/i.test(navigator.userAgent);
     const [projectOffset, setProjectOffset] = useState(0);
     const [lang, setLang] = useState("en");
     const [toastMessage, setToastMessage] = useState<string>("");
@@ -697,6 +702,40 @@ function App() {
         } catch (err) {
             console.error("Failed to read thanks content:", err);
             showToastMessage(t("refreshFailed") + err, 5000);
+        }
+    };
+
+    const handleDownload = async () => {
+        if (!updateResult || !updateResult.release_url) return;
+        
+        setIsDownloading(true);
+        setDownloadProgress(0);
+        setDownloadError("");
+        setInstallerPath("");
+        
+        try {
+            // Extracts the filename from release_url, but we want AICoder-Setup.exe 
+            // as per requirements. Usually GitHub assets have it.
+            const path = await DownloadUpdate(updateResult.release_url, "AICoder-Setup.exe");
+            setInstallerPath(path);
+        } catch (err: any) {
+            console.error("Download error:", err);
+            // Error is handled by the event listener
+        }
+    };
+
+    const handleCancelDownload = () => {
+        CancelDownload("AICoder-Setup.exe");
+    };
+
+    const handleInstall = async () => {
+        if (installerPath) {
+            try {
+                await LaunchInstallerAndExit(installerPath);
+            } catch (err) {
+                console.error("Install launch error:", err);
+                showToastMessage(t("downloadError").replace("{error}", err as string));
+            }
         }
     };
 
@@ -820,6 +859,22 @@ function App() {
         EventsOn("env-log", logHandler);
         EventsOn("env-check-done", doneHandler);
 
+        EventsOn("download-progress", (data: any) => {
+            console.log("Download progress event:", data);
+            if (data.status === "downloading") {
+                setDownloadProgress(Math.floor(data.percentage));
+            } else if (data.status === "completed") {
+                setDownloadProgress(100);
+                setIsDownloading(false);
+            } else if (data.status === "error") {
+                setDownloadError(data.error);
+                setIsDownloading(false);
+            } else if (data.status === "cancelled") {
+                setDownloadError(t("downloadCancelled"));
+                setIsDownloading(false);
+            }
+        });
+
         CheckEnvironment(); // Start checks
         checkTools();
 
@@ -921,8 +976,7 @@ function App() {
         return () => {
             EventsOff("env-log");
             EventsOff("env-check-done");
-            EventsOff("config-changed");
-            EventsOff("config-updated");
+            EventsOff("download-progress");
         };
     }, []);
 
@@ -2146,7 +2200,7 @@ ${instruction}`;
                                         }}
                                         style={{width: '16px', height: '16px'}}
                                     />
-                                    <span style={{fontSize: '0.8rem', color: '#374151'}}>{t("checkUpdateOnStartup")}</span>
+                                    <span style={{fontSize: '0.8rem', color: '#374151'}}>{isWindows ? t("onlineUpdate") : t("checkUpdate")}</span>
                                 </label>
                                 <p style={{fontSize: '0.75rem', color: '#64748b', marginLeft: '24px', marginTop: '4px'}}>
                                     {lang === 'zh-Hans' ? '开启后，程序启动时将自动检查是否有新版本可用' :
@@ -2232,7 +2286,7 @@ ${instruction}`;
                                             });
                                         }}
                                     >
-                                        {t("checkUpdate")}
+                                        {isWindows ? t("onlineUpdate") : t("checkUpdate")}
                                     </button>
                                     <button className="btn-link" style={{fontSize: '0.75rem', padding: '2px 6px'}} onClick={() => setShowInstallLog(true)}>{t("installLog")}</button>
                                     <button className="btn-link" style={{fontSize: '0.75rem', padding: '2px 6px'}} onClick={() => BrowserOpenURL("https://github.com/RapidAI/aicoder/issues/new")}>{t("bugReport")}</button>
@@ -2638,27 +2692,68 @@ ${instruction}`;
                         {updateResult.has_update ? (
                             <>
                                 <div style={{backgroundColor: '#f0f9ff', padding: '12px', borderRadius: '6px', marginBottom: '15px', border: '1px solid #e0f2fe'}}>
-                                    <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>当前版本</div>
+                                    <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{lang === 'zh-Hans' ? '当前版本' : lang === 'zh-Hant' ? '當前版本' : 'Current Version'}</div>
                                     <div style={{fontSize: '1rem', fontWeight: '600', color: '#1e40af', marginBottom: '12px'}}>v{APP_VERSION}</div>
-                                    <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>最新版本</div>
+                                    <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{lang === 'zh-Hans' ? '最新版本' : lang === 'zh-Hant' ? '最新版本' : 'Latest Version'}</div>
                                     <div style={{fontSize: '1rem', fontWeight: '600', color: '#059669'}}>{updateResult.latest_version}</div>
                                 </div>
-                                <p style={{margin: '10px 0', fontSize: '0.9rem', color: '#374151'}}>检查新版本，是否立即下载？</p>
-                                <a href={updateResult.release_url} target="_blank" rel="noopener noreferrer" style={{color: '#60a5fa', cursor: 'pointer', fontSize: '0.9rem', display: 'inline-block', marginTop: '10px'}}>
-                                    {t("downloadNow")}
-                                </a>
+                                
+                                {isWindows ? (
+                                    <div style={{marginTop: '15px'}}>
+                                        {isDownloading ? (
+                                            <div style={{width: '100%'}}>
+                                                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem'}}>
+                                                    <span>{t("downloading")}</span>
+                                                    <span>{downloadProgress}%</span>
+                                                </div>
+                                                <div style={{width: '100%', height: '10px', backgroundColor: '#e2e8f0', borderRadius: '5px', overflow: 'hidden'}}>
+                                                    <div style={{width: `${downloadProgress}%`, height: '100%', backgroundColor: '#3b82f6', transition: 'width 0.2s ease'}}></div>
+                                                </div>
+                                                <button 
+                                                    className="btn-link" 
+                                                    style={{marginTop: '10px', color: '#ef4444'}} 
+                                                    onClick={handleCancelDownload}
+                                                >
+                                                    {t("cancelDownload")}
+                                                </button>
+                                            </div>
+                                        ) : installerPath ? (
+                                            <div style={{textAlign: 'center', padding: '10px'}}>
+                                                <p style={{color: '#059669', fontWeight: 'bold', marginBottom: '15px'}}>{t("downloadComplete")}</p>
+                                                <button className="btn-primary" style={{width: '100%'}} onClick={handleInstall}>
+                                                    {t("installNow")}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                {downloadError && <p style={{color: '#ef4444', fontSize: '0.85rem', marginBottom: '10px'}}>{t("downloadError").replace("{error}", downloadError)}</p>}
+                                                <p style={{margin: '10px 0', fontSize: '0.9rem', color: '#374151'}}>{lang === 'zh-Hans' ? '检查新版本，是否立即下载更新？' : lang === 'zh-Hant' ? '檢查新版本，是否立即下載更新？' : 'New version found. Download and update now?'}</p>
+                                                <button className="btn-primary" style={{width: '100%'}} onClick={handleDownload}>
+                                                    {t("downloadAndUpdate")}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <>
+                                        <p style={{margin: '10px 0', fontSize: '0.9rem', color: '#374151'}}>{lang === 'zh-Hans' ? '检查新版本，是否立即下载？' : lang === 'zh-Hant' ? '檢查新版本，是否立即下載？' : 'Check for new version, download now?'}</p>
+                                        <a href={updateResult.release_url} target="_blank" rel="noopener noreferrer" style={{color: '#60a5fa', cursor: 'pointer', fontSize: '0.9rem', display: 'inline-block', marginTop: '10px'}}>
+                                            {t("downloadNow")}
+                                        </a>
+                                    </>
+                                )}
                             </>
                         ) : (
                             <div style={{backgroundColor: '#f0f9ff', padding: '12px', borderRadius: '6px', border: '1px solid #e0f2fe'}}>
-                                <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>当前版本</div>
+                                <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{lang === 'zh-Hans' ? '当前版本' : lang === 'zh-Hant' ? '當前版本' : 'Current Version'}</div>
                                 <div style={{fontSize: '1rem', fontWeight: '600', color: '#1e40af', marginBottom: '12px'}}>v{APP_VERSION}</div>
-                                <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>最新版本</div>
+                                <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{lang === 'zh-Hans' ? '最新版本' : lang === 'zh-Hant' ? '最新版本' : 'Latest Version'}</div>
                                 <div style={{fontSize: '1rem', fontWeight: '600', color: '#059669', marginBottom: '12px'}}>{updateResult.latest_version}</div>
-                                <p style={{margin: '0', fontSize: '0.9rem', color: '#059669', fontWeight: '500'}}>✓ 已是最新版本</p>
+                                <p style={{margin: '0', fontSize: '0.9rem', color: '#059669', fontWeight: '500'}}>✓ {lang === 'zh-Hans' ? '已是最新版本' : lang === 'zh-Hant' ? '已是最新版本' : 'Already up to date'}</p>
                             </div>
                         )}
                         <div style={{display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px'}}>
-                            <button className="btn-primary" onClick={() => {
+                            <button className="btn-primary" disabled={isDownloading} onClick={() => {
                                 setShowUpdateModal(false);
                                 // After closing update modal, show welcome page only if this was a startup check
                                 if (isStartupUpdateCheck && config && !config.hide_startup_popup) {
@@ -2666,6 +2761,8 @@ ${instruction}`;
                                 }
                                 // Reset the flag
                                 setIsStartupUpdateCheck(false);
+                                // Clear error if any
+                                setDownloadError("");
                             }}>{t("close")}</button>
                         </div>
                     </div>
