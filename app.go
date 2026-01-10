@@ -2235,8 +2235,13 @@ func (a *App) CheckUpdate(currentVersion string) (UpdateResult, error) {
 	// Extract release URL
 	htmlURL, _ := release["html_url"].(string)
 
-	// Construct direct download URL for AICoder-Setup.exe
-	downloadUrl := fmt.Sprintf("https://github.com/RapidAI/aicoder/releases/download/%s/AICoder-Setup.exe", tagName)
+	// Construct direct download URL based on platform
+	var downloadUrl string
+	if goruntime.GOOS == "darwin" {
+		downloadUrl = fmt.Sprintf("https://github.com/RapidAI/aicoder/releases/download/%s/AICoder-Universal.pkg", tagName)
+	} else {
+		downloadUrl = fmt.Sprintf("https://github.com/RapidAI/aicoder/releases/download/%s/AICoder-Setup.exe", tagName)
+	}
 	a.log(a.tr("CheckUpdate: Constructed download URL: %s", downloadUrl))
 
 	// Keep original version with V prefix for display
