@@ -150,7 +150,7 @@ func (a *App) startConfigWatcher() {
 					return
 				}
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					a.log("Config file modified: " + event.Name)
+					a.log(a.tr("Config file modified: ") + event.Name)
 					// Reload config and emit event
 					// We use a debounce-like approach or just reload. 
 					// Since Wails events are async, it should be fine.
@@ -2112,11 +2112,11 @@ func (a *App) CheckUpdate(currentVersion string) (UpdateResult, error) {
 	// Updated URL: aicoder instead of cceasy
 	url := "https://api.github.com/repos/RapidAI/aicoder/releases/latest"
 
-	a.log(fmt.Sprintf("CheckUpdate: Starting check against %s", url))
+	a.log(a.tr("CheckUpdate: Starting check against %s", url))
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		a.log(fmt.Sprintf("CheckUpdate: Failed to create request: %v", err))
+		a.log(a.tr("CheckUpdate: Failed to create request: %v", err))
 		return UpdateResult{LatestVersion: "检查失败", ReleaseUrl: ""}, err
 	}
 	req.Header.Set("User-Agent", "AICoder")
@@ -2132,7 +2132,7 @@ func (a *App) CheckUpdate(currentVersion string) (UpdateResult, error) {
 		for i := 0; i < 3; i++ {
 			decodedBytes, err := base64.StdEncoding.DecodeString(decoded)
 			if err != nil {
-				a.log(fmt.Sprintf("CheckUpdate: Failed to decode token at iteration %d: %v", i+1, err))
+				a.log(a.tr("CheckUpdate: Failed to decode token at iteration %d: %v", i+1, err))
 				decoded = ""
 				break
 			}
@@ -2140,10 +2140,10 @@ func (a *App) CheckUpdate(currentVersion string) (UpdateResult, error) {
 		}
 		if decoded != "" {
 			token = decoded
-			a.log("CheckUpdate: Using built-in GitHub token for authentication")
+			a.log(a.tr("CheckUpdate: Using built-in GitHub token for authentication"))
 		}
 	} else {
-		a.log("CheckUpdate: Using custom GitHub token from environment variable")
+		a.log(a.tr("CheckUpdate: Using custom GitHub token from environment variable"))
 	}
 
 	if token != "" {
@@ -2153,31 +2153,31 @@ func (a *App) CheckUpdate(currentVersion string) (UpdateResult, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		a.log(fmt.Sprintf("CheckUpdate: Failed to fetch GitHub API: %v", err))
+		a.log(a.tr("CheckUpdate: Failed to fetch GitHub API: %v", err))
 		return UpdateResult{LatestVersion: "网络错误", ReleaseUrl: ""}, err
 	}
 	defer resp.Body.Close()
 
-	a.log(fmt.Sprintf("CheckUpdate: HTTP Status: %d", resp.StatusCode))
+	a.log(a.tr("CheckUpdate: HTTP Status: %d", resp.StatusCode))
 
 	// Log rate limit headers for debugging
-	a.log(fmt.Sprintf("CheckUpdate: Rate Limit: %s/%s, Reset: %s",
+	a.log(a.tr("CheckUpdate: Rate Limit: %s/%s, Reset: %s",
 		resp.Header.Get("X-RateLimit-Remaining"),
 		resp.Header.Get("X-RateLimit-Limit"),
 		resp.Header.Get("X-RateLimit-Reset")))
 
 	// Check HTTP status
 	if resp.StatusCode != 200 {
-		a.log(fmt.Sprintf("CheckUpdate: GitHub API returned status %d", resp.StatusCode))
+		a.log(a.tr("CheckUpdate: GitHub API returned status %d", resp.StatusCode))
 		bodyText, _ := io.ReadAll(resp.Body)
-		a.log(fmt.Sprintf("CheckUpdate: Response: %s", string(bodyText[:min(len(bodyText), 200)])))
+		a.log(a.tr("CheckUpdate: Response: %s", string(bodyText[:min(len(bodyText), 200)])))
 
 		// Provide specific error message for rate limiting
 		if resp.StatusCode == 403 {
 			remaining := resp.Header.Get("X-RateLimit-Remaining")
 			if remaining == "0" {
 				resetTime := resp.Header.Get("X-RateLimit-Reset")
-				a.log(fmt.Sprintf("CheckUpdate: Rate limit exceeded, resets at: %s", resetTime))
+				a.log(a.tr("CheckUpdate: Rate limit exceeded, resets at: %s", resetTime))
 				return UpdateResult{LatestVersion: "速率限制", ReleaseUrl: ""},
 					fmt.Errorf("github api rate limit exceeded (resets at %s)", resetTime)
 			}
@@ -2190,25 +2190,24 @@ func (a *App) CheckUpdate(currentVersion string) (UpdateResult, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		a.log(fmt.Sprintf("CheckUpdate: Failed to read response body: %v", err))
+		a.log(a.tr("CheckUpdate: Failed to read response body: %v", err))
 		return UpdateResult{LatestVersion: "读取失败", ReleaseUrl: ""}, err
 	}
 
 	// Log raw response for debugging
-	a.log(fmt.Sprintf("CheckUpdate: Raw response length: %d bytes", len(body)))
-	a.log(fmt.Sprintf("CheckUpdate: Response body: %s", string(body[:min(len(body), 500)])))
+	a.log(a.tr("CheckUpdate: Raw response length: %d bytes", len(body)))
+	a.log(a.tr("CheckUpdate: Response body: %s", string(body[:min(len(body), 500)])))
 
 	// Parse JSON response
 	var release map[string]interface{}
-	err = json.Unmarshal(body, &release)
-	if err != nil {
-		a.log(fmt.Sprintf("CheckUpdate: Failed to parse JSON: %v", err))
-		a.log(fmt.Sprintf("CheckUpdate: Response body: %s", string(body[:min(len(body), 500)])))
+	if err := json.Unmarshal(body, &release); err != nil {
+		a.log(a.tr("CheckUpdate: Failed to parse JSON: %v", err))
+		a.log(a.tr("CheckUpdate: Response body: %s", string(body[:min(len(body), 500)])))
 		return UpdateResult{LatestVersion: "解析失败", ReleaseUrl: ""}, err
 	}
 
 	// Log parsed keys
-	a.log(fmt.Sprintf("CheckUpdate: Parsed keys: %v", getMapKeys(release)))
+	a.log(a.tr("CheckUpdate: Parsed keys: %v", getMapKeys(release)))
 
 	// Extract version from either 'name' or 'tag_name'
 	var tagName string
@@ -2216,17 +2215,17 @@ func (a *App) CheckUpdate(currentVersion string) (UpdateResult, error) {
 	// Try 'tag_name' field first (e.g., "v2.0.0.2")
 	if tag, ok := release["tag_name"].(string); ok && tag != "" {
 		tagName = tag
-		a.log(fmt.Sprintf("CheckUpdate: Found version in 'tag_name' field: %s", tagName))
+		a.log(a.tr("CheckUpdate: Found version in 'tag_name' field: %s", tagName))
 	} else if name, ok := release["name"].(string); ok && name != "" {
 		// Fallback to 'name' field (e.g., "V2.0.0.2")
 		tagName = name
-		a.log(fmt.Sprintf("CheckUpdate: Found version in 'name' field: %s", tagName))
+		a.log(a.tr("CheckUpdate: Found version in 'name' field: %s", tagName))
 	} else {
-		a.log(fmt.Sprintf("CheckUpdate: Neither 'name' nor 'tag_name' found. Available: %v", release))
+		a.log(a.tr("CheckUpdate: Neither 'name' nor 'tag_name' found. Available: %v", release))
 		return UpdateResult{LatestVersion: "找不到版本号", ReleaseUrl: ""}, fmt.Errorf("no version found in release")
 	}
 
-	a.log(fmt.Sprintf("CheckUpdate: Using version: %s", tagName))
+	a.log(a.tr("CheckUpdate: Using version: %s", tagName))
 
 	// Extract release URL
 	htmlURL, _ := release["html_url"].(string)
@@ -2243,15 +2242,15 @@ func (a *App) CheckUpdate(currentVersion string) (UpdateResult, error) {
 	cleanCurrent = strings.Split(cleanCurrent, " ")[0]
 
 	// Log for debugging
-	a.log(fmt.Sprintf("CheckUpdate: Latest version: %s, Current version: %s, Display version: %s", latestVersionForComparison, cleanCurrent, displayVersion))
+	a.log(a.tr("CheckUpdate: Latest version: %s, Current version: %s, Display version: %s", latestVersionForComparison, cleanCurrent, displayVersion))
 
 	// Compare versions
 	if compareVersions(latestVersionForComparison, cleanCurrent) > 0 {
-		a.log(fmt.Sprintf("CheckUpdate: Update available! %s > %s", latestVersionForComparison, cleanCurrent))
+		a.log(a.tr("CheckUpdate: Update available! %s > %s", latestVersionForComparison, cleanCurrent))
 		return UpdateResult{HasUpdate: true, LatestVersion: displayVersion, ReleaseUrl: htmlURL}, nil
 	}
 
-	a.log(fmt.Sprintf("CheckUpdate: Already on latest version"))
+	a.log(a.tr("CheckUpdate: Already on latest version"))
 	return UpdateResult{HasUpdate: false, LatestVersion: displayVersion, ReleaseUrl: htmlURL}, nil
 }
 
@@ -3060,19 +3059,35 @@ func (a *App) PackLog(logContent string) (string, error) {
 
 		
 
-					"Checking Node.js installation...": {
+										"Checking Node.js installation...": {
 
 		
 
-						"zh-Hans": "正在检查 Node.js 安装...",
+											"zh-Hans": "正在检查 Node.js 安装...",
 
 		
 
-						"zh-Hant": "正在檢查 Node.js 安裝...",
+											"zh-Hant": "正在檢查 Node.js 安裝...",
 
 		
 
-					},
+										},
+
+		
+
+										"Initializing...": {
+
+		
+
+											"zh-Hans": "初始化中...",
+
+		
+
+											"zh-Hant": "初始化中...",
+
+		
+
+										},
 
 		
 
@@ -3384,19 +3399,1131 @@ func (a *App) PackLog(logContent string) (string, error) {
 
 		
 
-					"%s updated successfully to %s.": {
+										"%s updated successfully to %s.": {
 
 		
 
-						"zh-Hans": "%s 成功更新到 %s。",
+							
 
 		
 
-						"zh-Hant": "%s 成功更新到 %s。",
+											"zh-Hans": "%s 成功更新到 %s。",
 
 		
 
-					},
+							
+
+		
+
+											"zh-Hant": "%s 成功更新到 %s。",
+
+		
+
+							
+
+		
+
+										},
+
+		
+
+					
+
+		
+
+																				"CheckUpdate: Starting check against %s": {
+
+		
+
+					
+
+		
+
+																					"zh-Hans": "检查更新：正在从 %s 检查...",
+
+		
+
+					
+
+		
+
+																					"zh-Hant": "檢查更新：正在從 %s 檢查...",
+
+		
+
+					
+
+		
+
+																				},
+
+		
+
+					
+
+		
+
+																				"CheckUpdate: Failed to create request: %v": {
+
+		
+
+					
+
+		
+
+																					"zh-Hans": "检查更新：创建请求失败: %v",
+
+		
+
+					
+
+		
+
+																					"zh-Hant": "檢查更新：建立請求失敗: %v",
+
+		
+
+					
+
+		
+
+																				},
+
+		
+
+					
+
+		
+
+																				"CheckUpdate: Failed to decode token at iteration %d: %v": {
+
+		
+
+					
+
+		
+
+																					"zh-Hans": "检查更新：第 %d 次迭代解码令牌失败: %v",
+
+		
+
+					
+
+		
+
+																					"zh-Hant": "檢查更新：第 %d 次迭代解碼令牌失敗: %v",
+
+		
+
+					
+
+		
+
+																				},
+
+		
+
+					
+
+		
+
+																				"CheckUpdate: HTTP Status: %d": {
+
+		
+
+					
+
+		
+
+																					"zh-Hans": "检查更新：HTTP 状态码: %d",
+
+		
+
+					
+
+		
+
+																					"zh-Hant": "檢查更新：HTTP 狀態碼: %d",
+
+		
+
+					
+
+		
+
+																				},
+
+		
+
+					
+
+		
+
+																														"CheckUpdate: Rate Limit: %s/%s, Reset: %s": {
+
+		
+
+					
+
+		
+
+																															"zh-Hans": "检查更新：速率限制: %s/%s, 重置时间: %s",
+
+		
+
+					
+
+		
+
+																															"zh-Hant": "檢查更新：速率限制: %s/%s, 重置時間: %s",
+
+		
+
+					
+
+		
+
+																														},
+
+		
+
+					
+
+		
+
+																																								"CheckUpdate: Response: %s": {
+
+		
+
+					
+
+		
+
+																																									"zh-Hans": "检查更新：响应内容: %s",
+
+		
+
+					
+
+		
+
+																																									"zh-Hant": "檢查更新：響應內容: %s",
+
+		
+
+					
+
+		
+
+																																								},
+
+		
+
+					
+
+		
+
+																																								"CheckUpdate: Failed to read response body: %v": {
+
+		
+
+					
+
+		
+
+																																									"zh-Hans": "检查更新：读取响应体失败: %v",
+
+		
+
+					
+
+		
+
+																																									"zh-Hant": "檢查更新：讀取響應體失敗: %v",
+
+		
+
+					
+
+		
+
+																																								},
+
+		
+
+					
+
+		
+
+																																								"CheckUpdate: Raw response length: %d bytes": {
+
+		
+
+					
+
+		
+
+																																									"zh-Hans": "检查更新：原始响应长度: %d 字节",
+
+		
+
+					
+
+		
+
+																																									"zh-Hant": "檢查更新：原始響應長度: %d 位元組",
+
+		
+
+					
+
+		
+
+																																								},
+
+		
+
+					
+
+		
+
+																																																		"CheckUpdate: Response body: %s": {
+
+		
+
+					
+
+		
+
+																																																			"zh-Hans": "检查更新：响应体: %s",
+
+		
+
+					
+
+		
+
+																																																			"zh-Hant": "檢查更新：響應體: %s",
+
+		
+
+					
+
+		
+
+																																																		},
+
+		
+
+					
+
+		
+
+																																																		"CheckUpdate: Parsed keys: %v": {
+
+		
+
+					
+
+		
+
+																																																			"zh-Hans": "检查更新：解析出的键: %v",
+
+		
+
+					
+
+		
+
+																																																			"zh-Hant": "檢查更新：解析出的鍵: %v",
+
+		
+
+					
+
+		
+
+																																																		},
+
+		
+
+					
+
+		
+
+																																																		"CheckUpdate: Found version in 'tag_name' field: %s": {
+
+		
+
+					
+
+		
+
+																																																			"zh-Hans": "检查更新：在 'tag_name' 字段中找到版本: %s",
+
+		
+
+					
+
+		
+
+																																																			"zh-Hant": "檢查更新：在 'tag_name' 欄位中找到版本: %s",
+
+		
+
+					
+
+		
+
+																																																		},
+
+		
+
+					
+
+		
+
+																																																		"CheckUpdate: Found version in 'name' field: %s": {
+
+		
+
+					
+
+		
+
+																																																			"zh-Hans": "检查更新：在 'name' 字段中找到版本: %s",
+
+		
+
+					
+
+		
+
+																																																			"zh-Hant": "檢查更新：在 'name' 欄位中找到版本: %s",
+
+		
+
+					
+
+		
+
+																																																		},
+
+		
+
+					
+
+		
+
+																																																		"CheckUpdate: Neither 'name' nor 'tag_name' found. Available: %v": {
+
+		
+
+					
+
+		
+
+																																																			"zh-Hans": "检查更新：未找到 'name' 或 'tag_name'。可用字段: %v",
+
+		
+
+					
+
+		
+
+																																																			"zh-Hant": "檢查更新：未找到 'name' 或 'tag_name'。可用欄位: %v",
+
+		
+
+					
+
+		
+
+																																																		},
+
+		
+
+					
+
+		
+
+																																																		"CheckUpdate: Using version: %s": {
+
+		
+
+					
+
+		
+
+																																																			"zh-Hans": "检查更新：使用版本: %s",
+
+		
+
+					
+
+		
+
+																																																			"zh-Hant": "檢查更新：使用版本: %s",
+
+		
+
+					
+
+		
+
+																																																		},
+
+		
+
+					
+
+		
+
+										"CheckUpdate: Using built-in GitHub token for authentication": {
+
+		
+
+											"zh-Hans": "检查更新：使用内置 GitHub 令牌进行身份验证",
+
+		
+
+											"zh-Hant": "檢查更新：使用內置 GitHub 令牌進行身份驗證",
+
+		
+
+										},
+
+		
+
+					
+
+		
+
+															"CheckUpdate: Using custom GitHub token from environment variable": {
+
+		
+
+					
+
+		
+
+																"zh-Hans": "检查更新：使用环境变量中的自定义 GitHub 令牌",
+
+		
+
+					
+
+		
+
+																"zh-Hant": "檢查更新：使用環境變數中的自定義 GitHub 令牌",
+
+		
+
+					
+
+		
+
+															},
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+															"CheckUpdate: Already on latest version": {
+
+		
+
+					
+
+		
+
+																"zh-Hans": "检查更新：已是最新版本",
+
+		
+
+					
+
+		
+
+																"zh-Hant": "檢查更新：已是最新版本",
+
+		
+
+					
+
+		
+
+															},
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+															"CheckUpdate: Latest version: %s, Current version: %s, Display version: %s": {
+
+		
+
+					
+
+		
+
+																"zh-Hans": "检查更新：最新版本: %s, 当前版本: %s, 显示版本: %s",
+
+		
+
+					
+
+		
+
+																"zh-Hant": "檢查更新：最新版本: %s, 當前版本: %s, 顯示版本: %s",
+
+		
+
+					
+
+		
+
+															},
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																												"CheckUpdate: Update available! %s > %s": {
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																													"zh-Hans": "检查更新：发现新版本！ %s > %s",
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																													"zh-Hant": "檢查更新：發現新版本！ %s > %s",
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																												},
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+															
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																												"CheckUpdate: Failed to fetch GitHub API: %v": {
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																													"zh-Hans": "检查更新：获取 GitHub API 失败: %v",
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																													"zh-Hant": "檢查更新：獲取 GitHub API 失敗: %v",
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																												},
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+															
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																												"CheckUpdate: Rate limit exceeded, resets at: %s": {
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																													"zh-Hans": "检查更新：超出速率限制，重置时间: %s",
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																													"zh-Hant": "檢查更新：超出速率限制，重置時間: %s",
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																												},
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+															
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																												"CheckUpdate: Failed to parse JSON: %v": {
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																													"zh-Hans": "检查更新：解析 JSON 失败: %v",
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																													"zh-Hant": "檢查更新：解析 JSON 失敗: %v",
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																												},
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+															
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																												"CheckUpdate: GitHub API returned status %d": {
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																													"zh-Hans": "检查更新：GitHub API 返回状态 %d",
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																													"zh-Hant": "檢查更新：GitHub API 返回狀態 %d",
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																												},
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+															
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																				
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+															
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+																												"Config file modified: ": {
+
+		
+
+					
+
+		
+
+																"zh-Hans": "配置文件已修改：",
+
+		
+
+					
+
+		
+
+																"zh-Hant": "配置文件已修改：",
+
+		
+
+					
+
+		
+
+															},
+
+		
+
+					
+
+		
+
+										
+
+		
+
+					
+
+		
+
+															"Updated PATH environment variable: ": {
+
+		
+
+											"zh-Hans": "已更新 PATH 环境变量：",
+
+		
+
+											"zh-Hant": "已更新 PATH 環境變數：",
+
+		
+
+										},
+
+		
+
+					
+
+		
+
+										"Updated PATH environment variable for Git.": {
+
+		
+
+											"zh-Hans": "已为 Git 更新 PATH 环境变量。",
+
+		
+
+											"zh-Hant": "已為 Git 更新 PATH 環境變數。",
+
+		
+
+										},
 
 		
 

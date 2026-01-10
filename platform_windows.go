@@ -67,7 +67,7 @@ func (a *App) updatePathForNode() {
 
 	if newPath != currentPath {
 		os.Setenv("PATH", newPath)
-		a.log("Updated PATH environment variable: " + newPath)
+		a.log(a.tr("Updated PATH environment variable: ") + newPath)
 	}
 }
 
@@ -248,7 +248,7 @@ func (a *App) updatePathForGit() {
 
 	if newPath != currentPath {
 		os.Setenv("PATH", newPath)
-		a.log("Updated PATH environment variable for Git.")
+		a.log(a.tr("Updated PATH environment variable for Git."))
 	}
 }
 

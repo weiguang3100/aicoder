@@ -618,6 +618,29 @@ body {
     margin: 20px 0;
 }
 
+.toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(30, 41, 59, 0.9);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 5000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    animation: toast-in-out 3s ease-in-out forwards;
+}
+
+@keyframes toast-in-out {
+    0% { opacity: 0; bottom: 20px; }
+    15% { opacity: 1; bottom: 30px; }
+    85% { opacity: 1; bottom: 30px; }
+    100% { opacity: 0; bottom: 20px; }
+}
+
 /* Tool Grid Styles */
 .tool-grid .sidebar-item {
     flex-direction: column;

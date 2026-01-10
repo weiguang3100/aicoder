@@ -613,7 +613,7 @@ function App() {
     }, [showModelSettings, activeTab]);
 
     const [toolStatuses, setToolStatuses] = useState<any[]>([]);
-    const [envLogs, setEnvLogs] = useState<string[]>(["Initializing..."]);
+    const [envLogs, setEnvLogs] = useState<string[]>([]);
     const [showLogs, setShowLogs] = useState(false);
     const [yoloMode, setYoloMode] = useState(false);
     const [selectedProjectForLaunch, setSelectedProjectForLaunch] = useState<string>("");
@@ -1409,7 +1409,7 @@ ${instruction}`;
                     />
                 ) : (
                     <div style={{fontSize: '0.9rem', color: '#6b7280', marginBottom: '15px', height: '20px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                        {envLogs[envLogs.length - 1]}
+                        {envLogs.length > 0 ? envLogs[envLogs.length - 1] : t("initializing")}
                     </div>
                 )}
 
@@ -2521,27 +2521,32 @@ ${instruction}`;
 
             {showInstallLog && (
                 <div className="modal-overlay" onClick={() => setShowInstallLog(false)}>
-                    <div style={{position: 'relative', width: '600px', maxWidth: '90vw', margin: '50px auto'}}>
-                        <div className="modal-content" style={{width: '100%', paddingBottom: '60px'}} onClick={e => e.stopPropagation()}>
-                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
-                                <h3 style={{margin: 0, color: '#60a5fa'}}>{t("installLogTitle")}</h3>
-                                <button className="modal-close" onClick={() => setShowInstallLog(false)}>&times;</button>
-                            </div>
-                            <div 
-                                className="elegant-scrollbar"
-                                style={{
-                                backgroundColor: '#1e293b',
-                                color: '#e2e8f0',
-                                padding: '15px',
-                                borderRadius: '8px',
-                                height: '250px',
-                                overflowY: 'auto',
-                                fontFamily: 'monospace',
-                                fontSize: '0.85rem',
-                                whiteSpace: 'pre-wrap',
-                                textAlign: 'left'
-                            }}>
-                                {envLogs.map((log, index) => {
+                    <div className="modal-content" style={{width: '600px', maxWidth: '90vw'}} onClick={e => e.stopPropagation()}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                            <h3 style={{margin: 0, color: '#60a5fa'}}>{t("installLogTitle")}</h3>
+                            <button className="modal-close" onClick={() => setShowInstallLog(false)}>&times;</button>
+                        </div>
+                        <div 
+                            className="elegant-scrollbar"
+                            style={{
+                            backgroundColor: '#1e293b',
+                            color: '#e2e8f0',
+                            padding: '15px',
+                            borderRadius: '8px',
+                            height: '250px',
+                            overflowY: 'auto',
+                            fontFamily: 'monospace',
+                            fontSize: '0.85rem',
+                            whiteSpace: 'pre-wrap',
+                            textAlign: 'left',
+                            marginBottom: '15px'
+                        }}>
+                            {envLogs.length === 0 ? (
+                                <div style={{color: '#94a3b8', fontStyle: 'italic'}}>
+                                    {t("initializing")}
+                                </div>
+                            ) : (
+                                envLogs.map((log, index) => {
                                     const isError = /error|failed/i.test(log);
                                     return (
                                         <div key={index} style={{
@@ -2551,28 +2556,20 @@ ${instruction}`;
                                             {isError ? `** ${log}` : log}
                                         </div>
                                     );
-                                })}
-                            </div>
+                                })
+                            )}
                         </div>
                         <div style={{
-                            position: 'absolute',
-                            bottom: '15px',
-                            left: '20px',
-                            right: '20px',
                             display: 'flex',
                             justifyContent: 'flex-end',
-                            gap: '10px',
-                            backgroundColor: 'white',
-                            padding: '10px',
-                            borderRadius: '8px',
-                            zIndex: 10
-                        }} onClick={e => e.stopPropagation()}>
+                            gap: '10px'
+                        }}>
                             <button
                                 className="btn-link"
                                 onClick={() => {
                                     const logText = envLogs.join('\n');
                                     navigator.clipboard.writeText(logText).then(() => {
-                                        alert(lang === 'zh-Hans' ? '日志已复制到剪贴板' : 'Logs copied to clipboard');
+                                        showToastMessage(lang === 'zh-Hans' ? '日志已复制到剪贴板' : 'Logs copied to clipboard');
                                     });
                                 }}
                             >
@@ -2603,7 +2600,6 @@ ${instruction}`;
                             >
                                 {t("sendLog")}
                             </button>
-                            <button className="btn-primary" style={{marginLeft: 'auto'}} onClick={() => setShowInstallLog(false)}>{t("close")}</button>
                         </div>
                     </div>
                 </div>
@@ -3355,6 +3351,12 @@ ${instruction}`;
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {showToast && (
+                <div className="toast">
+                    {toastMessage}
                 </div>
             )}
         </div>
