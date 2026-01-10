@@ -376,3 +376,11 @@ func (a *App) GetDownloadsFolder() (string, error) {
 	return home, nil
 
 }
+
+func getWindowsVersionHidden() string {
+	return ""
+}
+
+func createUpdateCmd(path string) *exec.Cmd {
+	return exec.Command(path, "update")
+}

@@ -3099,19 +3099,9 @@ func (a *App) getOSVersion() string {
 			return strings.TrimSpace(string(out))
 		}
 	case "windows":
-		// Simple version check for Windows
-		cmd := exec.Command("cmd", "/c", "ver")
-		out, err := cmd.Output()
-		if err == nil {
-			// Sanitize output to ASCII only to avoid encoding issues with localized Windows
-			verStr := string(out)
-			safeVer := ""
-			for _, r := range verStr {
-				if r >= 32 && r <= 126 {
-					safeVer += string(r)
-				}
-			}
-			return strings.TrimSpace(safeVer)
+		// Use platform-specific function to hide window
+		if ver := getWindowsVersionHidden(); ver != "" {
+			return ver
 		}
 	case "linux":
 		// Try /etc/os-release

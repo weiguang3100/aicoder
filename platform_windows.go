@@ -213,9 +213,9 @@ func (a *App) installNodeJS() error {
 	defer os.Remove(msiPath)
 
 	a.log(a.tr("Installing Node.js (this may take a moment, please grant administrator permission if prompted)..."))
-	// Use /passive for basic UI or /qn for completely silent.
+	// Use /qn for completely silent installation (no UI)
 	// Adding ALLUSERS=1 to ensure it's in the standard path.
-	cmd := exec.Command("msiexec", "/i", msiPath, "/passive", "ALLUSERS=1")
+	cmd := exec.Command("msiexec", "/i", msiPath, "/qn", "ALLUSERS=1")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -811,7 +811,37 @@ func (a *App) LaunchInstallerAndExit(installerPath string) error {
 		time.Sleep(500 * time.Millisecond)
 		runtime.Quit(a.ctx)
 	}()
-	
+
 	return nil
+}
+
+func getWindowsVersionHidden() string {
+	cmd := exec.Command("cmd")
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CmdLine:    `cmd /c ver`,
+		HideWindow: true,
+	}
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	// Sanitize output to ASCII only
+	verStr := string(out)
+	safeVer := ""
+	for _, r := range verStr {
+		if r >= 32 && r <= 126 {
+			safeVer += string(r)
+		}
+	}
+	return strings.TrimSpace(safeVer)
+}
+
+func createUpdateCmd(path string) *exec.Cmd {
+	cmd := exec.Command("cmd")
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CmdLine:    fmt.Sprintf(`cmd /c ""%s" update"`, path),
+		HideWindow: true,
+	}
+	return cmd
 }
 

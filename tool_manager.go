@@ -286,7 +286,7 @@ func (tm *ToolManager) UpdateTool(name string) error {
 			return fmt.Errorf("tool %s is not installed", name)
 		}
 
-		cmd = exec.Command(status.Path, "update")
+		cmd = createUpdateCmd(status.Path)
 
 		// Set up environment variables with proper PATH
 		home, _ := os.UserHomeDir()

@@ -430,3 +430,11 @@ func (a *App) LaunchInstallerAndExit(installerPath string) error {
 
 	return nil
 }
+
+func getWindowsVersionHidden() string {
+	return ""
+}
+
+func createUpdateCmd(path string) *exec.Cmd {
+	return exec.Command(path, "update")
+}

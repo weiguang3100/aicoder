@@ -9,10 +9,10 @@ APP_NAME="AICoder"
 # Read version from build_number if exists, else default
 if [ -f "build_number" ]; then
     BUILD_NUM=$(cat build_number)
-    VERSION="2.7.5.${BUILD_NUM}"
+    VERSION="3.2.1.${BUILD_NUM}"
 else
     BUILD_NUM="1"
-    VERSION="2.7.5.1"
+    VERSION="3.2.1.1"
 fi
 
 # Sync version to frontend
