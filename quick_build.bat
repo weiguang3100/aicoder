@@ -31,7 +31,7 @@ set "GOARCH=arm64"
 go build -tags desktop,production -ldflags "-s -w -H windowsgui" -o "%BIN_DIR%\%APP_NAME%_arm64.exe"
 
 echo [5/5] Creating NSIS installer...
-"%NSIS_PATH%" /DINFO_PRODUCTVERSION="2.6.4.2356" /DARG_WAILS_AMD64_BINARY="%BIN_DIR%\%APP_NAME%_amd64.exe" /DARG_WAILS_ARM64_BINARY="%BIN_DIR%\%APP_NAME%_arm64.exe" "%~dp0build\windows\installer\multiarch.nsi"
+"%NSIS_PATH%" /DINFO_PRODUCTVERSION="3.1.0.3100" /DARG_WAILS_AMD64_BINARY="%BIN_DIR%\%APP_NAME%_amd64.exe" /DARG_WAILS_ARM64_BINARY="%BIN_DIR%\%APP_NAME%_arm64.exe" "%~dp0build\windows\installer\multiarch.nsi"
 
 del "%~dp0resource_windows_amd64.syso" 2>nul
 del "%~dp0resource_windows_arm64.syso" 2>nul

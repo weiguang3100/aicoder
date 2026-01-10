@@ -2,6 +2,13 @@ import {useEffect, useState, useRef} from 'react';
 import './App.css';
 import {buildNumber} from './version';
 import appIcon from './assets/images/appicon.png';
+import claudecodeIcon from './assets/images/claudecode.png';
+import codebuddyIcon from './assets/images/Codebuddy.png';
+import codexIcon from './assets/images/Codex.png';
+import geminiIcon from './assets/images/gemincli.png';
+import iflowIcon from './assets/images/iflow.png';
+import opencodeIcon from './assets/images/opencode.png';
+import qoderIcon from './assets/images/qodercli.png';
 import {CheckToolsStatus, InstallTool, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl} from "../wailsjs/go/main/App";
 import {EventsOn, EventsOff, BrowserOpenURL, Quit} from "../wailsjs/runtime";
 import {main} from "../wailsjs/go/models";
@@ -21,11 +28,12 @@ const subscriptionUrls: {[key: string]: string} = {
     "GACCode": "https://gaccode.com/signup?ref=FVMCU97H",
     "DeepSeek": "https://platform.deepseek.com/api_keys",
     "CodeRelay": "https://api.code-relay.com/register?aff=0ZtO",
-    "ChatFire": "https://api.chatfire.cn/register?aff=jira"
+    "ChatFire": "https://api.chatfire.cn/register?aff=jira",
+    "XiaoMi": "https://platform.xiaomimimo.com/#/console/api-keys"
 };
 
 
-const APP_VERSION = "2.6.4.2356"
+const APP_VERSION = "3.1.0.3100"
 
 const translations: any = {
     "en": {
@@ -42,7 +50,6 @@ const translations: any = {
         "yoloMode": "Yolo Mode",
         "dangerouslySkip": "(Dangerously Skip Permissions)",
         "launchBtn": "Launch Tool",
-        "activeModel": "ACTIVE PROVIDER",
         "modelSettings": "PROVIDER SETTINGS",
         "providerName": "Provider Name",
         "modelName": "Model ID",
@@ -97,6 +104,8 @@ const translations: any = {
         "codebuddyDesc": "CodeBuddy AI Assistant",
         "qoder": "Qoder CLI",
         "qoderDesc": "Qoder AI Programming Assistant",
+        "iflow": "iFlow CLI",
+        "iflowDesc": "iFlow AI Programming Assistant",
         "bugReport": "Problem Feedback",
         "businessCooperation": "Business: WeChat znsoft",
         "original": "Original",
@@ -145,7 +154,9 @@ const translations: any = {
         "proxyNotConfigured": "Proxy not configured. Please configure proxy settings first.",
         "useDefaultProxy": "Use default proxy settings",
         "proxyHostPlaceholder": "e.g., 192.168.1.1 or proxy.company.com",
-        "proxyPortPlaceholder": "e.g., 8080"
+        "proxyPortPlaceholder": "e.g., 8080",
+        "freeload": "Free",
+        "checkUpdateOnStartup": "Check for updates on startup"
     },
     "zh-Hans": {
         "title": "AICoder",
@@ -162,8 +173,7 @@ const translations: any = {
         "yoloMode": "Yolo 模式",
         "dangerouslySkip": "(危险：跳过权限检查)",
         "launchBtn": "启动工具",
-        "activeModel": "服务商选择",
-        "modelSettings": "服务商设置",
+        "modelSettings": "服务商配置",
         "providerName": "服务商名称",
         "modelName": "模型名称/ID",
         "apiKey": "API Key",
@@ -217,6 +227,8 @@ const translations: any = {
         "codebuddyDesc": "CodeBuddy 编程助手",
         "qoder": "Qoder CLI",
         "qoderDesc": "Qoder AI 辅助编程",
+        "iflow": "iFlow CLI",
+        "iflowDesc": "iFlow AI 辅助编程",
         "bugReport": "问题反馈",
         "businessCooperation": "商业合作：微信 znsoft",
         "original": "原厂",
@@ -264,7 +276,9 @@ const translations: any = {
         "proxyNotConfigured": "代理未配置。请先配置代理设置。",
         "useDefaultProxy": "使用默认代理设置",
         "proxyHostPlaceholder": "例如：192.168.1.1 或 proxy.company.com",
-        "proxyPortPlaceholder": "例如：8080"
+        "proxyPortPlaceholder": "例如：8080",
+        "freeload": "正白嫖",
+        "checkUpdateOnStartup": "启动时检查更新"
     },
     "zh-Hant": {
         "title": "AICoder",
@@ -281,7 +295,6 @@ const translations: any = {
         "yoloMode": "Yolo 模式",
         "dangerouslySkip": "(危險：跳過權限檢查)",
         "launchBtn": "啟動工具",
-        "activeModel": "服務商選擇",
         "modelSettings": "服務商設定",
         "providerName": "服務商名稱",
         "modelName": "模型名稱/ID",
@@ -334,6 +347,8 @@ const translations: any = {
         "codebuddyDesc": "CodeBuddy 編程助手",
         "qoder": "Qoder CLI",
         "qoderDesc": "Qoder AI 輔助編程",
+        "iflow": "iFlow CLI",
+        "iflowDesc": "iFlow AI 輔助編程",
         "bugReport": "問題反饋",
         "businessCooperation": "商業合作：微信 znsoft",
         "original": "原廠",
@@ -381,7 +396,9 @@ const translations: any = {
         "proxyNotConfigured": "代理未配置。請先配置代理設置。",
         "useDefaultProxy": "使用預設代理設置",
         "proxyHostPlaceholder": "例如：192.168.1.1 或 proxy.company.com",
-        "proxyPortPlaceholder": "例如：8080"
+        "proxyPortPlaceholder": "例如：8080",
+        "freeload": "正白嫖",
+        "checkUpdateOnStartup": "啟動時檢查更新"
     }
 };
 
@@ -406,23 +423,9 @@ const ToolConfiguration = ({
             border: '1px solid rgba(96, 165, 250, 0.1)',
             marginBottom: '15px'
         }}>
-            <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'
-            }}>
-                <h3 style={{
-                    fontSize: '0.9rem', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0
-                }}>{t("activeModel")}</h3>
-                <button 
-                    className="btn-link" 
-                    onClick={() => setShowModelSettings(true)}
-                    style={{borderColor: '#60a5fa', color: '#60a5fa'}}
-                >
-                    {t("editConfig")}
-                </button>
-            </div>
             <div className="model-switcher" style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: '12px',
                 width: '100%',
                 paddingTop: '8px',
@@ -434,7 +437,7 @@ const ToolConfiguration = ({
                         className={`model-btn ${toolCfg.current_model === model.model_name ? 'selected' : ''}`}
                         onClick={() => handleModelSwitch(model.model_name)}
                         style={{
-                            minWidth: '100px',
+                            minWidth: '94px',
                             padding: '4px 4px',
                             fontSize: '0.8rem',
                             borderBottom: (model.api_key && model.api_key.trim() !== "") ? '3px solid #60a5fa' : '1px solid var(--border-color)',
@@ -498,6 +501,24 @@ const ToolConfiguration = ({
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                             }}>
                                 {t("premium")}
+                            </span>
+                        )}
+                        {model.model_name.toLowerCase().includes("xiaomi") && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '-8px',
+                                right: '0px',
+                                backgroundColor: '#60a5fa',
+                                color: 'white',
+                                fontSize: '10px',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                fontWeight: 'bold',
+                                zIndex: 10,
+                                transform: 'scale(0.85)',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                            }}>
+                                {t("freeload")}
                             </span>
                         )}
                         {model.is_custom ? (
@@ -767,7 +788,7 @@ function App() {
             }
         };
         const doneHandler = () => {
-            ResizeWindow(700, 440);
+            ResizeWindow(657, 440);
             setIsLoading(false);
         };
 
@@ -791,8 +812,31 @@ function App() {
                 setLang(cfg.language);
                 SetLanguage(cfg.language);
             }
-            if (cfg && !cfg.hide_startup_popup) {
-                setShowStartupPopup(true);
+
+            // Check for updates on startup if enabled
+            if (cfg && cfg.check_update_on_startup !== false) {
+                CheckUpdate(APP_VERSION).then(res => {
+                    if (res && res.has_update) {
+                        setUpdateResult(res);
+                        setShowUpdateModal(true);
+                    } else {
+                        // No update available, show welcome page if needed
+                        if (cfg && !cfg.hide_startup_popup) {
+                            setShowStartupPopup(true);
+                        }
+                    }
+                }).catch(err => {
+                    console.error("Startup update check failed:", err);
+                    // On error, still show welcome page if needed
+                    if (cfg && !cfg.hide_startup_popup) {
+                        setShowStartupPopup(true);
+                    }
+                });
+            } else {
+                // Update check disabled, show welcome page if needed
+                if (cfg && !cfg.hide_startup_popup) {
+                    setShowStartupPopup(true);
+                }
             }
             if (cfg && cfg.current_project) {
                 setSelectedProjectForLaunch(cfg.current_project);
@@ -806,7 +850,7 @@ function App() {
                 
                 // Keep track of the last active tool for settings/launch logic
                 const lastActiveTool = cfg.active_tool || "claude";
-                if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder') {
+                if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder' || lastActiveTool === 'iflow') {
                     setActiveTool(lastActiveTool);
                 }
                 
@@ -818,7 +862,7 @@ function App() {
                     if (idx !== -1) setActiveTab(idx);
 
                     // Check if any model has an API key configured for the active tool
-                    if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder') {
+                    if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder' || lastActiveTool === 'iflow') {
                         const hasAnyApiKey = toolCfg.models.some((m: any) => m.api_key && m.api_key.trim() !== "");
                         if (!hasAnyApiKey) {
                             setShowModelSettings(true);
@@ -836,7 +880,7 @@ function App() {
             // Sync with tray menu changes
             const tool = cfg.active_tool || "message";
             setNavTab(tool);
-            if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy') {
+            if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy' || tool === 'iflow') {
                 setActiveTool(tool);
                 const toolCfg = (cfg as any)[tool];
                 if (toolCfg && toolCfg.models) {
@@ -862,22 +906,37 @@ function App() {
             // Add opencode check and installation if missing
             const opencodeStatus = statuses?.find((s: any) => s.name === "opencode");
             if (opencodeStatus && !opencodeStatus.installed) {
-                setEnvLogs(prev => [...prev, lang === 'zh-Hans' ? "正在安装 Opencode AI..." : "Installing Opencode AI..."]);
+                setEnvLogs(prev => [...prev, lang === 'zh-Hans' ? "正在安装 Opencode AI..." : 
+                                         lang === 'zh-Hant' ? "正在安裝 Opencode AI..." :
+                                         "Installing Opencode AI..."]);
                 await InstallTool("opencode");
             }
 
             // Add codebuddy check and installation if missing
             const codebuddyStatus = statuses?.find((s: any) => s.name === "codebuddy");
             if (codebuddyStatus && !codebuddyStatus.installed) {
-                setEnvLogs(prev => [...prev, lang === 'zh-Hans' ? "正在安装 CodeBuddy AI..." : "Installing CodeBuddy AI..."]);
+                setEnvLogs(prev => [...prev, lang === 'zh-Hans' ? "正在安装 CodeBuddy AI..." : 
+                                         lang === 'zh-Hant' ? "正在安裝 CodeBuddy AI..." :
+                                         "Installing CodeBuddy AI..."]);
                 await InstallTool("codebuddy");
             }
 
             // Add qoder check and installation if missing
             const qoderStatus = statuses?.find((s: any) => s.name === "qoder");
             if (qoderStatus && !qoderStatus.installed) {
-                setEnvLogs(prev => [...prev, lang === 'zh-Hans' ? "正在安装 Qoder CLI..." : "Installing Qoder CLI..."]);
+                setEnvLogs(prev => [...prev, lang === 'zh-Hans' ? "正在安装 Qoder CLI..." : 
+                                         lang === 'zh-Hant' ? "正在安裝 Qoder CLI..." :
+                                         "Installing Qoder CLI..."]);
                 await InstallTool("qoder");
+            }
+
+            // Add iflow check and installation if missing
+            const iflowStatus = statuses?.find((s: any) => s.name === "iflow");
+            if (iflowStatus && !iflowStatus.installed) {
+                setEnvLogs(prev => [...prev, lang === 'zh-Hans' ? "正在安装 iFlow CLI..." : 
+                                         lang === 'zh-Hant' ? "正在安裝 iFlow CLI..." :
+                                         "Installing iFlow CLI..."]);
+                await InstallTool("iflow");
             }
 
             // Re-check after installation
@@ -901,7 +960,7 @@ function App() {
 
     const switchTool = (tool: string) => {
         setNavTab(tool);
-        if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy' || tool === 'qoder') {
+        if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy' || tool === 'qoder' || tool === 'iflow') {
             setActiveTool(tool);
             setActiveTab(0); // Reset to Original when switching tools
         }
@@ -965,7 +1024,7 @@ function App() {
 
         // Skip syncing for "Original" model and custom models
         if (providerPrefix !== "Original" && !isCurrentCustom) {
-            const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder'];
+            const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow'];
             let syncCount = 0;
 
             tools.forEach(tool => {
@@ -1081,7 +1140,7 @@ function App() {
             if (p.includes("doubao")) return "doubao-seed-code-preview-latest";
             if (p.includes("kimi")) return "kimi-for-coding";
             if (p.includes("minimax")) return "MiniMax-M2.1";
-        } else if (tool === "opencode" || tool === "codebuddy" || tool === "qoder") {
+        } else if (tool === "opencode" || tool === "codebuddy" || tool === "qoder" || tool === "iflow") {
             if (p.includes("deepseek")) return "deepseek-chat";
             if (p.includes("glm")) return "glm-4.7";
             if (p.includes("doubao")) return "doubao-seed-code-preview-latest";
@@ -1210,7 +1269,7 @@ function App() {
 
         // Sanitize: Ensure Custom models have a name (prevent empty tab button)
         const configCopy = JSON.parse(JSON.stringify(config));
-        const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder'];
+        const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow'];
         tools.forEach(tool => {
             if (configCopy[tool] && configCopy[tool].models) {
                 configCopy[tool].models.forEach((model: any) => {
@@ -1386,7 +1445,7 @@ ${instruction}`;
 
     if (!config) return <div className="main-content" style={{display:'flex', justifyContent:'center', alignItems:'center'}}>{t("loadingConfig")}</div>;
 
-            const toolCfg = (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder')
+            const toolCfg = (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow')
                 ? (config as any)[navTab]
                 : null;
 
@@ -1404,69 +1463,131 @@ ${instruction}`;
                 '--wails-draggable': 'drag'
             } as any}></div>
 
-            <div className="sidebar" style={{'--wails-draggable': 'no-drag'} as any}>
-                <div className="sidebar-header">
-                    <img src={appIcon} alt="Logo" className="sidebar-logo" />
-                    <span className="sidebar-title" style={{
-                        background: 'linear-gradient(to right, #60a5fa, #a855f7, #ec4899)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        fontWeight: 'bold',
-                        display: 'inline-block'
-                    }}>AICoder</span>
-                </div>
-                <div className={`sidebar-item ${navTab === 'message' ? 'active' : ''}`} onClick={() => switchTool('message')}>
-                    <span className="sidebar-icon">💬</span> <span>{t("message")}</span>
-                </div>
-                <div className={`sidebar-item ${navTab === 'tutorial' ? 'active' : ''}`} onClick={() => switchTool('tutorial')}>
-                    <span className="sidebar-icon">📚</span> <span>{t("tutorial")}</span>
-                </div>
-                <div style={{height: '10px'}}></div>
-                
-                <div style={{backgroundColor: 'rgba(96, 165, 250, 0.05)', borderRadius: '8px', margin: '0 8px', overflow: 'hidden'}}>
-                    <div className={`sidebar-item ${navTab === 'claude' ? 'active' : ''}`} onClick={() => switchTool('claude')}>
-                        <span className="sidebar-icon">🤖</span> <span>Claude Code</span>
+            <div className="sidebar" style={{'--wails-draggable': 'no-drag', flexDirection: 'row', padding: 0, width: '180px'} as any}>
+                {/* Left Navigation Strip */}
+                <div style={{
+                    width: '60px', 
+                    borderRight: '1px solid var(--border-color)', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    padding: '10px 0',
+                    backgroundColor: '#f8fafc',
+                    flexShrink: 0
+                }}>
+                    <div className="sidebar-header" style={{padding: '0 0 15px 0', justifyContent: 'center', width: '100%'}}>
+                        <img src={appIcon} alt="Logo" className="sidebar-logo" style={{width: '28px', height: '28px'}} />
                     </div>
-                    {config?.show_gemini !== false && (
-                    <div className={`sidebar-item ${navTab === 'gemini' ? 'active' : ''}`} onClick={() => switchTool('gemini')}>
-                        <span className="sidebar-icon">✨</span> <span>Gemini CLI</span>
+                    
+                    <div 
+                        className={`sidebar-item ${navTab === 'message' ? 'active' : ''}`} 
+                        onClick={() => switchTool('message')}
+                        style={{flexDirection: 'column', padding: '10px 0', width: '100%', gap: '4px', borderLeft: 'none', borderRight: navTab === 'message' ? '3px solid var(--primary-color)' : '3px solid transparent', justifyContent: 'center'}}
+                        title={t("message")}
+                    >
+                        <span className="sidebar-icon" style={{margin: 0, fontSize: '1.2rem'}}>💬</span>
+                        <span style={{fontSize: '0.65rem', lineHeight: 1}}>{t("message")}</span>
                     </div>
-                    )}
-                    {config?.show_codex !== false && (
-                    <div className={`sidebar-item ${navTab === 'codex' ? 'active' : ''}`} onClick={() => switchTool('codex')}>
-                        <span className="sidebar-icon">💻</span> <span>CodeX</span>
+                    <div 
+                        className={`sidebar-item ${navTab === 'tutorial' ? 'active' : ''}`} 
+                        onClick={() => switchTool('tutorial')}
+                        style={{flexDirection: 'column', padding: '10px 0', width: '100%', gap: '4px', borderLeft: 'none', borderRight: navTab === 'tutorial' ? '3px solid var(--primary-color)' : '3px solid transparent', justifyContent: 'center'}}
+                        title={t("tutorial")}
+                    >
+                        <span className="sidebar-icon" style={{margin: 0, fontSize: '1.2rem'}}>📚</span>
+                        <span style={{fontSize: '0.65rem', lineHeight: 1}}>{t("tutorial")}</span>
                     </div>
-                    )}
-                    {config?.show_opencode !== false && (
-                    <div className={`sidebar-item ${navTab === 'opencode' ? 'active' : ''}`} onClick={() => switchTool('opencode')}>
-                        <span className="sidebar-icon">🚀</span> <span>OpenCode</span>
+
+                    <div style={{flex: 1}}></div>
+
+                    <div 
+                        className={`sidebar-item ${navTab === 'settings' ? 'active' : ''}`} 
+                        onClick={() => switchTool('settings')}
+                        style={{flexDirection: 'column', padding: '10px 0', width: '100%', gap: '4px', borderLeft: 'none', borderRight: navTab === 'settings' ? '3px solid var(--primary-color)' : '3px solid transparent', justifyContent: 'center'}}
+                        title={t("settings")}
+                    >
+                        <span className="sidebar-icon" style={{margin: 0, fontSize: '1.2rem'}}>⚙️</span>
+                        <span style={{fontSize: '0.65rem', lineHeight: 1}}>{t("settings")}</span>
                     </div>
-                    )}
-                    {config?.show_codebuddy !== false && (
-                    <div className={`sidebar-item ${navTab === 'codebuddy' ? 'active' : ''}`} onClick={() => switchTool('codebuddy')}>
-                        <span className="sidebar-icon">👨‍💻</span> <span>CodeBuddy</span>
+                    <div 
+                        className={`sidebar-item ${navTab === 'about' ? 'active' : ''}`} 
+                        onClick={() => switchTool('about')}
+                        style={{flexDirection: 'column', padding: '10px 0', width: '100%', gap: '4px', borderLeft: 'none', borderRight: navTab === 'about' ? '3px solid var(--primary-color)' : '3px solid transparent', justifyContent: 'center'}}
+                        title={t("about")}
+                    >
+                        <span className="sidebar-icon" style={{margin: 0, fontSize: '1.2rem'}}>ℹ️</span>
+                        <span style={{fontSize: '0.65rem', lineHeight: 1}}>{t("about")}</span>
                     </div>
-                    )}
-                    {config?.show_qoder !== false && (
-                    <div className={`sidebar-item ${navTab === 'qoder' ? 'active' : ''}`} onClick={() => switchTool('qoder')}>
-                        <span className="sidebar-icon">⚡</span> <span>Qoder CLI</span>
-                    </div>
-                    )}
                 </div>
 
-                <div style={{height: '40px'}}></div>
-                <div className={`sidebar-item ${navTab === 'settings' ? 'active' : ''}`} onClick={() => switchTool('settings')}>
-                    <span className="sidebar-icon">⚙️</span> <span style={{maxWidth: lang === 'en' ? '110px' : 'none'}}>{t("settings")}</span>
-                </div>
-                <div className={`sidebar-item ${navTab === 'about' ? 'active' : ''}`} onClick={() => switchTool('about')}>
-                    <span className="sidebar-icon">ℹ️</span> <span>{t("about")}</span>
+                {/* Right Tool List */}
+                <div style={{flex: 1, padding: '10px', overflowY: 'auto', backgroundColor: '#fff', display: 'flex', flexDirection: 'column'}}>
+                    <div style={{marginBottom: '15px', fontSize: '1.1rem', fontWeight: 'bold', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                        <span style={{
+                            background: 'linear-gradient(to right, #60a5fa, #a855f7, #ec4899)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            display: 'inline-block'
+                        }}>AICoder</span>
+                    </div>
+                    
+                    <div className="tool-grid" style={{display: 'grid', gridTemplateColumns: '1fr', gap: '4px'}}>
+                        <div className={`sidebar-item ${navTab === 'claude' ? 'active' : ''}`} onClick={() => switchTool('claude')}>
+                            <span className="sidebar-icon">
+                                <img src={claudecodeIcon} style={{width: '1.1em', height: '1.1em', verticalAlign: 'middle'}} alt="Claude" />
+                            </span> <span>Claude Code</span>
+                        </div>
+                        {config?.show_gemini !== false && (
+                        <div className={`sidebar-item ${navTab === 'gemini' ? 'active' : ''}`} onClick={() => switchTool('gemini')}>
+                            <span className="sidebar-icon">
+                                <img src={geminiIcon} style={{width: '1.1em', height: '1.1em', verticalAlign: 'middle'}} alt="Gemini" />
+                            </span> <span>Gemini CLI</span>
+                        </div>
+                        )}
+                        {config?.show_codex !== false && (
+                        <div className={`sidebar-item ${navTab === 'codex' ? 'active' : ''}`} onClick={() => switchTool('codex')}>
+                            <span className="sidebar-icon">
+                                <img src={codexIcon} style={{width: '1.1em', height: '1.1em', verticalAlign: 'middle'}} alt="Codex" />
+                            </span> <span>CodeX</span>
+                        </div>
+                        )}
+                        {config?.show_opencode !== false && (
+                        <div className={`sidebar-item ${navTab === 'opencode' ? 'active' : ''}`} onClick={() => switchTool('opencode')}>
+                            <span className="sidebar-icon">
+                                <img src={opencodeIcon} style={{width: '1.1em', height: '1.1em', verticalAlign: 'middle'}} alt="OpenCode" />
+                            </span> <span>OpenCode</span>
+                        </div>
+                        )}
+                        {config?.show_codebuddy !== false && (
+                        <div className={`sidebar-item ${navTab === 'codebuddy' ? 'active' : ''}`} onClick={() => switchTool('codebuddy')}>
+                            <span className="sidebar-icon">
+                                <img src={codebuddyIcon} style={{width: '1.1em', height: '1.1em', verticalAlign: 'middle'}} alt="CodeBuddy" />
+                            </span> <span>CodeBuddy</span>
+                        </div>
+                        )}
+                        {config?.show_iflow !== false && (
+                        <div className={`sidebar-item ${navTab === 'iflow' ? 'active' : ''}`} onClick={() => switchTool('iflow')}>
+                            <span className="sidebar-icon">
+                                <img src={iflowIcon} style={{width: '1.1em', height: '1.1em', verticalAlign: 'middle'}} alt="iFlow" />
+                            </span> <span>iFlow CLI</span>
+                        </div>
+                        )}
+                        {config?.show_qoder !== false && (
+                        <div className={`sidebar-item ${navTab === 'qoder' ? 'active' : ''}`} onClick={() => switchTool('qoder')}>
+                            <span className="sidebar-icon">
+                                <img src={qoderIcon} style={{width: '1.1em', height: '1.1em', verticalAlign: 'middle'}} alt="Qoder" />
+                            </span> <span>Qoder CLI</span>
+                        </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
             <div className="main-container">
                 <div className="top-header" style={{'--wails-draggable': 'no-drag'} as any}>
                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%'}}>
-                        <h2 style={{margin: 0, fontSize: '1.1rem', color: '#60a5fa', fontWeight: 'bold', marginLeft: '20px', '--wails-draggable': 'drag', flex: 1} as any}>
+                        <h2 style={{margin: 0, fontSize: '1.1rem', color: '#60a5fa', fontWeight: 'bold', marginLeft: '20px', '--wails-draggable': 'drag', flex: 1, display: 'flex', alignItems: 'center'} as any}>
+                            <span>
                             {navTab === 'message' ? t("message") :
                              navTab === 'claude' ? 'Claude Code' :
                              navTab === 'gemini' ? 'Gemini CLI' :
@@ -1474,8 +1595,26 @@ ${instruction}`;
                              navTab === 'opencode' ? 'OpenCode AI' :
                              navTab === 'codebuddy' ? 'CodeBuddy AI' :
                              navTab === 'qoder' ? 'Qoder CLI' :
+                             navTab === 'iflow' ? 'iFlow CLI' :
                              navTab === 'projects' ? t("projectManagement") :
                              navTab === 'settings' ? t("globalSettings") : t("about")}
+                            </span>
+                            {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow') && (
+                                <button 
+                                    className="btn-link" 
+                                    onClick={() => setShowModelSettings(true)}
+                                    style={{
+                                        marginLeft: '10px', 
+                                        padding: '2px 8px', 
+                                        fontSize: '0.8rem',
+                                        borderColor: '#60a5fa', 
+                                        color: '#60a5fa',
+                                        '--wails-draggable': 'no-drag'
+                                    } as any}
+                                >
+                                    {lang === 'zh-Hans' || lang === 'zh-Hant' ? '服务商配置' : 'Provider Config'}
+                                </button>
+                            )}
                         </h2>
                         <div style={{display: 'flex', gap: '10px', '--wails-draggable': 'no-drag', marginRight: '5px', pointerEvents: 'auto', position: 'relative', zIndex: 10000} as any}>
                             <button
@@ -1726,7 +1865,7 @@ ${instruction}`;
                                                     </ReactMarkdown>
                                                 </div>
                                             </div>
-                                        )}                        {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder') && (
+                                        )}                        {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow') && (
                             <ToolConfiguration 
                                 toolName={navTab} 
                                 toolCfg={toolCfg} 
@@ -1785,17 +1924,7 @@ ${instruction}`;
                                         </div>
 
                                         <div style={{display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0}}>
-                                            <button
-                                                className="btn-link"
-                                                onClick={() => {
-                                                    setSelectedProjectForLaunch(proj.id);
-                                                    setProxyEditMode('project');
-                                                    setShowProxySettings(true);
-                                                }}
-                                                style={{display: 'flex', alignItems: 'center', gap: '4px'}}
-                                            >
-                                                <span>🌐</span>
-                                            </button>
+
                                             <button className="btn-link" onClick={() => {
                                                 SelectProjectDir().then(dir => {
                                                     if (dir) {
@@ -1846,7 +1975,6 @@ ${instruction}`;
                                 >
                                     <span>📂</span> {t("manageProjects")}
                                 </button>
-                                {!/window/i.test(navigator.userAgent) && (
                                     <button
                                         className="btn-link"
                                         onClick={() => {
@@ -1857,7 +1985,6 @@ ${instruction}`;
                                     >
                                         <span>🌐</span> {t("proxySettings")}
                                     </button>
-                                )}
                             </div>
 
                             <div className="form-group" style={{marginTop: '15px', borderTop: '1px solid #f1f5f9', paddingTop: '15px'}}>
@@ -1938,6 +2065,21 @@ ${instruction}`;
                                         />
                                         <span style={{fontSize: '0.8rem', color: '#4b5563'}}>Qoder CLI</span>
                                     </label>
+                                    <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={config?.show_iflow !== false}
+                                            onChange={(e) => {
+                                                if (config) {
+                                                    const newConfig = new main.AppConfig({...config, show_iflow: e.target.checked});
+                                                    setConfig(newConfig);
+                                                    SaveConfig(newConfig);
+                                                }
+                                            }}
+                                            style={{width: '16px', height: '16px'}}
+                                        />
+                                        <span style={{fontSize: '0.8rem', color: '#4b5563'}}>iFlow CLI</span>
+                                    </label>
                                 </div>
                             </div>
 
@@ -1958,9 +2100,30 @@ ${instruction}`;
                                     <span style={{fontSize: '0.8rem', color: '#374151'}}>{t("showWelcomePage")}</span>
                                 </label>
                                 <p style={{fontSize: '0.75rem', color: '#64748b', marginLeft: '24px', marginTop: '4px'}}>
-                                    {lang === 'zh-Hans' ? '开启后，程序启动时将显示新手教学和快速入门链接' : 
-                                     lang === 'zh-Hant' ? '開啟後，程序啟動時將顯示新手教學和快速入門鏈接' : 
+                                    {lang === 'zh-Hans' ? '开启后，程序启动时将显示新手教学和快速入门链接' :
+                                     lang === 'zh-Hant' ? '開啟後，程序啟動時將顯示新手教學和快速入門鏈接' :
                                      'When enabled, a welcome popup with tutorial links will be shown at startup.'}
+                                </p>
+
+                                <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '12px'}}>
+                                    <input
+                                        type="checkbox"
+                                        checked={config?.check_update_on_startup !== false}
+                                        onChange={(e) => {
+                                            if (config) {
+                                                const newConfig = new main.AppConfig({...config, check_update_on_startup: e.target.checked});
+                                                setConfig(newConfig);
+                                                SaveConfig(newConfig);
+                                            }
+                                        }}
+                                        style={{width: '16px', height: '16px'}}
+                                    />
+                                    <span style={{fontSize: '0.8rem', color: '#374151'}}>{t("checkUpdateOnStartup")}</span>
+                                </label>
+                                <p style={{fontSize: '0.75rem', color: '#64748b', marginLeft: '24px', marginTop: '4px'}}>
+                                    {lang === 'zh-Hans' ? '开启后，程序启动时将自动检查是否有新版本可用' :
+                                     lang === 'zh-Hant' ? '開啟後，程序啟動時將自動檢查是否有新版本可用' :
+                                     'When enabled, the application will automatically check for updates at startup.'}
                                 </p>
                             </div>
                         </div>
@@ -2051,7 +2214,7 @@ ${instruction}`;
                 </div>
 
                 {/* Global Action Bar (Footer) */}
-                {config && (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder') && (
+                {config && (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow') && (
                     <div className="global-action-bar">
                         <div style={{display: 'flex', flexDirection: 'column', gap: '5px', width: '100%', padding: '2px 0'}}>
                             <div style={{display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'flex-start'}}>
@@ -2110,7 +2273,6 @@ ${instruction}`;
                                                                         </span>
                                                                     )}
                                                                 </label>
-                                                                {!/window/i.test(navigator.userAgent) && (
                                                                     <label style={{display:'flex', alignItems:'center', cursor:'pointer', fontSize: '0.8rem', color: '#6b7280'}}>
                                                                         <input
                                                                             type="checkbox"
@@ -2149,7 +2311,6 @@ ${instruction}`;
                                                                             ⚙️
                                                                         </span>
                                                                     </label>
-                                                                )}
                                                             </div>
                                                             <div style={{display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '15px'}}>
                                                                 <label style={{display:'flex', alignItems:'center', cursor:'pointer', fontSize: '0.8rem', color: '#6b7280'}}>
@@ -2471,7 +2632,13 @@ ${instruction}`;
                             </div>
                         )}
                         <div style={{display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px'}}>
-                            <button className="btn-primary" onClick={() => setShowUpdateModal(false)}>{t("close")}</button>
+                            <button className="btn-primary" onClick={() => {
+                                setShowUpdateModal(false);
+                                // After closing update modal, show welcome page if configured
+                                if (config && !config.hide_startup_popup) {
+                                    setShowStartupPopup(true);
+                                }
+                            }}>{t("close")}</button>
                         </div>
                     </div>
                 </div>
@@ -2652,6 +2819,8 @@ ${instruction}`;
                                         placeholder="https://api.example.com/v1"
                                         spellCheck={false}
                                         autoComplete="off"
+                                        readOnly={!(config as any)[activeTool].models[activeTab].is_custom}
+                                        style={!(config as any)[activeTool].models[activeTab].is_custom ? {backgroundColor: '#f3f4f6', cursor: 'not-allowed', color: '#9ca3af'} : {}}
                                     />
                                 </div>
                                 )}

@@ -32,12 +32,12 @@ echo [Step 2/7] Updating version number...
 powershell -NoProfile -Command "if (Test-Path 'build_number') { $n = [int](Get-Content 'build_number') + 1 } else { $n = 1 }; Set-Content -Path 'build_number' -Value $n -NoNewline; Set-Content -Path 'temp_build_num.txt' -Value $n -NoNewline"
 set /p BUILD_NUM=<temp_build_num.txt
 del temp_build_num.txt
-set "VERSION=2.6.4.%BUILD_NUM%"
+set "VERSION=2.7.5.%BUILD_NUM%"
 echo [INFO] Building Version: %VERSION%
 
 REM -- Sync version with frontend --
 echo [Step 3/7] Syncing version with frontend...
-powershell -Command "$filePath = '%~dp0frontend\src\App.tsx'; $content = [System.IO.File]::ReadAllText($filePath); $newContent = $content -replace 'const APP_VERSION = \".*\";', 'const APP_VERSION = \"%VERSION%\"'; [System.IO.File]::WriteAllText($filePath, $newContent, [System.Text.UTF8Encoding]::new($false))"
+powershell -Command "$filePath = '%~dp0frontend\src\App.tsx'; $content = [System.IO.File]::ReadAllText($filePath); $newContent = $content -replace 'const APP_VERSION = ".*";', 'const APP_VERSION = \"%VERSION%\"'; [System.IO.File]::WriteAllText($filePath, $newContent, [System.Text.UTF8Encoding]::new($false))"
 powershell -Command "\"export const buildNumber = `\"%BUILD_NUM%`\";\" | Set-Content -Path '%~dp0frontend\src\version.ts' -Encoding Utf8"
 
 REM -- Build Frontend --
@@ -89,16 +89,20 @@ del "%~dp0resource_windows_arm64.syso"
 
 REM -- Create NSIS Installer --
 echo [Step 7/7] Creating NSIS installer...
-if not exist "%NSIS_PATH%" (
-    echo [ERROR] NSIS not found at %NSIS_PATH%. Please install NSIS.
-    goto :error
-)
+if not exist "%NSIS_PATH%" goto nsis_missing
+
 "%NSIS_PATH%" /DINFO_PRODUCTVERSION="%VERSION%" /DARG_WAILS_AMD64_BINARY="%BIN_DIR%\%APP_NAME%_amd64.exe" /DARG_WAILS_ARM64_BINARY="%BIN_DIR%\%APP_NAME%_arm64.exe" "%~dp0build\windows\installer\multiarch.nsi"
 if %errorlevel% neq 0 (
     echo [ERROR] NSIS installer creation failed.
     goto :error
 )
+goto :success
 
+:nsis_missing
+echo [ERROR] NSIS not found at %NSIS_PATH%. Please install NSIS.
+goto :error
+
+:success
 echo.
 echo [SUCCESS] Build and packaging complete!
 echo Installer created at: %BIN_DIR%\%APP_NAME%-Setup.exe

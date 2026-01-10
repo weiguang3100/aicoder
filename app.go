@@ -92,6 +92,7 @@ type AppConfig struct {
 	Opencode         ToolConfig      `json:"opencode"`
 	CodeBuddy        ToolConfig      `json:"codebuddy"`
 	Qoder            ToolConfig      `json:"qoder"`
+	IFlow            ToolConfig      `json:"iflow"`
 	Projects         []ProjectConfig `json:"projects"`
 	CurrentProject   string          `json:"current_project"` // ID of the current project
 	ActiveTool       string          `json:"active_tool"`     // "claude", "gemini", or "codex"
@@ -101,7 +102,9 @@ type AppConfig struct {
 	ShowOpenCode     bool            `json:"show_opencode"`
 	ShowCodeBuddy    bool            `json:"show_codebuddy"`
 	ShowQoder        bool            `json:"show_qoder"`
+	ShowIFlow        bool            `json:"show_iflow"`
 	Language         string          `json:"language"`
+	CheckUpdateOnStartup bool        `json:"check_update_on_startup"`
 	// Proxy settings (global default)
 	DefaultProxyHost     string `json:"default_proxy_host"`
 	DefaultProxyPort     string `json:"default_proxy_port"`
@@ -123,8 +126,11 @@ func (a *App) startup(ctx context.Context) {
 	a.startConfigWatcher()
 
 	// Initialize CodeBuddy config in project directory
-	if _, err := a.LoadConfig(); err == nil {
+	if config, err := a.LoadConfig(); err == nil {
 		// a.syncToCodeBuddySettings(config, "")
+		if config.Language != "" {
+			a.SetLanguage(config.Language)
+		}
 	}
 }
 
@@ -222,6 +228,11 @@ func (a *App) GetUserHomeDir() string {
 	return home
 }
 
+func (a *App) GetLocalCacheDir() string {
+	home := a.GetUserHomeDir()
+	return filepath.Join(home, ".cceasy", "npm_cache")
+}
+
 func (a *App) GetCurrentProjectPath() string {
 	config, err := a.LoadConfig()
 	if err != nil {
@@ -273,6 +284,13 @@ func (a *App) getOpencodeConfigPaths() (string, string) {
 	return dir, config
 }
 
+func (a *App) getIFlowConfigPaths() (string, string) {
+	home, _ := os.UserHomeDir()
+	dir := filepath.Join(home, ".iflow")
+	config := filepath.Join(dir, "settings.json")
+	return dir, config
+}
+
 func (a *App) clearClaudeConfig() {
 	dir, _, legacy := a.getClaudeConfigPaths()
 	home, _ := os.UserHomeDir()
@@ -302,6 +320,12 @@ func (a *App) clearOpencodeConfig() {
 	a.log("Cleared Opencode configuration directory")
 }
 
+func (a *App) clearIFlowConfig() {
+	dir, _ := a.getIFlowConfigPaths()
+	os.RemoveAll(dir)
+	a.log("Cleared iFlow configuration directory")
+}
+
 func (a *App) clearEnvVars() {
 	vars := []string{
 		"ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN",
@@ -309,7 +333,8 @@ func (a *App) clearEnvVars() {
 		"GEMINI_API_KEY", "GOOGLE_GEMINI_BASE_URL",
 		"OPENCODE_API_KEY", "OPENCODE_BASE_URL",
 		"CODEBUDDY_API_KEY", "CODEBUDDY_BASE_URL", "CODEBUDDY_CODE_MAX_OUTPUT_TOKENS",
-		"QODER_API_KEY", "QODER_BASE_URL",
+		"QODER_PERSONAL_ACCESS_TOKEN", "QODER_BASE_URL",
+		"IFLOW_API_KEY", "IFLOW_BASE_URL",
 	}
 	for _, v := range vars {
 		os.Unsetenv(v)
@@ -862,6 +887,74 @@ func (a *App) syncToGeminiSettings(config AppConfig) error {
 	return os.WriteFile(configPath, configJson, 0644)
 }
 
+func (a *App) syncToIFlowSettings(config AppConfig) error {
+	var selectedModel *ModelConfig
+	for _, m := range config.IFlow.Models {
+		if m.ModelName == config.IFlow.CurrentModel {
+			selectedModel = &m
+			break
+		}
+	}
+
+	if selectedModel == nil {
+		return fmt.Errorf("selected iflow model not found")
+	}
+
+	dir, configPath := a.getIFlowConfigPaths()
+
+	if strings.ToLower(selectedModel.ModelName) == "original" {
+		a.clearIFlowConfig()
+		return nil
+	}
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	// Prepare defaults
+	baseUrl := selectedModel.ModelUrl
+	modelId := selectedModel.ModelId
+	providerName := strings.ToLower(selectedModel.ModelName)
+
+	// Fallback logic for iFlow (align with Codex providers)
+	if modelId == "" {
+		switch providerName {
+		case "deepseek":
+			modelId = "deepseek-chat"
+			if baseUrl == "" { baseUrl = "https://api.deepseek.com/v1" }
+		case "glm":
+			modelId = "glm-4.7"
+			if baseUrl == "" { baseUrl = "https://open.bigmodel.cn/api/paas/v4" }
+		case "doubao":
+			modelId = "doubao-seed-code-preview-latest"
+			if baseUrl == "" { baseUrl = "https://ark.cn-beijing.volces.com/api/coding/v3" }
+		case "kimi":
+			modelId = "kimi-for-coding"
+			if baseUrl == "" { baseUrl = "https://api.kimi.com/coding/v1" }
+		case "minimax":
+			modelId = "MiniMax-M2.1"
+			if baseUrl == "" { baseUrl = "https://api.minimaxi.com/v1" }
+		default:
+			modelId = "gpt-4o"
+		}
+	}
+
+	// Build the JSON structure for settings.json
+	settings := map[string]string{
+		"selectedAuthType": "openai-compatible",
+		"apiKey":           selectedModel.ApiKey,
+		"baseUrl":          baseUrl,
+		"modelName":        modelId,
+	}
+
+	data, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(configPath, data, 0644)
+}
+
 func (a *App) syncToCodeBuddySettings(config AppConfig, projectPath string) error {
 	if projectPath == "" {
 		projectPath = a.GetCurrentProjectPath()
@@ -1119,6 +1212,11 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 		envKey = "OPENAI_API_KEY"
 		envBaseUrl = "OPENAI_BASE_URL"
 		binaryName = "codex"
+	case "iflow":
+		toolCfg = config.IFlow
+		envKey = "IFLOW_API_KEY"
+		envBaseUrl = "IFLOW_BASE_URL"
+		binaryName = "iflow"
 	case "opencode":
 		toolCfg = config.Opencode
 		envKey = "OPENCODE_API_KEY"
@@ -1132,10 +1230,9 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 	case "qoder":
 		toolCfg = config.Qoder
 		envKey = "QODER_PERSONAL_ACCESS_TOKEN"
-		envBaseUrl = "" // Qoder doesn't use a base URL env var in this context
-		binaryName = "qodercli"
+		envBaseUrl = "QODER_BASE_URL"
+		binaryName = "qoder"
 	default:
-		a.log("Unknown tool: " + toolName)
 		return
 	}
 
@@ -1167,8 +1264,8 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 
 	env := make(map[string]string)
 
-	// Proxy settings (macOS/Linux only)
-	if useProxy && goruntime.GOOS != "windows" {
+	// Proxy settings
+	if useProxy {
 		var proxyHost, proxyPort, proxyUsername, proxyPassword string
 
 		// Get proxy configuration (matching project path > global default)
@@ -1266,6 +1363,10 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 				// env["CODEBUDDY_MODEL"] = selectedModel.ModelId
 			case "qoder":
 				// Qoder doesn't use model env var
+			case "iflow":
+				// iFlow uses settings.json, but maybe env var too?
+				os.Setenv("IFLOW_MODEL", selectedModel.ModelId)
+				env["IFLOW_MODEL"] = selectedModel.ModelId
 			}
 		}
 
@@ -1294,6 +1395,15 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 			// a.syncToCodeBuddySettings(config, projectDir)
 		case "qoder":
 			a.syncToQoderSettings(config, projectDir)
+		case "iflow":
+			// Ensure OpenAI standard vars for iFlow (compatibility)
+			os.Setenv("OPENAI_API_KEY", selectedModel.ApiKey)
+			env["OPENAI_API_KEY"] = selectedModel.ApiKey
+			if selectedModel.ModelUrl != "" {
+				os.Setenv("OPENAI_BASE_URL", selectedModel.ModelUrl)
+				env["OPENAI_BASE_URL"] = selectedModel.ModelUrl
+			}
+			a.syncToIFlowSettings(config)
 		}
 	} else {
 		// --- ORIGINAL MODE: CLEANUP SPECIFIC TOOL ONLY ---
@@ -1326,7 +1436,11 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 			// Codebuddy might need cleanup too if we added a clear function
 		} else if strings.ToLower(toolName) == "qoder" {
 			os.Unsetenv("QODER_PERSONAL_ACCESS_TOKEN")
-			// No base URL to unset for Qoder
+			os.Unsetenv("QODER_BASE_URL")
+			// Qoder cleanup if needed
+		} else if strings.ToLower(toolName) == "iflow" {
+			os.Unsetenv("IFLOW_MODEL")
+			a.clearIFlowConfig()
 		}
 
 		a.log(fmt.Sprintf("Running %s in Original mode: Custom configurations cleared.", toolName))
@@ -1410,6 +1524,16 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		{ModelName: "Original", ModelId: "", ModelUrl: "", ApiKey: ""},
 		{ModelName: "Qoder", ModelId: "qoder-1.0", ModelUrl: "https://api.qoder.com/v1", ApiKey: ""},
 	}
+	defaultIFlowModels := []ModelConfig{
+		{ModelName: "Original", ModelId: "", ModelUrl: "", ApiKey: ""},
+		{ModelName: "DeepSeek", ModelId: "deepseek-chat", ModelUrl: "https://api.deepseek.com/v1", ApiKey: ""},
+		{ModelName: "GLM", ModelId: "glm-4.7", ModelUrl: "https://open.bigmodel.cn/api/paas/v4", ApiKey: ""},
+		{ModelName: "Doubao", ModelId: "doubao-seed-code-preview-latest", ModelUrl: "https://ark.cn-beijing.volces.com/api/coding/v3", ApiKey: ""},
+		{ModelName: "Kimi", ModelId: "kimi-for-coding", ModelUrl: "https://api.kimi.com/coding/v1", ApiKey: ""},
+		{ModelName: "MiniMax", ModelId: "MiniMax-M2.1", ModelUrl: "https://api.minimaxi.com/v1", ApiKey: ""},
+		{ModelName: "XiaoMi", ModelId: "mimo-v2-flash", ModelUrl: "https://api.xiaomimimo.com/v1", ApiKey: ""},
+		{ModelName: "Custom", ModelId: "", ModelUrl: "", ApiKey: "", IsCustom: true},
+	}
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		// Check for old config file for migration
@@ -1451,6 +1575,10 @@ func (a *App) LoadConfig() (AppConfig, error) {
 							CurrentModel: "Original",
 							Models:       defaultQoderModels,
 						},
+						IFlow: ToolConfig{
+							CurrentModel: "Original",
+							Models:       defaultIFlowModels,
+						},
 						Projects:       oldConfig.Projects,
 						CurrentProject: oldConfig.CurrentProj,
 						ActiveTool:     "claude",
@@ -1459,6 +1587,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 						ShowOpenCode:   true,
 						ShowCodeBuddy:  true,
 						ShowQoder:      true,
+						ShowIFlow:      true,
 					}
 					a.SaveConfig(config)
 					// Optional: os.Remove(oldPath)
@@ -1493,6 +1622,10 @@ func (a *App) LoadConfig() (AppConfig, error) {
 				CurrentModel: "Original",
 				Models:       defaultQoderModels,
 			},
+			IFlow: ToolConfig{
+				CurrentModel: "Original",
+				Models:       defaultIFlowModels,
+			},
 			Projects: []ProjectConfig{
 				{
 					Id:       "default",
@@ -1508,6 +1641,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 			ShowOpenCode:   true,
 			ShowCodeBuddy:  true,
 			ShowQoder:      true,
+			ShowIFlow:      true,
 		}
 
 		err = a.SaveConfig(defaultConfig)
@@ -1520,6 +1654,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		ShowOpenCode:  true,
 		ShowCodeBuddy: true,
 		ShowQoder:     true,
+		ShowIFlow:     true,
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -1570,6 +1705,10 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		config.Qoder.Models = defaultQoderModels
 		config.Qoder.CurrentModel = "Original"
 	}
+	if config.IFlow.Models == nil || len(config.IFlow.Models) == 0 {
+		config.IFlow.Models = defaultIFlowModels
+		config.IFlow.CurrentModel = "Original"
+	}
 
 	ensureModel(&config.Claude.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/claudecode", "sonnet", "")
 	ensureModel(&config.Claude.Models, "CodeRelay", "https://api.code-relay.com/", "claude-3-5-sonnet-20241022", "")
@@ -1580,6 +1719,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureModel(&config.Claude.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.Claude.Models, "GLM", "https://open.bigmodel.cn/api/anthropic", "glm-4.7", "")
 	ensureModel(&config.Claude.Models, "MiniMax", "https://api.minimaxi.com/anthropic", "MiniMax-M2.1", "")
+	ensureModel(&config.Claude.Models, "XiaoMi", "https://api.xiaomimimo.com/anthropic", "mimo-v2-flash", "")
 	
 	// Deduplicate AiCodeMirror for Claude if both AICodeMirror and AiCodeMirror exist
 	dedupeAiCodeMirror := func(models *[]ModelConfig) {
@@ -1610,6 +1750,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureModel(&config.Codex.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.Codex.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
 	ensureModel(&config.Codex.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+	ensureModel(&config.Codex.Models, "XiaoMi", "https://api.xiaomimimo.com/v1", "mimo-v2-flash", "")
 
 	ensureModel(&config.Opencode.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
 	ensureModel(&config.Opencode.Models, "ChatFire", "https://api.chatfire.cn/v1", "gpt-4o", "")
@@ -1617,12 +1758,14 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureModel(&config.Opencode.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.Opencode.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
 	ensureModel(&config.Opencode.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+	ensureModel(&config.Opencode.Models, "XiaoMi", "https://api.xiaomimimo.com/v1", "mimo-v2-flash", "")
 
 	ensureModel(&config.CodeBuddy.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
 	ensureModel(&config.CodeBuddy.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
 	ensureModel(&config.CodeBuddy.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.CodeBuddy.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
 	ensureModel(&config.CodeBuddy.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+	ensureModel(&config.CodeBuddy.Models, "XiaoMi", "https://api.xiaomimimo.com/v1", "mimo-v2-flash", "")
 	ensureModel(&config.Codex.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
 	ensureModel(&config.Codex.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.Codex.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
@@ -1640,6 +1783,13 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureModel(&config.CodeBuddy.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
 	ensureModel(&config.CodeBuddy.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
 	ensureModel(&config.CodeBuddy.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+
+	ensureModel(&config.IFlow.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
+	ensureModel(&config.IFlow.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
+	ensureModel(&config.IFlow.Models, "Doubao", "https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-code-preview-latest", "")
+	ensureModel(&config.IFlow.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
+	ensureModel(&config.IFlow.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
+	ensureModel(&config.IFlow.Models, "XiaoMi", "https://api.xiaomimimo.com/v1", "mimo-v2-flash", "")
 
 	// Ensure 'Original' is always present and first
 	ensureOriginal := func(models *[]ModelConfig) {
@@ -1660,7 +1810,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		var newModels []ModelConfig
 		for _, m := range *models {
 			name := strings.ToLower(m.ModelName)
-			if name != "aigocode" && name != "aicodemirror" {
+			if name != "aigocode" && name != "aicodemirror" && name != "coderelay" && name != "chatfire" {
 				newModels = append(newModels, m)
 			}
 		}
@@ -1673,9 +1823,11 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureOriginal(&config.Opencode.Models)
 	ensureOriginal(&config.CodeBuddy.Models)
 	ensureOriginal(&config.Qoder.Models)
+	ensureOriginal(&config.IFlow.Models)
 
 	cleanOpencodeModels(&config.Opencode.Models)
 	cleanOpencodeModels(&config.CodeBuddy.Models)
+	cleanOpencodeModels(&config.IFlow.Models)
 
 	// Ensure 'Custom' is always present
 	ensureCustom := func(models *[]ModelConfig) {
@@ -1695,6 +1847,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureCustom(&config.Codex.Models)
 	ensureCustom(&config.Opencode.Models)
 	ensureCustom(&config.CodeBuddy.Models)
+	ensureCustom(&config.IFlow.Models)
 	// Qoder only has Original and Qoder
 	// Preserve existing Qoder key if present
 	var existingQoderKey string
@@ -1754,6 +1907,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	moveCustomToLast(&config.Codex.Models)
 	moveCustomToLast(&config.Opencode.Models)
 	moveCustomToLast(&config.CodeBuddy.Models)
+	moveCustomToLast(&config.IFlow.Models)
 
 	ensureOriginalFirst(&config.Claude.Models)
 	ensureOriginalFirst(&config.Gemini.Models)
@@ -1761,6 +1915,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureOriginalFirst(&config.Opencode.Models)
 	ensureOriginalFirst(&config.CodeBuddy.Models)
 	ensureOriginalFirst(&config.Qoder.Models)
+	ensureOriginalFirst(&config.IFlow.Models)
 
 	// Ensure CurrentModel is valid
 	if config.Gemini.CurrentModel == "" {
@@ -1777,6 +1932,9 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	}
 	if config.Qoder.CurrentModel == "" {
 		config.Qoder.CurrentModel = "Original"
+	}
+	if config.IFlow.CurrentModel == "" {
+		config.IFlow.CurrentModel = "Original"
 	}
 
 	if config.ActiveTool == "" {
@@ -1798,6 +1956,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	normalizeCurrentModel(&config.Opencode)
 	normalizeCurrentModel(&config.CodeBuddy)
 	normalizeCurrentModel(&config.Qoder)
+	normalizeCurrentModel(&config.IFlow)
 
 	return config, nil
 }
@@ -1822,6 +1981,7 @@ func syncAllProviderApiKeys(a *App, oldConfig, newConfig *AppConfig) {
 		"opencode":  &newConfig.Opencode,
 		"codebuddy": &newConfig.CodeBuddy,
 		"qoder":     &newConfig.Qoder,
+		"iflow":     &newConfig.IFlow,
 	}
 	oldTools := map[string]*ToolConfig{
 		"claude":    &oldConfig.Claude,
@@ -1830,6 +1990,7 @@ func syncAllProviderApiKeys(a *App, oldConfig, newConfig *AppConfig) {
 		"opencode":  &oldConfig.Opencode,
 		"codebuddy": &oldConfig.CodeBuddy,
 		"qoder":     &oldConfig.Qoder,
+		"iflow":     &oldConfig.IFlow,
 	}
 
 	// providerName (lower) -> intended API key
@@ -1909,6 +2070,7 @@ func (a *App) SaveConfig(config AppConfig) error {
 	sanitizeCustomNames(config.Opencode.Models)
 	sanitizeCustomNames(config.CodeBuddy.Models)
 	sanitizeCustomNames(config.Qoder.Models)
+	sanitizeCustomNames(config.IFlow.Models)
 
 	// Load old config to compare for sync logic
 	var oldConfig AppConfig
@@ -2349,7 +2511,11 @@ func (a *App) getInstalledClaudeVersion(claudePath string) (string, error) {
 func (a *App) getLatestNpmVersion(npmPath string, packageName string) (string, error) {
 	var cmd *exec.Cmd
 	// Use npm view <package> version
-	args := []string{"view", packageName, "version"}
+	localCacheDir := a.GetLocalCacheDir()
+	if err := os.MkdirAll(localCacheDir, 0755); err != nil {
+		a.log(fmt.Sprintf("Warning: Failed to create local npm cache dir: %v", err))
+	}
+	args := []string{"view", packageName, "version", "--cache", localCacheDir}
 	if strings.HasPrefix(strings.ToLower(a.CurrentLanguage), "zh") {
 		args = append(args, "--registry=https://registry.npmmirror.com")
 	}
@@ -2384,73 +2550,114 @@ func (a *App) ListPythonEnvironments() []PythonEnvironment {
 // detectCondaEnvironments finds all Anaconda/Miniconda environments
 func (a *App) detectCondaEnvironments() []PythonEnvironment {
 	envs := []PythonEnvironment{}
-
-	// Try to find conda executable
-	condaCmd := a.findCondaCommand()
-	if condaCmd == "" {
-		a.log("Conda command not found")
-		return envs
-	}
-
-	a.log("Using conda command: " + condaCmd)
-
-	// Run 'conda env list' to get all environments
-	// On Windows, we need to use cmd /c for proper execution
-	var cmd *exec.Cmd
-	if goruntime.GOOS == "windows" {
-		// Use platform-specific function to create command with hidden window
-		cmd = createCondaEnvListCmd(condaCmd)
-	} else {
-		cmd = exec.Command(condaCmd, "env", "list")
-	}
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		a.log("Failed to list conda environments: " + err.Error())
-		a.log("Command output: " + string(output))
-		return envs
-	}
-
-	a.log("Conda env list output: " + string(output))
-
-	// Use a map to deduplicate environments by name
 	envMap := make(map[string]PythonEnvironment)
 
-	// Parse the output
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-
-		// Skip comments and empty lines
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
+	// Helper to add env
+	addEnv := func(name, path string) {
+		if name == "" || path == "" {
+			return
 		}
-
-		// Parse line format: "envname  *  /path/to/env" or "envname  /path/to/env"
-		parts := strings.Fields(line)
-		if len(parts) < 2 {
-			continue
-		}
-
-		envName := parts[0]
-		envPath := ""
-
-		// Find the path (skip the * marker if present)
-		for i := 1; i < len(parts); i++ {
-			if parts[i] != "*" && (strings.Contains(parts[i], "/") || strings.Contains(parts[i], "\\") || strings.Contains(parts[i], ":")) {
-				envPath = parts[i]
-				break
+		if _, exists := envMap[name]; !exists {
+			a.log(a.tr("Found conda environment: %s at %s", name, path))
+			envMap[name] = PythonEnvironment{
+				Name: name,
+				Path: path,
+				Type: "conda",
 			}
 		}
+	}
 
-		if envPath != "" {
-			// Only add if not already in map (deduplicate by name)
-			if _, exists := envMap[envName]; !exists {
-				a.log(fmt.Sprintf("Found conda environment: %s at %s", envName, envPath))
-				envMap[envName] = PythonEnvironment{
-					Name: envName,
-					Path: envPath,
-					Type: "conda",
+	// 1. Try 'conda env list'
+	condaCmd := a.findCondaCommand()
+	if condaCmd != "" {
+		a.log(a.tr("Using conda command: ") + condaCmd)
+		
+		var cmd *exec.Cmd
+		if goruntime.GOOS == "windows" {
+			// Use platform-specific function to create command with hidden window
+			cmd = createCondaEnvListCmd(condaCmd)
+		} else {
+			cmd = exec.Command(condaCmd, "env", "list")
+		}
+
+		output, err := cmd.CombinedOutput()
+		if err == nil {
+			lines := strings.Split(string(output), "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+
+				// Skip comments and empty lines
+				if line == "" || strings.HasPrefix(line, "#") {
+					continue
+				}
+
+				parts := strings.Fields(line)
+				if len(parts) == 0 {
+					continue
+				}
+
+				var name, path string
+				
+				// Handle parsing
+				// Case 1: "* /path" (unnamed, active)
+				// Case 2: "/path" (unnamed)
+				// Case 3: "name * /path" (named, active)
+				// Case 4: "name /path" (named)
+				
+				firstIsPath := strings.Contains(parts[0], "/") || strings.Contains(parts[0], "\\") || (goruntime.GOOS == "windows" && strings.Contains(parts[0], ":"))
+				
+				if parts[0] == "*" {
+					// Case 1
+					if len(parts) > 1 {
+						path = strings.Join(parts[1:], " ")
+						name = filepath.Base(path)
+					}
+				} else if firstIsPath {
+					// Case 2
+					path = strings.Join(parts, " ")
+					name = filepath.Base(path)
+				} else {
+					// Case 3 or 4
+					name = parts[0]
+					if len(parts) > 1 {
+						startIdx := 1
+						if parts[1] == "*" {
+							startIdx = 2
+						}
+						if startIdx < len(parts) {
+							path = strings.Join(parts[startIdx:], " ")
+						}
+					}
+				}
+				
+				addEnv(name, path)
+			}
+		} else {
+			a.log(a.tr("Failed to list conda environments: ") + err.Error())
+		}
+	}
+
+	// 2. Scan common env directories (Fallback/Augment)
+	roots := []string{}
+	
+	// Conda installation root envs
+	condaRoot := a.getCondaRoot()
+	if condaRoot != "" {
+		roots = append(roots, filepath.Join(condaRoot, "envs"))
+		// Also add root environment (base)
+		addEnv("base", condaRoot)
+	}
+
+	// User .conda envs
+	home, _ := os.UserHomeDir()
+	roots = append(roots, filepath.Join(home, ".conda", "envs"))
+
+	for _, root := range roots {
+		entries, err := os.ReadDir(root)
+		if err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					addEnv(entry.Name(), filepath.Join(root, entry.Name()))
 				}
 			}
 		}
@@ -2461,7 +2668,7 @@ func (a *App) detectCondaEnvironments() []PythonEnvironment {
 		envs = append(envs, env)
 	}
 
-	a.log(fmt.Sprintf("Total conda environments found: %d", len(envs)))
+	a.log(a.tr("Total conda environments found: %d", len(envs)))
 	return envs
 }
 
@@ -2473,7 +2680,7 @@ func (a *App) findCondaCommand() string {
 	// First check CONDA_EXE environment variable
 	if condaExe := os.Getenv("CONDA_EXE"); condaExe != "" {
 		if _, err := os.Stat(condaExe); err == nil {
-			a.log("Found conda from CONDA_EXE: " + condaExe)
+			a.log(a.tr("Found conda from CONDA_EXE: ") + condaExe)
 			return condaExe
 		}
 	}
@@ -2481,14 +2688,14 @@ func (a *App) findCondaCommand() string {
 	for _, cmd := range condaCmds {
 		// Check if command exists in PATH
 		if path, err := exec.LookPath(cmd); err == nil {
-			a.log("Found conda in PATH: " + path)
+			a.log(a.tr("Found conda in PATH: ") + path)
 			return path
 		}
 	}
 
 	// Try common installation paths
 	commonPaths := a.getCommonCondaPaths()
-	a.log(fmt.Sprintf("Searching for conda in %d common paths...", len(commonPaths)))
+	a.log(a.tr("Searching for conda in %d common paths...", len(commonPaths)))
 
 	for _, basePath := range commonPaths {
 		// Check if the base path exists first
@@ -2499,34 +2706,34 @@ func (a *App) findCondaCommand() string {
 		for _, cmd := range condaCmds {
 			fullPath := filepath.Join(basePath, cmd)
 			if _, err := os.Stat(fullPath); err == nil {
-				a.log("Found conda at: " + fullPath)
+				a.log(a.tr("Found conda at: ") + fullPath)
 				return fullPath
 			}
 
 			// Also check in Scripts subdirectory (Windows)
 			scriptsPath := filepath.Join(basePath, "Scripts", cmd)
 			if _, err := os.Stat(scriptsPath); err == nil {
-				a.log("Found conda at: " + scriptsPath)
+				a.log(a.tr("Found conda at: ") + scriptsPath)
 				return scriptsPath
 			}
 
 			// Check in condabin subdirectory (newer Anaconda installations)
 			condabinPath := filepath.Join(basePath, "condabin", cmd)
 			if _, err := os.Stat(condabinPath); err == nil {
-				a.log("Found conda at: " + condabinPath)
+				a.log(a.tr("Found conda at: ") + condabinPath)
 				return condabinPath
 			}
 
 			// Check in bin subdirectory (Linux/macOS)
 			binPath := filepath.Join(basePath, "bin", cmd)
 			if _, err := os.Stat(binPath); err == nil {
-				a.log("Found conda at: " + binPath)
+				a.log(a.tr("Found conda at: ") + binPath)
 				return binPath
 			}
 		}
 	}
 
-	a.log("Conda not found in any common location")
+	a.log(a.tr("Conda not found in any common location"))
 	return ""
 }
 
@@ -2601,13 +2808,14 @@ func (a *App) getCommonCondaPaths() []string {
 
 	// Common drive root installations
 	for _, drive := range []string{"C:", "D:", "E:"} {
+		root := drive + string(filepath.Separator)
 		paths = append(paths,
-			filepath.Join(drive, "anaconda3"),
-			filepath.Join(drive, "miniconda3"),
-			filepath.Join(drive, "Anaconda3"),
-			filepath.Join(drive, "Miniconda3"),
-			filepath.Join(drive, "ProgramData", "anaconda3"),
-			filepath.Join(drive, "ProgramData", "miniconda3"),
+			filepath.Join(root, "anaconda3"),
+			filepath.Join(root, "miniconda3"),
+			filepath.Join(root, "Anaconda3"),
+			filepath.Join(root, "Miniconda3"),
+			filepath.Join(root, "ProgramData", "anaconda3"),
+			filepath.Join(root, "ProgramData", "miniconda3"),
 		)
 	}
 
@@ -2832,11 +3040,1139 @@ func (a *App) PackLog(logContent string) (string, error) {
 
 		
 
-				return cmd.Start()
+						return cmd.Start()
 
 		
 
-			}
+					}
+
+		
+
+				
+
+		
+
+				// Translation logic
+
+		
+
+				var translations = map[string]map[string]string{
+
+		
+
+					"Checking Node.js installation...": {
+
+		
+
+						"zh-Hans": "正在检查 Node.js 安装...",
+
+		
+
+						"zh-Hant": "正在檢查 Node.js 安裝...",
+
+		
+
+					},
+
+		
+
+					"Node.js not found. Downloading and installing...": {
+
+		
+
+						"zh-Hans": "未找到 Node.js。正在下载并安装...",
+
+		
+
+						"zh-Hant": "未找到 Node.js。正在下載並安裝...",
+
+		
+
+					},
+
+		
+
+					"Node.js not found. Attempting manual installation...": {
+
+		
+
+						"zh-Hans": "未找到 Node.js。尝试手动安装...",
+
+		
+
+						"zh-Hant": "未找到 Node.js。嘗試手動安裝...",
+
+		
+
+					},
+
+		
+
+					"Node.js installed successfully.": {
+
+		
+
+						"zh-Hans": "Node.js 安装成功。",
+
+		
+
+						"zh-Hant": "Node.js 安裝成功。",
+
+		
+
+					},
+
+		
+
+					"Node.js is installed.": {
+
+		
+
+						"zh-Hans": "Node.js 已安装。",
+
+		
+
+						"zh-Hant": "Node.js 已安裝。",
+
+		
+
+					},
+
+		
+
+					"Checking Git installation...": {
+
+		
+
+						"zh-Hans": "正在检查 Git 安装...",
+
+		
+
+						"zh-Hant": "正在檢查 Git 安裝...",
+
+		
+
+					},
+
+		
+
+					"Git found in standard location.": {
+
+		
+
+						"zh-Hans": "在标准位置找到 Git。",
+
+		
+
+						"zh-Hant": "在標準位置找到 Git。",
+
+		
+
+					},
+
+		
+
+					"Git not found. Downloading and installing...": {
+
+		
+
+						"zh-Hans": "未找到 Git。正在下载并安装...",
+
+		
+
+						"zh-Hant": "未找到 Git。正在下載並安裝...",
+
+		
+
+					},
+
+		
+
+					"Git installed successfully.": {
+
+		
+
+						"zh-Hans": "Git 安装成功。",
+
+		
+
+						"zh-Hant": "Git 安裝成功。",
+
+		
+
+					},
+
+		
+
+					"Git is installed.": {
+
+		
+
+						"zh-Hans": "Git 已安装。",
+
+		
+
+						"zh-Hant": "Git 已安裝。",
+
+		
+
+					},
+
+		
+
+					"Environment check complete.": {
+
+		
+
+						"zh-Hans": "环境检查完成。",
+
+		
+
+						"zh-Hant": "環境檢查完成。",
+
+		
+
+					},
+
+		
+
+					"npm not found.": {
+
+		
+
+						"zh-Hans": "未找到 npm。",
+
+		
+
+						"zh-Hant": "未找到 npm。",
+
+		
+
+					},
+
+		
+
+					// Templates
+
+		
+
+					"Checking %s...": {
+
+		
+
+						"zh-Hans": "正在检查 %s...",
+
+		
+
+						"zh-Hant": "正在檢查 %s...",
+
+		
+
+					},
+
+		
+
+					"%s not found. Attempting automatic installation...": {
+
+		
+
+						"zh-Hans": "未找到 %s。尝试自动安装...",
+
+		
+
+						"zh-Hant": "未找到 %s。嘗試自動安裝...",
+
+		
+
+					},
+
+		
+
+					"ERROR: Failed to install %s: %v": {
+
+		
+
+						"zh-Hans": "错误：安装 %s 失败: %v",
+
+		
+
+						"zh-Hant": "錯誤：安裝 %s 失敗: %v",
+
+		
+
+					},
+
+		
+
+					"%s installed successfully.": {
+
+		
+
+						"zh-Hans": "%s 安装成功。",
+
+		
+
+						"zh-Hant": "%s 安裝成功。",
+
+		
+
+					},
+
+		
+
+					"%s found at %s (version: %s).": {
+
+		
+
+						"zh-Hans": "发现 %s 位于 %s (版本: %s)。",
+
+		
+
+						"zh-Hant": "發現 %s 位於 %s (版本: %s)。",
+
+		
+
+					},
+
+		
+
+					"Checking for %s updates...": {
+
+		
+
+						"zh-Hans": "正在检查 %s 更新...",
+
+		
+
+						"zh-Hant": "正在檢查 %s 更新...",
+
+		
+
+					},
+
+		
+
+					"New version available for %s: %s (current: %s). Updating...": {
+
+		
+
+						"zh-Hans": "%s 有新版本可用: %s (当前: %s)。正在更新...",
+
+		
+
+						"zh-Hant": "%s 有新版本可用: %s (當前: %s)。正在更新...",
+
+		
+
+					},
+
+		
+
+					"ERROR: Failed to update %s: %v": {
+
+		
+
+						"zh-Hans": "错误：更新 %s 失败: %v",
+
+		
+
+						"zh-Hant": "錯誤：更新 %s 失敗: %v",
+
+		
+
+					},
+
+		
+
+					"%s updated successfully to %s.": {
+
+		
+
+						"zh-Hans": "%s 成功更新到 %s。",
+
+		
+
+						"zh-Hant": "%s 成功更新到 %s。",
+
+		
+
+					},
+
+		
+
+					"Installing Node.js (this may take a moment, please grant administrator permission if prompted)...": {
+
+		
+
+						"zh-Hans": "正在安装 Node.js (这可能需要一些时间，如果提示请授予管理员权限)...",
+
+		
+
+						"zh-Hant": "正在安裝 Node.js (這可能需要一些時間，如果提示請授予管理員權限)...",
+
+		
+
+					},
+
+		
+
+					"Installing Git (this may take a moment, please grant administrator permission if prompted)...": {
+
+		
+
+						"zh-Hans": "正在安装 Git (这可能需要一些时间，如果提示请授予管理员权限)...",
+
+		
+
+						"zh-Hant": "正在安裝 Git (這可能需要一些時間，如果提示請授予管理員權限)...",
+
+		
+
+					},
+
+		
+
+				    "Downloading Node.js %s for %s...": {
+
+		
+
+				        "zh-Hans": "正在下载 Node.js %s (%s)...",
+
+		
+
+				        "zh-Hant": "正在下載 Node.js %s (%s)...",
+
+		
+
+				    },
+
+		
+
+				    "Downloading Node.js v%s from %s...": {
+
+		
+
+				        "zh-Hans": "正在从 %s 下载 Node.js v%s...",
+
+		
+
+				        "zh-Hant": "正在從 %s 下載 Node.js v%s...",
+
+		
+
+				    },
+
+		
+
+				    				    "Downloading Git %s...": {
+
+		
+
+				    		
+
+		
+
+				    				        "zh-Hans": "正在下载 Git %s...",
+
+		
+
+				    		
+
+		
+
+				    				        "zh-Hant": "正在下載 Git %s...",
+
+		
+
+				    		
+
+		
+
+				    				    },
+
+		
+
+				    
+
+		
+
+				    					"Downloading Node.js (%.1f%%): %d/%d bytes": {
+
+		
+
+				    						"zh-Hans": "正在下载 Node.js (%.1f%%): %d/%d 字节",
+
+		
+
+				    						"zh-Hant": "正在下載 Node.js (%.1f%%): %d/%d 字節",
+
+		
+
+				    					},
+
+		
+
+				    		
+
+		
+
+				    				    "Node.js installer is not accessible (Status: %s). Please check your internet connection or mirror availability.": {
+
+		
+
+				        "zh-Hans": "无法访问 Node.js 安装程序 (状态: %s)。请检查您的网络连接或镜像可用性。",
+
+		
+
+				        "zh-Hant": "無法訪問 Node.js 安裝程序 (狀態: %s)。請檢查您的網絡連接或鏡像可用性。",
+
+		
+
+				    },
+
+		
+
+				        "Failed to install Node.js: ": {
+
+		
+
+				            "zh-Hans": "安装 Node.js 失败: ",
+
+		
+
+				            "zh-Hant": "安裝 Node.js 失敗: ",
+
+		
+
+				        },
+
+		
+
+				        "Node.js not found. Checking for Homebrew...": {
+
+		
+
+				            "zh-Hans": "未找到 Node.js。正在检查 Homebrew...",
+
+		
+
+				            "zh-Hant": "未找到 Node.js。正在檢查 Homebrew...",
+
+		
+
+				        },
+
+		
+
+				        "Installing Node.js via Homebrew...": {
+
+		
+
+				            "zh-Hans": "正在通过 Homebrew 安装 Node.js...",
+
+		
+
+				            "zh-Hant": "正在通過 Homebrew 安裝 Node.js...",
+
+		
+
+				        },
+
+		
+
+				        "Homebrew installation failed.": {
+
+		
+
+				            "zh-Hans": "Homebrew 安装失败。",
+
+		
+
+				            "zh-Hant": "Homebrew 安裝失敗。",
+
+		
+
+				        },
+
+		
+
+				        "Node.js installed via Homebrew.": {
+
+		
+
+				            "zh-Hans": "Node.js 已通过 Homebrew 安装。",
+
+		
+
+				            "zh-Hant": "Node.js 已通過 Homebrew 安裝。",
+
+		
+
+				        },
+
+		
+
+				        "Homebrew not found. Attempting manual installation...": {
+
+		
+
+				            "zh-Hans": "未找到 Homebrew。尝试手动安装...",
+
+		
+
+				            "zh-Hant": "未找到 Homebrew。嘗試手動安裝...",
+
+		
+
+				        },
+
+		
+
+				        				        "Manual installation failed: ": {
+
+		
+
+				        		
+
+		
+
+				        				            "zh-Hans": "手动安装失败: ",
+
+		
+
+				        		
+
+		
+
+				        				            "zh-Hant": "手動安裝失敗: ",
+
+		
+
+				        		
+
+		
+
+				        				        },
+
+		
+
+				        
+
+		
+
+				        						"Downloading Node.js from %s": {
+
+		
+
+				        							"zh-Hans": "正在从 %s 下载 Node.js",
+
+		
+
+				        							"zh-Hant": "正在從 %s 下載 Node.js",
+
+		
+
+				        						},
+
+		
+
+				        
+
+		
+
+				        												"Extracting Node.js (this should be fast)...": {
+
+		
+
+				        
+
+		
+
+				        													"zh-Hans": "正在解压 Node.js (这应该很快)...",
+
+		
+
+				        
+
+		
+
+				        													"zh-Hant": "正在解壓 Node.js (這應該很快)...",
+
+		
+
+				        
+
+		
+
+				        												},
+
+		
+
+				        
+
+		
+
+				        						
+
+		
+
+				        
+
+		
+
+				        												"Extracting Node.js...": {
+
+		
+
+				        
+
+		
+
+				        													"zh-Hans": "正在解压 Node.js...",
+
+		
+
+				        
+
+		
+
+				        													"zh-Hant": "正在解壓 Node.js...",
+
+		
+
+				        
+
+		
+
+				        												},
+
+		
+
+				        
+
+		
+
+				        								
+
+		
+
+				        
+
+		
+
+				        										        "Node.js manually installed to ": {
+
+		
+
+				            "zh-Hans": "Node.js 已手动安装到 ",
+
+		
+
+				            "zh-Hant": "Node.js 已手動安裝到 ",
+
+		
+
+				        },
+
+		
+
+				        "Verifying Node.js installation...": {
+
+		
+
+				            "zh-Hans": "正在验证 Node.js 安装...",
+
+		
+
+				            "zh-Hant": "正在驗證 Node.js 安裝...",
+
+		
+
+				        },
+
+		
+
+				        "Node.js installation completed but binary not found.": {
+
+		
+
+				            "zh-Hans": "Node.js 安装完成但未找到二进制文件。",
+
+		
+
+				            "zh-Hant": "Node.js 安裝完成但未找到二進制文件。",
+
+		
+
+				        },
+
+		
+
+				            "Node.js found at: ": {
+
+		
+
+				                "zh-Hans": "Node.js 位于: ",
+
+		
+
+				                "zh-Hant": "Node.js 位於: ",
+
+		
+
+				            },
+
+		
+
+				                "Updated PATH: ": {
+
+		
+
+				                    "zh-Hans": "已更新 PATH: ",
+
+		
+
+				                    "zh-Hant": "已更新 PATH: ",
+
+		
+
+				                },
+
+		
+
+				                "Running installation: %s %s": {
+
+		
+
+				                    "zh-Hans": "正在运行安装: %s %s",
+
+		
+
+				                    "zh-Hant": "正在運行安裝: %s %s",
+
+		
+
+				                },
+
+		
+
+				                "Detected npm cache permission issue. Attempting to clear cache...": {
+
+		
+
+				                    "zh-Hans": "检测到 npm 缓存权限问题。正在尝试清理缓存...",
+
+		
+
+				                    "zh-Hant": "檢測到 npm 緩存權限問題。正在嘗試清理緩存...",
+
+		
+
+				                },
+
+		
+
+				                "Retrying installation after cache clean...": {
+
+		
+
+				                    "zh-Hans": "清理缓存后重试安装...",
+
+		
+
+				                    "zh-Hant": "清理緩存後重試安裝...",
+
+		
+
+				                },
+
+		
+
+				                "Running update: %s %s": {
+
+		
+
+				                    "zh-Hans": "正在运行更新: %s %s",
+
+		
+
+				                    "zh-Hant": "正在運行更新: %s %s",
+
+		
+
+				                },
+
+		
+
+				                    "Warning: Failed to create local npm cache dir: %v": {
+
+		
+
+				                        "zh-Hans": "警告: 创建本地 npm 缓存目录失败: %v",
+
+		
+
+				                        "zh-Hant": "警告: 創建本地 npm 緩存目錄失敗: %v",
+
+		
+
+				                    },
+
+		
+
+				                    "Found conda environment: %s at %s": {
+
+		
+
+				                        "zh-Hans": "发现 conda 环境: %s 位于 %s",
+
+		
+
+				                        "zh-Hant": "發現 conda 環境: %s 位於 %s",
+
+		
+
+				                    },
+
+		
+
+				                    "Using conda command: ": {
+
+		
+
+				                        "zh-Hans": "使用 conda 命令: ",
+
+		
+
+				                        "zh-Hant": "使用 conda 命令: ",
+
+		
+
+				                    },
+
+		
+
+				                    "Failed to list conda environments: ": {
+
+		
+
+				                        "zh-Hans": "列出 conda 环境失败: ",
+
+		
+
+				                        "zh-Hant": "列出 conda 環境失敗: ",
+
+		
+
+				                    },
+
+		
+
+				                    "Total conda environments found: %d": {
+
+		
+
+				                        "zh-Hans": "共发现 %d 个 conda 环境",
+
+		
+
+				                        "zh-Hant": "共發現 %d 個 conda 環境",
+
+		
+
+				                    },
+
+		
+
+				                    "Found conda from CONDA_EXE: ": {
+
+		
+
+				                        "zh-Hans": "从 CONDA_EXE 发现 conda: ",
+
+		
+
+				                        "zh-Hant": "從 CONDA_EXE 發現 conda: ",
+
+		
+
+				                    },
+
+		
+
+				                    "Found conda in PATH: ": {
+
+		
+
+				                        "zh-Hans": "在 PATH 中发现 conda: ",
+
+		
+
+				                        "zh-Hant": "在 PATH 中發現 conda: ",
+
+		
+
+				                    },
+
+		
+
+				                    "Searching for conda in %d common paths...": {
+
+		
+
+				                        "zh-Hans": "正在 %d 个常用路径中搜索 conda...",
+
+		
+
+				                        "zh-Hant": "正在 %d 個常用路徑中搜索 conda...",
+
+		
+
+				                    },
+
+		
+
+				                    "Found conda at: ": {
+
+		
+
+				                        "zh-Hans": "发现 conda 位于: ",
+
+		
+
+				                        "zh-Hant": "發現 conda 位於: ",
+
+		
+
+				                    },
+
+		
+
+				                    "Conda not found in any common location": {
+
+		
+
+				                        "zh-Hans": "在任何常用位置都未找到 Conda",
+
+		
+
+				                        "zh-Hant": "在任何常用位置都未找到 Conda",
+
+		
+
+				                    },
+
+		
+
+				                }
+
+		
+
+				
+
+		
+
+				func (a *App) tr(key string, args ...interface{}) string {
+
+		
+
+					lang := strings.ToLower(a.CurrentLanguage)
+
+		
+
+					if strings.HasPrefix(lang, "zh-hans") || strings.HasPrefix(lang, "zh-cn") {
+
+		
+
+						lang = "zh-Hans"
+
+		
+
+					} else if strings.HasPrefix(lang, "zh-hant") || strings.HasPrefix(lang, "zh-tw") || strings.HasPrefix(lang, "zh-hk") {
+
+		
+
+						lang = "zh-Hant"
+
+		
+
+					} else {
+
+		
+
+						lang = "en"
+
+		
+
+					}
+
+		
+
+				
+
+		
+
+					var format string
+
+		
+
+					if dict, ok := translations[key]; ok {
+
+		
+
+						if val, ok := dict[lang]; ok {
+
+		
+
+							format = val
+
+		
+
+						}
+
+		
+
+					}
+
+		
+
+				
+
+		
+
+					if format == "" {
+
+		
+
+						format = key
+
+		
+
+					}
+
+		
+
+				
+
+		
+
+					if len(args) > 0 {
+
+		
+
+						return fmt.Sprintf(format, args...)
+
+		
+
+					}
+
+		
+
+					return format
+
+		
+
+				}
 
 		
 

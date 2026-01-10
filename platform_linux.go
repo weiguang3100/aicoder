@@ -22,10 +22,10 @@ func (a *App) platformStartup() {
 
 func (a *App) CheckEnvironment() {
 	go func() {
-		a.log("Checking Node.js installation...")
+		a.log(a.tr("Checking Node.js installation..."))
 		
 		home, _ := os.UserHomeDir()
-		localNodeDir := filepath.Join(home, ".cceasy", "node")
+		localNodeDir := filepath.Join(home, ".cceasy", "tools")
 		localBinDir := filepath.Join(localNodeDir, "bin")
 
 		// 1. Setup PATH
@@ -47,7 +47,7 @@ func (a *App) CheckEnvironment() {
 		if pathChanged {
 			envPath = strings.Join(newPathParts, ":")
 			os.Setenv("PATH", envPath)
-			a.log("Updated PATH: " + envPath)
+			a.log(a.tr("Updated PATH: ") + envPath)
 		}
 
 		// 2. Search for Node.js
@@ -64,13 +64,13 @@ func (a *App) CheckEnvironment() {
 
 		// 3. If still not found, try to install
 		if nodePath == "" {
-			a.log("Node.js not found. Attempting manual installation...")
+			a.log(a.tr("Node.js not found. Attempting manual installation..."))
 			if err := a.installNodeJSManually(localNodeDir); err != nil {
-				a.log("Manual installation failed: " + err.Error())
+				a.log(a.tr("Manual installation failed: ") + err.Error())
 				wails_runtime.EventsEmit(a.ctx, "env-check-done")
 				return
 			}
-			a.log("Node.js manually installed to " + localNodeDir)
+			a.log(a.tr("Node.js manually installed to ") + localNodeDir)
 			
 			// Re-check for node
 			localNodePath := filepath.Join(localBinDir, "node")
@@ -79,13 +79,13 @@ func (a *App) CheckEnvironment() {
 			}
 			
 			if nodePath == "" {
-				a.log("Node.js installation completed but binary not found.")
+				a.log(a.tr("Node.js installation completed but binary not found."))
 				wails_runtime.EventsEmit(a.ctx, "env-check-done")
 				return
 			}
 		}
 
-		a.log("Node.js found at: " + nodePath)
+		a.log(a.tr("Node.js found at: ") + nodePath)
 
 		// 4. Search for npm
 		npmExec, err := exec.LookPath("npm")
@@ -97,45 +97,44 @@ func (a *App) CheckEnvironment() {
 		}
 		
 		if npmExec == "" {
-			a.log("npm not found.")
+			a.log(a.tr("npm not found."))
 			wails_runtime.EventsEmit(a.ctx, "env-check-done")
 			return
 		}
 
 		        // 5. Check and Install AI Tools
 				tm := NewToolManager(a)
-				tools := []string{"claude", "gemini", "codex", "opencode", "codebuddy", "qoder"}
+				tools := []string{"claude", "gemini", "codex", "opencode", "codebuddy", "qoder", "iflow"}
 				
 				for _, tool := range tools {
-					a.log(fmt.Sprintf("Checking %s...", tool))
+					a.log(a.tr("Checking %s...", tool))
 					status := tm.GetToolStatus(tool)
 					
 					if !status.Installed {
-						a.log(fmt.Sprintf("%s not found. Attempting automatic installation...", tool))
+						a.log(a.tr("%s not found. Attempting automatic installation...", tool))
 						if err := tm.InstallTool(tool); err != nil {
-							a.log(fmt.Sprintf("ERROR: Failed to install %s: %v", tool, err))
+							a.log(a.tr("ERROR: Failed to install %s: %v", tool, err))
 							// We continue to other tools even if one fails, allowing manual intervention later
 						} else {
-							a.log(fmt.Sprintf("%s installed successfully.", tool))
+							a.log(a.tr("%s installed successfully.", tool))
 						}
-					} else {
-						a.log(fmt.Sprintf("%s found (version: %s).", tool, status.Version))
-						// Check for updates for codex, opencode, codebuddy and qoder
-						if tool == "codex" || tool == "opencode" || tool == "codebuddy" || tool == "qoder" {
-							a.log(fmt.Sprintf("Checking for %s updates...", tool))
-							latest, err := a.getLatestNpmVersion(npmExec, tm.GetPackageName(tool))
+					                    } else {
+					                        a.log(a.tr("%s found at %s (version: %s).", tool, status.Path, status.Version))
+					                        // Check for updates for all tools
+					                        if tool == "codex" || tool == "opencode" || tool == "codebuddy" || tool == "qoder" || tool == "iflow" || tool == "gemini" || tool == "claude" {
+					                            a.log(a.tr("Checking for %s updates...", tool))							latest, err := a.getLatestNpmVersion(npmExec, tm.GetPackageName(tool))
 							if err == nil && latest != "" && latest != status.Version {
-								a.log(fmt.Sprintf("New version available for %s: %s (current: %s). Updating...", tool, latest, status.Version))
+								a.log(a.tr("New version available for %s: %s (current: %s). Updating...", tool, latest, status.Version))
 								if err := tm.InstallTool(tool); err != nil {
-									a.log(fmt.Sprintf("ERROR: Failed to update %s: %v", tool, err))
+									a.log(a.tr("ERROR: Failed to update %s: %v", tool, err))
 								} else {
-									a.log(fmt.Sprintf("%s updated successfully to %s.", tool, latest))
+									a.log(a.tr("%s updated successfully to %s.", tool, latest))
 								}
 							}
 						}
 					}
 				}
-		a.log("Environment check complete.")
+		a.log(a.tr("Environment check complete."))
 		wails_runtime.EventsEmit(a.ctx, "env-check-done")
 	}()
 }
@@ -155,7 +154,7 @@ downloadURL := fmt.Sprintf("https://nodejs.org/dist/v%s/%s", version, fileName)
 		downloadURL = fmt.Sprintf("https://mirrors.tuna.tsinghua.edu.cn/nodejs-release/v%s/%s", version, fileName)
 	}
 
-	a.log(fmt.Sprintf("Downloading Node.js v%s from %s...", version, downloadURL))
+	a.log(a.tr("Downloading Node.js v%s from %s...", version, downloadURL))
 	
 	req, err := http.NewRequest("GET", downloadURL, nil)
 	if err != nil {
@@ -193,7 +192,7 @@ downloadURL := fmt.Sprintf("https://nodejs.org/dist/v%s/%s", version, fileName)
 			downloaded += int64(n)
 			if size > 0 && time.Since(lastReport) > 500*time.Millisecond {
 				percent := float64(downloaded) / float64(size) * 100
-				a.log(fmt.Sprintf("Downloading Node.js (%.1f%%): %d/%d bytes", percent, downloaded, size))
+				a.log(a.tr("Downloading Node.js (%.1f%%): %d/%d bytes", percent, downloaded, size))
 				lastReport = time.Now()
 			}
 		}
@@ -215,7 +214,7 @@ downloadURL := fmt.Sprintf("https://nodejs.org/dist/v%s/%s", version, fileName)
 		return err
 	}
 	
-a.log("Extracting Node.js...")
+a.log(a.tr("Extracting Node.js..."))
 	cmd := exec.Command("tar", "-xJf", tempFile.Name(), "-C", destDir, "--strip-components", "1")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("tar extraction failed: %v, output: %s", err, string(out))
@@ -294,7 +293,9 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 			finalCmd += " --full-auto"
 		case "codebuddy":
 			finalCmd += " -y"
-		case "qodercli":
+		case "iflow":
+			finalCmd += " -y"
+		case "qodercli", "qoder":
 			finalCmd += " --yolo"
 		}
 	}

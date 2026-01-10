@@ -12,6 +12,8 @@ export function ClipboardGetText():Promise<string>;
 
 export function GetCurrentProjectPath():Promise<string>;
 
+export function GetLocalCacheDir():Promise<string>;
+
 export function GetSystemInfo():Promise<main.SystemInfo>;
 
 export function GetUserHomeDir():Promise<string>;
@@ -49,5 +51,7 @@ export function SetLanguage(arg1:string):Promise<void>;
 export function ShowItemInFolder(arg1:string):Promise<void>;
 
 export function ShowMessage(arg1:string,arg2:string):Promise<void>;
+
+export function UpdateTool(arg1:string):Promise<void>;
 
 export function WindowHide():Promise<void>;

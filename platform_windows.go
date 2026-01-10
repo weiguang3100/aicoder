@@ -25,9 +25,23 @@ func (a *App) updatePathForNode() {
 	nodePath := `C:\Program Files\nodejs`
 	npmPath := filepath.Join(os.Getenv("AppData"), "npm")
 	home, _ := os.UserHomeDir()
-	localToolPath := filepath.Join(home, ".cceasy", "node")
+	localToolPath := filepath.Join(home, ".cceasy", "tools")
+	oldToolPath := filepath.Join(home, ".cceasy", "node")
 
 	currentPath := os.Getenv("PATH")
+	// Remove old path if present to prevent conflicts
+	if strings.Contains(strings.ToLower(currentPath), strings.ToLower(oldToolPath)) {
+		// Simple removal - split by separator, filter, join
+		parts := strings.Split(currentPath, string(os.PathListSeparator))
+		var newParts []string
+		for _, part := range parts {
+			if !strings.EqualFold(part, oldToolPath) {
+				newParts = append(newParts, part)
+			}
+		}
+		currentPath = strings.Join(newParts, string(os.PathListSeparator))
+	}
+
 	newPath := currentPath
 	
 	// Check and add Node.js path
@@ -59,27 +73,27 @@ func (a *App) updatePathForNode() {
 
 func (a *App) CheckEnvironment() {
 	go func() {
-		a.log("Checking Node.js installation...")
+		a.log(a.tr("Checking Node.js installation..."))
 
 		// Check for node
 		nodeCmd := exec.Command("node", "--version")
 		nodeCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		if err := nodeCmd.Run(); err != nil {
-			a.log("Node.js not found. Downloading and installing...")
+			a.log(a.tr("Node.js not found. Downloading and installing..."))
 			if err := a.installNodeJS(); err != nil {
-				a.log("Failed to install Node.js: " + err.Error())
+				a.log(a.tr("Failed to install Node.js: ") + err.Error())
 				return
 			}
-			a.log("Node.js installed successfully.")
+			a.log(a.tr("Node.js installed successfully."))
 		} else {
-			a.log("Node.js is installed.")
+			a.log(a.tr("Node.js is installed."))
 		}
 
 		// Update path for the current process anyway to ensure npm is found
 		a.updatePathForNode()
 
 		// Check for Git
-		a.log("Checking Git installation...")
+		a.log(a.tr("Checking Git installation..."))
 		if _, err := exec.LookPath("git"); err != nil {
 			// Check common locations before giving up
 			gitFound := false
@@ -89,22 +103,26 @@ func (a *App) CheckEnvironment() {
 			
 			if gitFound {
 				a.updatePathForGit()
-				a.log("Git found in standard location.")
+				a.log(a.tr("Git found in standard location."))
 			} else {
-				a.log("Git not found. Downloading and installing...")
+				a.log(a.tr("Git not found. Downloading and installing..."))
 				if err := a.installGitBash(); err != nil {
 					a.log("Failed to install Git: " + err.Error())
 				} else {
-					a.log("Git installed successfully.")
+					a.log(a.tr("Git installed successfully."))
 					a.updatePathForGit()
 				}
 			}
 		} else {
-			a.log("Git is installed.")
+			a.log(a.tr("Git is installed."))
 		}
+
+		// Ensure node.exe is in local tool path for npm wrappers
+		a.ensureLocalNodeBinary()
 
 		// 5. Check and Install AI Tools
 		tm := NewToolManager(a)
+
 
 		// Search for npm
 		npmExec, err := exec.LookPath("npm")
@@ -115,40 +133,40 @@ func (a *App) CheckEnvironment() {
 			npmExec = "npm"
 		}
 
-		tools := []string{"claude", "gemini", "codex", "opencode", "codebuddy", "qoder"}
+		tools := []string{"claude", "gemini", "codex", "opencode", "codebuddy", "qoder", "iflow"}
 		
 		for _, tool := range tools {
-			a.log(fmt.Sprintf("Checking %s...", tool))
+			a.log(a.tr("Checking %s...", tool))
 			status := tm.GetToolStatus(tool)
 			
 			if !status.Installed {
-				a.log(fmt.Sprintf("%s not found. Attempting automatic installation...", tool))
+				a.log(a.tr("%s not found. Attempting automatic installation...", tool))
 				if err := tm.InstallTool(tool); err != nil {
-					a.log(fmt.Sprintf("ERROR: Failed to install %s: %v", tool, err))
+					a.log(a.tr("ERROR: Failed to install %s: %v", tool, err))
 					// We continue to other tools even if one fails, allowing manual intervention later
 				} else {
-					a.log(fmt.Sprintf("%s installed successfully.", tool))
+					a.log(a.tr("%s installed successfully.", tool))
 					a.updatePathForNode() // Refresh path after install
 				}
 			} else {
-				a.log(fmt.Sprintf("%s found (version: %s).", tool, status.Version))
-				// Check for updates for codex, opencode, codebuddy and qoder
-				if tool == "codex" || tool == "opencode" || tool == "codebuddy" || tool == "qoder" {
-					a.log(fmt.Sprintf("Checking for %s updates...", tool))
+				a.log(a.tr("%s found at %s (version: %s).", tool, status.Path, status.Version))
+				// Check for updates for all tools
+				if tool == "codex" || tool == "opencode" || tool == "codebuddy" || tool == "qoder" || tool == "iflow" || tool == "gemini" || tool == "claude" {
+					a.log(a.tr("Checking for %s updates...", tool))
 					latest, err := a.getLatestNpmVersion(npmExec, tm.GetPackageName(tool))
 					if err == nil && latest != "" && latest != status.Version {
-						a.log(fmt.Sprintf("New version available for %s: %s (current: %s). Updating...", tool, latest, status.Version))
+						a.log(a.tr("New version available for %s: %s (current: %s). Updating...", tool, latest, status.Version))
 						if err := tm.InstallTool(tool); err != nil {
-							a.log(fmt.Sprintf("ERROR: Failed to update %s: %v", tool, err))
+							a.log(a.tr("ERROR: Failed to update %s: %v", tool, err))
 						} else {
-							a.log(fmt.Sprintf("%s updated successfully to %s.", tool, latest))
+							a.log(a.tr("%s updated successfully to %s.", tool, latest))
 						}
 					}
 				}
 			}
 		}
 
-		a.log("Environment check complete.")
+		a.log(a.tr("Environment check complete."))
 		runtime.EventsEmit(a.ctx, "env-check-done")
 	}()
 }
@@ -170,7 +188,7 @@ func (a *App) installNodeJS() error {
 		downloadURL = fmt.Sprintf("https://mirrors.tuna.tsinghua.edu.cn/nodejs-release/v%s/%s", nodeVersion, fileName)
 	}
 
-	a.log(fmt.Sprintf("Downloading Node.js %s for %s...", nodeVersion, nodeArch))
+	a.log(a.tr("Downloading Node.js %s for %s...", nodeVersion, nodeArch))
 
 	// Pre-check if the file exists and is accessible
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -182,7 +200,7 @@ func (a *App) installNodeJS() error {
 		if headResp != nil {
 			status = headResp.Status
 		}
-		return fmt.Errorf("Node.js installer is not accessible (Status: %s). Please check your internet connection or mirror availability.", status)
+		return fmt.Errorf(a.tr("Node.js installer is not accessible (Status: %s). Please check your internet connection or mirror availability.", status))
 	}
 	headResp.Body.Close()
 
@@ -194,7 +212,7 @@ func (a *App) installNodeJS() error {
 	}
 	defer os.Remove(msiPath)
 
-	a.log("Installing Node.js (this may take a moment, please grant administrator permission if prompted)...")
+	a.log(a.tr("Installing Node.js (this may take a moment, please grant administrator permission if prompted)..."))
 	// Use /passive for basic UI or /qn for completely silent.
 	// Adding ALLUSERS=1 to ensure it's in the standard path.
 	cmd := exec.Command("msiexec", "/i", msiPath, "/passive", "ALLUSERS=1")
@@ -245,7 +263,7 @@ func (a *App) installGitBash() error {
 		downloadURL = fmt.Sprintf("https://npmmirror.com/mirrors/git-for-windows/%s/%s", fullVersion, fileName)
 	}
 	
-	a.log(fmt.Sprintf("Downloading Git %s...", gitVersion))
+	a.log(a.tr("Downloading Git %s...", gitVersion))
 
 	tempDir := os.TempDir()
 	exePath := filepath.Join(tempDir, fileName)
@@ -255,7 +273,7 @@ func (a *App) installGitBash() error {
 	}
 	defer os.Remove(exePath)
 
-	a.log("Installing Git (this may take a moment, please grant administrator permission if prompted)...")
+	a.log(a.tr("Installing Git (this may take a moment, please grant administrator permission if prompted)..."))
 	// Silent installation
 	cmd := exec.Command(exePath, "/VERYSILENT", "/NORESTART", "/NOCANCEL", "/SP-", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
@@ -313,7 +331,7 @@ func (a *App) downloadFile(filepath string, url string) error {
 			downloaded += int64(n)
 			if size > 0 && time.Since(lastReport) > 500*time.Millisecond {
 				percent := float64(downloaded) / float64(size) * 100
-				a.log(fmt.Sprintf("Downloading Node.js (%.1f%%): %d/%d bytes", percent, downloaded, size))
+				a.log(a.tr("Downloading Node.js (%.1f%%): %d/%d bytes", percent, downloaded, size))
 				lastReport = time.Now()
 			}
 		}
@@ -348,6 +366,28 @@ func (a *App) restartApp() {
 	}
 }
 
+func (a *App) findSh() string {
+	// Try standard path lookup
+	path, err := exec.LookPath("sh")
+	if err == nil {
+		return path
+	}
+
+	// Try common locations for Git Bash
+	commonPaths := []string{
+		`C:\Program Files\Git\bin\sh.exe`,
+		`C:\Program Files\Git\usr\bin\sh.exe`,
+		`C:\Program Files (x86)\Git\bin\sh.exe`,
+		`C:\Program Files (x86)\Git\usr\bin\sh.exe`,
+	}
+	for _, p := range commonPaths {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return "sh" // Fallback
+}
+
 func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, pythonEnv string, projectDir string, env map[string]string, modelId string) {
 	tm := NewToolManager(a)
 	status := tm.GetToolStatus(binaryName)
@@ -364,10 +404,6 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 		return
 	}
 	a.log("Using binary at: " + binaryPath)
-
-	for k, v := range env {
-		os.Setenv(k, v)
-	}
 
 	projectDir = filepath.Clean(projectDir)
 	binaryPath = filepath.Clean(binaryPath)
@@ -389,7 +425,9 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 			flag = "--full-auto"
 		case "codebuddy":
 			flag = "-y"
-		case "qodercli":
+		case "iflow":
+			flag = "-y"
+		case "qodercli", "qoder":
 			flag = "--yolo"
 		}
 		if flag != "" {
@@ -397,65 +435,94 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 		}
 	}
 
-	// Launch with administrator privileges if requested
-	if adminMode {
-		a.log("Launching with administrator privileges...")
+	// Create a unified batch file for launching
+	batchContent := "@echo off\r\n"
+	batchContent += "chcp 65001 > nul\r\n" // Use UTF-8
+	batchContent += fmt.Sprintf("cd /d \"%s\"\r\n", projectDir)
 
-		// Build batch file content to set environment variables and launch the tool
-		batchContent := "@echo off\r\n"
-		batchContent += fmt.Sprintf("cd /d \"%s\"\r\n", projectDir)
+	// Set environment variables in the batch file
+	for k, v := range env {
+		batchContent += fmt.Sprintf("set %s=%s\r\n", k, v)
+	}
 
-		// Set environment variables in the batch file
-		for k, v := range env {
-			batchContent += fmt.Sprintf("set %s=%s\r\n", k, v)
+	// Add local tools directory to PATH
+	home, _ := os.UserHomeDir()
+	localToolPath := filepath.Join(home, ".cceasy", "tools")
+	batchContent += fmt.Sprintf("set PATH=%s;%%PATH%%\r\n", localToolPath)
+
+	// Activate Python environment if specified
+	if pythonEnv != "" && pythonEnv != "None (Default)" {
+		// Find conda root directory
+		condaRoot := a.getCondaRoot()
+		if condaRoot != "" {
+			// Initialize conda first by calling activate.bat
+			activateScript := filepath.Join(condaRoot, "Scripts", "activate.bat")
+			batchContent += fmt.Sprintf("echo Initializing Conda from: %s\r\n", condaRoot)
+			batchContent += fmt.Sprintf("call \"%s\"\r\n", activateScript)
+
+			// Now activate the specific environment
+			batchContent += fmt.Sprintf("echo Activating Python environment: %s\r\n", pythonEnv)
+			batchContent += fmt.Sprintf("call conda activate \"%s\"\r\n", pythonEnv)
+			batchContent += "if errorlevel 1 (\r\n"
+			batchContent += fmt.Sprintf("  echo Warning: Failed to activate conda environment '%s'. Continuing with base environment.\r\n", pythonEnv)
+			batchContent += ")\r\n"
+		} else {
+			batchContent += "echo Warning: Conda installation not found. Cannot activate environment.\r\n"
 		}
+	}
 
-		// Activate Python environment if specified
-		if pythonEnv != "" && pythonEnv != "None (Default)" {
-			// Find conda root directory
-			condaRoot := a.getCondaRoot()
-			if condaRoot != "" {
-				// Initialize conda first by calling activate.bat
-				activateScript := filepath.Join(condaRoot, "Scripts", "activate.bat")
-				batchContent += fmt.Sprintf("echo Initializing Conda from: %s\r\n", condaRoot)
-				batchContent += fmt.Sprintf("call \"%s\"\r\n", activateScript)
-
-				// Now activate the specific environment
-				batchContent += fmt.Sprintf("echo Activating Python environment: %s\r\n", pythonEnv)
-				batchContent += fmt.Sprintf("call conda activate \"%s\"\r\n", pythonEnv)
-				batchContent += "if errorlevel 1 (\r\n"
-				batchContent += fmt.Sprintf("  echo Warning: Failed to activate conda environment '%s'. Continuing with base environment.\r\n", pythonEnv)
-				batchContent += ")\r\n"
-				batchContent += "echo Current Python: \r\n"
-				batchContent += "python --version\r\n"
-			} else {
-				batchContent += "echo Warning: Conda installation not found. Cannot activate environment.\r\n"
-			}
-		}
-
-		// Launch the tool
+	// Launch the tool
+	batchContent += fmt.Sprintf("echo Launching %s...\r\n", binaryName)
+	
+	ext := strings.ToLower(filepath.Ext(binaryPath))
+	if ext == ".ps1" {
+		batchContent += fmt.Sprintf("powershell -ExecutionPolicy Bypass -File \"%s\"%s\r\n", binaryPath, cmdArgs)
+	} else if ext == ".js" {
+		batchContent += fmt.Sprintf("node \"%s\"%s\r\n", binaryPath, cmdArgs)
+	} else if ext == "" {
+		// Assume shell script (extensionless). Try to run with sh (Git Bash)
+		// Find sh executable explicitly
+		shPath := a.findSh()
+		batchContent += fmt.Sprintf("\"%s\" \"%s\"%s\r\n", shPath, binaryPath, cmdArgs)
+	} else {
 		batchContent += fmt.Sprintf("\"%s\"%s\r\n", binaryPath, cmdArgs)
-		batchContent += "pause\r\n"
+	}
+	
+	// Pause on error
+	batchContent += "if errorlevel 1 (\r\n"
+	batchContent += "  echo.\r\n"
+	batchContent += "  echo Process exited with error code %errorlevel%.\r\n"
+	batchContent += "  pause\r\n"
+	batchContent += "  exit /b %errorlevel%\r\n"
+	batchContent += ")\r\n"
+	batchContent += "exit /b 0\r\n"
 
-		// Create a temporary batch file
-		tempBatchPath := filepath.Join(os.TempDir(), fmt.Sprintf("aicoder_admin_%d.bat", time.Now().UnixNano()))
-		err := os.WriteFile(tempBatchPath, []byte(batchContent), 0644)
-		if err != nil {
-			a.log("Error creating batch file: " + err.Error())
-			a.ShowMessage("Launch Error", "Failed to create temporary batch file")
-			return
-		}
+	// Create a temporary batch file
+	tempBatchPath := filepath.Join(os.TempDir(), fmt.Sprintf("aicoder_launch_%d.bat", time.Now().UnixNano()))
+	err := os.WriteFile(tempBatchPath, []byte(batchContent), 0644)
+	if err != nil {
+		a.log("Error creating batch file: " + err.Error())
+		a.ShowMessage("Launch Error", "Failed to create temporary batch file")
+		return
+	}
 
-		// Use ShellExecute with "runas" verb to launch with admin privileges
+	a.log(fmt.Sprintf("Created launch script: %s", tempBatchPath))
+
+	// Clean up the batch file after a delay
+	go func() {
+		time.Sleep(10 * time.Second)
+		os.Remove(tempBatchPath)
+	}()
+
+	if adminMode {
+		// Launch with administrator privileges
 		shell32 := syscall.NewLazyDLL("shell32.dll")
 		shellExecute := shell32.NewProc("ShellExecuteW")
 
 		verb := syscall.StringToUTF16Ptr("runas")
 		file := syscall.StringToUTF16Ptr("cmd.exe")
-		params := syscall.StringToUTF16Ptr(fmt.Sprintf("/k \"%s\"", tempBatchPath))
+		params := syscall.StringToUTF16Ptr(fmt.Sprintf("/c \"%s\"", tempBatchPath))
 		dir := syscall.StringToUTF16Ptr(projectDir)
-
-		a.log(fmt.Sprintf("Executing with admin: cmd.exe /k \"%s\" (Dir: %s)", tempBatchPath, projectDir))
 
 		ret, _, _ := shellExecute.Call(
 			0,
@@ -468,100 +535,21 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 
 		if ret <= 32 {
 			a.log(fmt.Sprintf("ShellExecute failed with return value: %d", ret))
-			a.ShowMessage("Launch Error", "Failed to launch with admin privileges. Please check UAC settings.")
+			a.ShowMessage("Launch Error", "Failed to launch with admin privileges.")
+		}
+	} else {
+		// Normal launch
+		cmdLine := fmt.Sprintf(`cmd /c start "AICoder - %s" /d "%s" cmd /k "%s"`, binaryName, projectDir, tempBatchPath)
+		
+		cmd := exec.Command("cmd")
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			CmdLine:    cmdLine,
+			HideWindow: true,
 		}
 
-		// Clean up the batch file after a delay (since it's launched asynchronously)
-		go func() {
-			time.Sleep(5 * time.Second)
-			os.Remove(tempBatchPath)
-		}()
-	} else {
-		// Check if we need to activate Python environment
-		if pythonEnv != "" && pythonEnv != "None (Default)" {
-			// Use batch file approach for Python environment activation
-			batchContent := "@echo off\r\n"
-			batchContent += fmt.Sprintf("cd /d \"%s\"\r\n", projectDir)
-
-			// Set environment variables
-			for k, v := range env {
-				os.Setenv(k, v)
-			}
-
-			// Find conda root directory and initialize conda
-			condaRoot := a.getCondaRoot()
-			if condaRoot != "" {
-				// Initialize conda first by calling activate.bat
-				activateScript := filepath.Join(condaRoot, "Scripts", "activate.bat")
-				batchContent += fmt.Sprintf("echo Initializing Conda from: %s\r\n", condaRoot)
-				batchContent += fmt.Sprintf("call \"%s\"\r\n", activateScript)
-
-				// Now activate the specific environment
-				batchContent += fmt.Sprintf("echo Activating Python environment: %s\r\n", pythonEnv)
-				batchContent += fmt.Sprintf("call conda activate \"%s\"\r\n", pythonEnv)
-				batchContent += "if errorlevel 1 (\r\n"
-				batchContent += fmt.Sprintf("  echo Warning: Failed to activate conda environment '%s'. Continuing with base environment.\r\n", pythonEnv)
-				batchContent += ")\r\n"
-				batchContent += "echo Current Python: \r\n"
-				batchContent += "python --version\r\n"
-			} else {
-				batchContent += "echo Warning: Conda installation not found. Cannot activate environment.\r\n"
-			}
-
-			// Launch the tool
-			batchContent += fmt.Sprintf("\"%s\"%s\r\n", binaryPath, cmdArgs)
-
-			// Create a temporary batch file
-			tempBatchPath := filepath.Join(os.TempDir(), fmt.Sprintf("aicoder_%d.bat", time.Now().UnixNano()))
-			err := os.WriteFile(tempBatchPath, []byte(batchContent), 0644)
-			if err != nil {
-				a.log("Error creating batch file: " + err.Error())
-				a.ShowMessage("Launch Error", "Failed to create temporary batch file")
-				return
-			}
-
-			// Launch the batch file in a new command window
-			cmdLine := fmt.Sprintf(`cmd /c start "" /d "%s" cmd /k "%s"`, projectDir, tempBatchPath)
-
-			cmd := exec.Command("cmd")
-			cmd.Dir = projectDir
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				CmdLine:    cmdLine,
-				HideWindow: true,
-			}
-
-			a.log(fmt.Sprintf("Executing with Python env: %s (Dir: %s)", cmdLine, projectDir))
-
-			err = cmd.Run()
-			if err != nil {
-				a.log("Error launching tool: " + err.Error())
-			}
-
-			// Clean up the batch file after a delay
-			go func() {
-				time.Sleep(5 * time.Second)
-				os.Remove(tempBatchPath)
-			}()
-		} else {
-			// Use SysProcAttr.CmdLine for raw control over quoting on Windows.
-			// This is necessary because paths with special characters like '&'
-			// require explicit quoting that Go's default escaping might not handle
-			// correctly when passed through 'cmd /c'.
-			cmdLine := fmt.Sprintf(`cmd /c start "" /d "%s" cmd /k "%s"%s`, projectDir, binaryPath, cmdArgs)
-
-			cmd := exec.Command("cmd")
-			cmd.Dir = projectDir
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				CmdLine:    cmdLine,
-				HideWindow: true,
-			}
-
-			a.log(fmt.Sprintf("Executing: %s (Dir: %s)", cmdLine, projectDir))
-
-			err := cmd.Run()
-			if err != nil {
-				a.log("Error launching tool: " + err.Error())
-			}
+		if err := cmd.Start(); err != nil {
+			a.log("Error launching tool: " + err.Error())
+			a.ShowMessage("Launch Error", "Failed to start process: "+err.Error())
 		}
 	}
 }
@@ -706,5 +694,60 @@ func createCondaEnvListCmd(condaCmd string) *exec.Cmd {
 	cmd := exec.Command("cmd", "/c", condaCmd, "env", "list")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd
+}
+
+func (a *App) ensureLocalNodeBinary() {
+	home, _ := os.UserHomeDir()
+	localNodeDir := filepath.Join(home, ".cceasy", "tools")
+	
+	// Create directory if it doesn't exist
+	if err := os.MkdirAll(localNodeDir, 0755); err != nil {
+		a.log("Failed to create local tools dir: " + err.Error())
+		return
+	}
+
+	localNodeExe := filepath.Join(localNodeDir, "node.exe")
+
+	if _, err := os.Stat(localNodeExe); err == nil {
+		// node.exe already exists
+		return
+	}
+
+	// Find system node.exe
+	systemNode, err := exec.LookPath("node")
+	if err != nil {
+		// Try common paths
+		commonPaths := []string{
+			`C:\Program Files\nodejs\node.exe`,
+			filepath.Join(os.Getenv("AppData"), "npm", "node.exe"),
+		}
+		for _, p := range commonPaths {
+			if _, err := os.Stat(p); err == nil {
+				systemNode = p
+				break
+			}
+		}
+	}
+
+	if systemNode == "" {
+		a.log("Warning: Could not find system node.exe to copy to local tool dir.")
+		return
+	}
+
+	a.log(fmt.Sprintf("Copying node.exe from %s to %s to ensure wrapper compatibility...", systemNode, localNodeExe))
+
+	// Copy the file
+	input, err := os.ReadFile(systemNode)
+	if err != nil {
+		a.log("Failed to read system node.exe: " + err.Error())
+		return
+	}
+
+	if err := os.WriteFile(localNodeExe, input, 0755); err != nil {
+		a.log("Failed to write local node.exe: " + err.Error())
+		return
+	}
+	
+	a.log("Successfully copied node.exe to local directory.")
 }
 
