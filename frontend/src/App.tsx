@@ -106,6 +106,7 @@ const translations: any = {
         "cancelDownload": "Cancel",
         "downloadComplete": "Download complete",
         "onlineUpdate": "Online Update",
+        "retry": "Retry",
         "opencode": "OpenCode",
         "opencodeDesc": "OpenCode AI Programming Assistant",
         "codebuddy": "CodeBuddy",
@@ -237,6 +238,7 @@ const translations: any = {
         "cancelDownload": "取消下载",
         "downloadComplete": "下载完成",
         "onlineUpdate": "在线更新",
+        "retry": "重试",
         "opencode": "OpenCode",
         "opencodeDesc": "OpenCode AI 辅助编程",
         "codebuddy": "CodeBuddy",
@@ -365,6 +367,7 @@ const translations: any = {
         "cancelDownload": "取消下載",
         "downloadComplete": "下載完成",
         "onlineUpdate": "線上更新",
+        "retry": "重試",
         "opencode": "OpenCode",
         "opencodeDesc": "OpenCode AI 輔助編程",
         "codebuddy": "CodeBuddy",
@@ -2732,11 +2735,22 @@ ${instruction}`;
                                             </div>
                                         ) : (
                                             <div>
-                                                {downloadError && <p style={{color: '#ef4444', fontSize: '0.85rem', marginBottom: '10px'}}>{t("downloadError").replace("{error}", downloadError)}</p>}
-                                                <p style={{margin: '10px 0', fontSize: '0.9rem', color: '#374151'}}>{lang === 'zh-Hans' ? '检查新版本，是否立即下载更新？' : lang === 'zh-Hant' ? '檢查新版本，是否立即下載更新？' : 'New version found. Download and update now?'}</p>
-                                                <button className="btn-primary" style={{width: '100%'}} onClick={handleDownload}>
-                                                    {t("downloadAndUpdate")}
-                                                </button>
+                                                {downloadError && (
+                                                    <div style={{marginBottom: '10px'}}>
+                                                        <p style={{color: '#ef4444', fontSize: '0.85rem', marginBottom: '5px'}}>{t("downloadError").replace("{error}", downloadError)}</p>
+                                                        <button className="btn-primary" style={{width: '100%', backgroundColor: '#ef4444'}} onClick={handleDownload}>
+                                                            {t("retry")}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {!downloadError && (
+                                                    <>
+                                                        <p style={{margin: '10px 0', fontSize: '0.9rem', color: '#374151'}}>{lang === 'zh-Hans' ? '检查新版本，是否立即下载更新？' : lang === 'zh-Hant' ? '檢查新版本，是否立即下載更新？' : 'New version found. Download and update now?'}</p>
+                                                        <button className="btn-primary" style={{width: '100%'}} onClick={handleDownload}>
+                                                            {t("downloadAndUpdate")}
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         )}
                                     </div>
