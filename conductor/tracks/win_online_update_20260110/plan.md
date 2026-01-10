@@ -11,25 +11,16 @@ This phase focuses on adding the necessary logic to handle file downloading with
 - [x] **Task: Conductor - User Manual Verification 'Phase 1: Backend' (Protocol in workflow.md)** (106eb4d)
 
 
-## Phase 2: Frontend Implementation (React/TS)
+## Phase 2: Frontend Implementation (React/TS) [checkpoint: 1ee0b30]
 This phase updates the UI to reflect the new update workflow on Windows.
 
-- [ ] **Task 1: Update I18n Labels**
+- [x] **Task 1: Update I18n Labels** (e6a4836)
   - Change "检查更新" to "在线更新" for Windows in `frontend/src/App.tsx`.
   - Add new strings for "Downloading...", "Download Cancelled", "Install Now", etc.
   - *Status:* `[ ]`
-- [ ] **Task 2: Enhance `UpdateModal` with Download State**
-  - Introduce states for `isDownloading`, `downloadProgress`, and `downloadError`.
-  - Replace the static download link with a "Download and Update" button for Windows.
-  - Implement the progress bar UI.
-  - *Status:* `[ ]`
-- [ ] **Task 3: Connect Frontend to Backend Update Logic**
-  - Listen for download progress events emitted by the backend.
-  - Wire the "Download and Update" button to call `DownloadUpdate`.
-  - Wire the "Install Now" button to call `LaunchInstallerAndExit`.
-  - *Status:* `[ ]`
-- [ ] **Task: Conductor - User Manual Verification 'Phase 2: Frontend' (Protocol in workflow.md)**
-  - *Status:* `[ ]`
+- [x] **Task 2: Enhance `UpdateModal` with Download State** (1ee0b30)
+- [x] **Task 3: Connect Frontend to Backend Update Logic** (1ee0b30)
+- [x] **Task: Conductor - User Manual Verification 'Phase 2: Frontend' (Protocol in workflow.md)** (1ee0b30)
 
 ## Phase 3: Final Integration and Verification
 - [ ] **Task 1: End-to-End Test on Windows**
