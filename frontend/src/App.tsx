@@ -33,7 +33,7 @@ const subscriptionUrls: {[key: string]: string} = {
 };
 
 
-const APP_VERSION = "3.2.1.3200"
+const APP_VERSION = "3.2.2.3300"
 
 const translations: any = {
     "en": {
