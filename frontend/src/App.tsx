@@ -2209,7 +2209,7 @@ ${instruction}`;
                                         }}
                                         style={{width: '16px', height: '16px'}}
                                     />
-                                    <span style={{fontSize: '0.8rem', color: '#374151'}}>{isWindows ? t("onlineUpdate") : t("checkUpdate")}</span>
+                                    <span style={{fontSize: '0.8rem', color: '#374151'}}>{t("onlineUpdate")}</span>
                                 </label>
                                 <p style={{fontSize: '0.75rem', color: '#64748b', marginLeft: '24px', marginTop: '4px'}}>
                                     {lang === 'zh-Hans' ? '开启后，程序启动时将自动检查是否有新版本可用' :
@@ -2295,7 +2295,7 @@ ${instruction}`;
                                             });
                                         }}
                                     >
-                                        {isWindows ? t("onlineUpdate") : t("checkUpdate")}
+                                        {t("onlineUpdate")}
                                     </button>
                                     <button className="btn-link" style={{fontSize: '0.75rem', padding: '2px 6px'}} onClick={() => setShowInstallLog(true)}>{t("installLog")}</button>
                                     <button className="btn-link" style={{fontSize: '0.75rem', padding: '2px 6px'}} onClick={() => BrowserOpenURL("https://github.com/RapidAI/aicoder/issues/new")}>{t("bugReport")}</button>
@@ -2706,62 +2706,53 @@ ${instruction}`;
                                     <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{lang === 'zh-Hans' ? '最新版本' : lang === 'zh-Hant' ? '最新版本' : 'Latest Version'}</div>
                                     <div style={{fontSize: '1rem', fontWeight: '600', color: '#059669'}}>{updateResult.latest_version}</div>
                                 </div>
-                                
-                                {isWindows ? (
-                                    <div style={{marginTop: '15px'}}>
-                                        {isDownloading ? (
-                                            <div style={{width: '100%'}}>
-                                                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem'}}>
-                                                    <span>{t("downloading")}</span>
-                                                    <span>{downloadProgress}%</span>
+
+                                <div style={{marginTop: '15px'}}>
+                                    {isDownloading ? (
+                                        <div style={{width: '100%'}}>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem'}}>
+                                                <span>{t("downloading")}</span>
+                                                <span>{downloadProgress}%</span>
+                                            </div>
+                                            <div style={{width: '100%', height: '10px', backgroundColor: '#e2e8f0', borderRadius: '5px', overflow: 'hidden'}}>
+                                                <div style={{width: `${downloadProgress}%`, height: '100%', backgroundColor: '#3b82f6', transition: 'width 0.2s ease'}}></div>
+                                            </div>
+                                            <button
+                                                className="btn-link"
+                                                style={{marginTop: '10px', color: '#ef4444'}}
+                                                onClick={handleCancelDownload}
+                                            >
+                                                {t("cancelDownload")}
+                                            </button>
+                                        </div>
+                                    ) : installerPath ? (
+                                        <div style={{textAlign: 'center', padding: '10px'}}>
+                                            <p style={{color: '#059669', fontWeight: 'bold', marginBottom: '15px'}}>{t("downloadComplete")}</p>
+                                            <button className="btn-primary" style={{width: '100%'}} onClick={handleInstall}>
+                                                {t("installNow")}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            {downloadError && (
+                                                <div style={{marginBottom: '10px'}}>
+                                                    <p style={{color: '#ef4444', fontSize: '0.85rem', marginBottom: '5px'}}>{t("downloadError").replace("{error}", downloadError)}</p>
+                                                    <button className="btn-primary" style={{width: '100%', backgroundColor: '#ef4444'}} onClick={handleDownload}>
+                                                        {t("retry")}
+                                                    </button>
                                                 </div>
-                                                <div style={{width: '100%', height: '10px', backgroundColor: '#e2e8f0', borderRadius: '5px', overflow: 'hidden'}}>
-                                                    <div style={{width: `${downloadProgress}%`, height: '100%', backgroundColor: '#3b82f6', transition: 'width 0.2s ease'}}></div>
-                                                </div>
-                                                <button 
-                                                    className="btn-link" 
-                                                    style={{marginTop: '10px', color: '#ef4444'}} 
-                                                    onClick={handleCancelDownload}
-                                                >
-                                                    {t("cancelDownload")}
-                                                </button>
-                                            </div>
-                                        ) : installerPath ? (
-                                            <div style={{textAlign: 'center', padding: '10px'}}>
-                                                <p style={{color: '#059669', fontWeight: 'bold', marginBottom: '15px'}}>{t("downloadComplete")}</p>
-                                                <button className="btn-primary" style={{width: '100%'}} onClick={handleInstall}>
-                                                    {t("installNow")}
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div>
-                                                {downloadError && (
-                                                    <div style={{marginBottom: '10px'}}>
-                                                        <p style={{color: '#ef4444', fontSize: '0.85rem', marginBottom: '5px'}}>{t("downloadError").replace("{error}", downloadError)}</p>
-                                                        <button className="btn-primary" style={{width: '100%', backgroundColor: '#ef4444'}} onClick={handleDownload}>
-                                                            {t("retry")}
-                                                        </button>
-                                                    </div>
-                                                )}
-                                                {!downloadError && (
-                                                    <>
-                                                        <p style={{margin: '10px 0', fontSize: '0.9rem', color: '#374151'}}>{lang === 'zh-Hans' ? '检查新版本，是否立即下载更新？' : lang === 'zh-Hant' ? '檢查新版本，是否立即下載更新？' : 'New version found. Download and update now?'}</p>
-                                                        <button className="btn-primary" style={{width: '100%'}} onClick={handleDownload}>
-                                                            {t("downloadAndUpdate")}
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <>
-                                        <p style={{margin: '10px 0', fontSize: '0.9rem', color: '#374151'}}>{lang === 'zh-Hans' ? '检查新版本，是否立即下载？' : lang === 'zh-Hant' ? '檢查新版本，是否立即下載？' : 'Check for new version, download now?'}</p>
-                                        <a href={updateResult.release_url} target="_blank" rel="noopener noreferrer" style={{color: '#60a5fa', cursor: 'pointer', fontSize: '0.9rem', display: 'inline-block', marginTop: '10px'}}>
-                                            {t("downloadNow")}
-                                        </a>
-                                    </>
-                                )}
+                                            )}
+                                            {!downloadError && (
+                                                <>
+                                                    <p style={{margin: '10px 0', fontSize: '0.9rem', color: '#374151'}}>{lang === 'zh-Hans' ? '检查新版本，是否立即下载更新？' : lang === 'zh-Hant' ? '檢查新版本，是否立即下載更新？' : 'New version found. Download and update now?'}</p>
+                                                    <button className="btn-primary" style={{width: '100%'}} onClick={handleDownload}>
+                                                        {t("downloadAndUpdate")}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </>
                         ) : (
                             <div style={{backgroundColor: '#f0f9ff', padding: '12px', borderRadius: '6px', border: '1px solid #e0f2fe'}}>

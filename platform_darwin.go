@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	wails_runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -155,7 +156,7 @@ func (a *App) CheckEnvironment() {
 					latest, err := a.getLatestNpmVersion(npmExec, tm.GetPackageName(tool))
 					if err == nil && latest != "" && latest != status.Version {
 						a.log(a.tr("New version available for %s: %s (current: %s). Updating...", tool, latest, status.Version))
-						if err := tm.InstallTool(tool); err != nil {
+						if err := tm.UpdateTool(tool); err != nil {
 							a.log(a.tr("ERROR: Failed to update %s: %v", tool, err))
 						} else {
 							a.log(a.tr("%s updated successfully to %s.", tool, latest))
@@ -411,5 +412,21 @@ func createCondaEnvListCmd(condaCmd string) *exec.Cmd {
 }
 
 func (a *App) LaunchInstallerAndExit(installerPath string) error {
-	return fmt.Errorf("automatic installation not supported on this platform")
+	a.log(fmt.Sprintf("Launching installer: %s", installerPath))
+
+	// Use open command to launch the .pkg installer
+	cmd := exec.Command("open", installerPath)
+
+	err := cmd.Start()
+	if err != nil {
+		return fmt.Errorf("failed to launch installer: %w", err)
+	}
+
+	// Wait a tiny bit and then quit
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		wails_runtime.Quit(a.ctx)
+	}()
+
+	return nil
 }

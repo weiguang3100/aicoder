@@ -285,12 +285,31 @@ func (tm *ToolManager) UpdateTool(name string) error {
 		if !status.Installed {
 			return fmt.Errorf("tool %s is not installed", name)
 		}
-		
+
 		cmd = exec.Command(status.Path, "update")
-		
+
+		// Set up environment variables with proper PATH
+		home, _ := os.UserHomeDir()
+		localNodeDir := filepath.Join(home, ".cceasy", "tools")
+		localBinDir := filepath.Join(localNodeDir, "bin")
+
+		env := os.Environ()
+		pathFound := false
+		for i, e := range env {
+			if strings.HasPrefix(strings.ToUpper(e), "PATH=") {
+				env[i] = fmt.Sprintf("PATH=%s%c%s", localBinDir, os.PathListSeparator, e[5:])
+				pathFound = true
+				break
+			}
+		}
+		if !pathFound {
+			env = append(env, "PATH="+localBinDir)
+		}
+		cmd.Env = env
+
 	case "iflow":
 		return tm.InstallTool(name)
-		
+
 	default:
 		return tm.InstallTool(name)
 	}

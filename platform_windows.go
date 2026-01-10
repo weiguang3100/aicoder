@@ -156,7 +156,7 @@ func (a *App) CheckEnvironment() {
 					latest, err := a.getLatestNpmVersion(npmExec, tm.GetPackageName(tool))
 					if err == nil && latest != "" && latest != status.Version {
 						a.log(a.tr("New version available for %s: %s (current: %s). Updating...", tool, latest, status.Version))
-						if err := tm.InstallTool(tool); err != nil {
+						if err := tm.UpdateTool(tool); err != nil {
 							a.log(a.tr("ERROR: Failed to update %s: %v", tool, err))
 						} else {
 							a.log(a.tr("%s updated successfully to %s.", tool, latest))
