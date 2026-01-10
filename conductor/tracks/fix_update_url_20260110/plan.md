@@ -8,7 +8,7 @@ Refine the update checking and downloading logic to ensure the correct installer
   - In `CheckUpdate`, construct the direct download URL: `https://github.com/RapidAI/aicoder/releases/download/<tag_name>/AICoder-Setup.exe`.
   - Populate the new fields in the return value.
   - *Status:* `[ ]`
-- [ ] **Task 2: Enhance `DownloadUpdate` with Validation**
+- [x] **Task 2: Enhance `DownloadUpdate` with Validation** (25e00a2)
   - Add logic to check the `Content-Type` header (should be binary/executable, e.g., `application/octet-stream`).
   - Add a minimum file size check (e.g., > 5MB) to ensure it's not an HTML error page.
   - Ensure the file extension is `.exe`.
