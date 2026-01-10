@@ -19,7 +19,7 @@ Refine the update checking and downloading logic to ensure the correct installer
 ## Phase 2: Frontend UI Refinement (React/TS)
 Update the UI to use the direct download URL and provide better error recovery options.
 
-- [ ] **Task 1: Update `handleDownload` to use `DownloadUrl`**
+- [x] **Task 1: Update `handleDownload` to use `DownloadUrl`** (bbf56d4)
   - Modify `handleDownload` in `App.tsx` to use `updateResult.download_url` instead of `release_url`.
   - *Status:* `[ ]`
 - [ ] **Task 2: Improve Error UI and Add Retry Button**
