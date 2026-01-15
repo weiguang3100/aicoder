@@ -108,11 +108,20 @@ type AppConfig struct {
 	ShowIFlow        bool            `json:"show_iflow"`
 	Language         string          `json:"language"`
 	CheckUpdateOnStartup bool        `json:"check_update_on_startup"`
+	PauseEnvCheck        bool        `json:"pause_env_check"`
+	EnvCheckDone         bool        `json:"env_check_done"`
 	// Proxy settings (global default)
 	DefaultProxyHost     string `json:"default_proxy_host"`
 	DefaultProxyPort     string `json:"default_proxy_port"`
 	DefaultProxyUsername string `json:"default_proxy_username"`
 	DefaultProxyPassword string `json:"default_proxy_password"`
+}
+
+type Skill struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Type        string `json:"type"` // "address" or "zip"
+	Value       string `json:"value"` // Address string or zip filename
 }
 
 // NewApp creates a new App application struct
@@ -3238,11 +3247,659 @@ func (a *App) PackLog(logContent string) (string, error) {
 
 		
 
-						return cmd.Start()
+								return cmd.Start()
 
 		
 
-					}
+							}
+
+		
+
+						
+
+		
+
+						func (a *App) GetSkillsDir() string {
+
+		
+
+							home, _ := os.UserHomeDir()
+
+		
+
+							return filepath.Join(home, ".cceasy", "skills")
+
+		
+
+						}
+
+		
+
+						
+
+		
+
+						func (a *App) SelectSkillFile() string {
+
+		
+
+							selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+
+		
+
+								Title: "Select Skill Zip File",
+
+		
+
+								Filters: []runtime.FileFilter{
+
+		
+
+									{DisplayName: "Zip Files", Pattern: "*.zip"},
+
+		
+
+								},
+
+		
+
+							})
+
+		
+
+							if err != nil {
+
+		
+
+								return ""
+
+		
+
+							}
+
+		
+
+							return selection
+
+		
+
+						}
+
+		
+
+						
+
+		
+
+						func (a *App) ListSkills() []Skill {
+
+		
+
+							skillsDir := a.GetSkillsDir()
+
+		
+
+							metadataPath := filepath.Join(skillsDir, "metadata.json")
+
+		
+
+							
+
+		
+
+							if _, err := os.Stat(metadataPath); os.IsNotExist(err) {
+
+		
+
+								return []Skill{}
+
+		
+
+							}
+
+		
+
+						
+
+		
+
+							data, err := os.ReadFile(metadataPath)
+
+		
+
+							if err != nil {
+
+		
+
+								return []Skill{}
+
+		
+
+							}
+
+		
+
+						
+
+		
+
+							var skills []Skill
+
+		
+
+							json.Unmarshal(data, &skills)
+
+		
+
+							return skills
+
+		
+
+						}
+
+		
+
+						
+
+		
+
+						func (a *App) AddSkill(name, description, skillType, value string) error {
+
+		
+
+							skillsDir := a.GetSkillsDir()
+
+		
+
+							if err := os.MkdirAll(skillsDir, 0755); err != nil {
+
+		
+
+								return err
+
+		
+
+							}
+
+		
+
+						
+
+		
+
+							metadataPath := filepath.Join(skillsDir, "metadata.json")
+
+		
+
+							
+
+		
+
+							// Load existing
+
+		
+
+							var skills []Skill
+
+		
+
+							if data, err := os.ReadFile(metadataPath); err == nil {
+
+		
+
+								json.Unmarshal(data, &skills)
+
+		
+
+							}
+
+		
+
+						
+
+		
+
+							// Check for duplicate name - update if exists
+
+		
+
+							found := false
+
+		
+
+							for i, s := range skills {
+
+		
+
+								if s.Name == name {
+
+		
+
+									finalValue := value
+
+		
+
+									if skillType == "zip" {
+
+		
+
+										// If value is a path (contains separator), assume it's a new file to copy
+
+		
+
+										if strings.Contains(value, string(os.PathSeparator)) {
+
+		
+
+											srcFile, err := os.Open(value)
+
+		
+
+											if err != nil {
+
+		
+
+												return err
+
+		
+
+											}
+
+		
+
+											defer srcFile.Close()
+
+		
+
+						
+
+		
+
+											fileName := filepath.Base(value)
+
+		
+
+											destPath := filepath.Join(skillsDir, fileName)
+
+		
+
+											
+
+		
+
+											destFile, err := os.Create(destPath)
+
+		
+
+											if err != nil {
+
+		
+
+												return err
+
+		
+
+											}
+
+		
+
+											defer destFile.Close()
+
+		
+
+						
+
+		
+
+											_, err = io.Copy(destFile, srcFile)
+
+		
+
+											if err != nil {
+
+		
+
+												return err
+
+		
+
+											}
+
+		
+
+											finalValue = fileName
+
+		
+
+										}
+
+		
+
+									}
+
+		
+
+						
+
+		
+
+									skills[i] = Skill{
+
+		
+
+										Name: name,
+
+		
+
+										Description: description,
+
+		
+
+										Type: skillType,
+
+		
+
+										Value: finalValue,
+
+		
+
+									}
+
+		
+
+									found = true
+
+		
+
+									break
+
+		
+
+								}
+
+		
+
+							}
+
+		
+
+						
+
+		
+
+							if !found {
+
+		
+
+								finalValue := value
+
+		
+
+								if skillType == "zip" {
+
+		
+
+									// Copy file
+
+		
+
+									srcFile, err := os.Open(value)
+
+		
+
+									if err != nil {
+
+		
+
+										return err
+
+		
+
+									}
+
+		
+
+									defer srcFile.Close()
+
+		
+
+						
+
+		
+
+									fileName := filepath.Base(value)
+
+		
+
+									destPath := filepath.Join(skillsDir, fileName)
+
+		
+
+									
+
+		
+
+									destFile, err := os.Create(destPath)
+
+		
+
+									if err != nil {
+
+		
+
+										return err
+
+		
+
+									}
+
+		
+
+									defer destFile.Close()
+
+		
+
+						
+
+		
+
+									_, err = io.Copy(destFile, srcFile)
+
+		
+
+									if err != nil {
+
+		
+
+										return err
+
+		
+
+									}
+
+		
+
+									finalValue = fileName
+
+		
+
+								}
+
+		
+
+						
+
+		
+
+								newSkill := Skill{
+
+		
+
+									Name: name,
+
+		
+
+									Description: description,
+
+		
+
+									Type: skillType,
+
+		
+
+									Value: finalValue,
+
+		
+
+								}
+
+		
+
+								skills = append(skills, newSkill)
+
+		
+
+							}
+
+		
+
+						
+
+		
+
+							// Save
+
+		
+
+							data, err := json.MarshalIndent(skills, "", "  ")
+
+		
+
+							if err != nil {
+
+		
+
+								return err
+
+		
+
+							}
+
+		
+
+							return os.WriteFile(metadataPath, data, 0644)
+
+		
+
+						}
+
+		
+
+						
+
+		
+
+						func (a *App) DeleteSkill(name string) error {
+
+		
+
+							skillsDir := a.GetSkillsDir()
+
+		
+
+							metadataPath := filepath.Join(skillsDir, "metadata.json")
+
+		
+
+						
+
+		
+
+							var skills []Skill
+
+		
+
+							if data, err := os.ReadFile(metadataPath); err == nil {
+
+		
+
+								json.Unmarshal(data, &skills)
+
+		
+
+							}
+
+		
+
+						
+
+		
+
+							var newSkills []Skill
+
+		
+
+							for _, s := range skills {
+
+		
+
+								if s.Name == name {
+
+		
+
+									if s.Type == "zip" {
+
+		
+
+										os.Remove(filepath.Join(skillsDir, s.Value))
+
+		
+
+									}
+
+		
+
+								} else {
+
+		
+
+									newSkills = append(newSkills, s)
+
+		
+
+								}
+
+		
+
+							}
+
+		
+
+						
+
+		
+
+							data, err := json.MarshalIndent(newSkills, "", "  ")
+
+		
+
+							if err != nil {
+
+		
+
+								return err
+
+		
+
+							}
+
+		
+
+							return os.WriteFile(metadataPath, data, 0644)
+
+		
+
+						}
 
 		
 
@@ -3274,19 +3931,51 @@ func (a *App) PackLog(logContent string) (string, error) {
 
 		
 
-										"Initializing...": {
+																				"Initializing...": {
 
 		
 
-											"zh-Hans": "初始化中...",
+																					"zh-Hans": "初始化中...",
 
 		
 
-											"zh-Hant": "初始化中...",
+																					"zh-Hant": "初始化中...",
 
 		
 
-										},
+																				},
+
+		
+
+																				"Skipping environment check and installation.": {
+
+		
+
+																					"zh-Hans": "跳过环境检测安装。",
+
+		
+
+																					"zh-Hant": "跳過環境檢測安裝。",
+
+		
+
+																				},
+
+		
+
+																				"Manual environment check triggered.": {
+
+		
+
+																					"zh-Hans": "手动触发环境检测。",
+
+		
+
+																					"zh-Hant": "手動觸發環境檢測。",
+
+		
+
+																				},
 
 		
 

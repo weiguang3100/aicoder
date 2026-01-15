@@ -108,6 +108,7 @@ export namespace main {
 	    show_iflow: boolean;
 	    language: string;
 	    check_update_on_startup: boolean;
+	    pause_env_check: boolean;
 	    default_proxy_host: string;
 	    default_proxy_port: string;
 	    default_proxy_username: string;
@@ -138,6 +139,7 @@ export namespace main {
 	        this.show_iflow = source["show_iflow"];
 	        this.language = source["language"];
 	        this.check_update_on_startup = source["check_update_on_startup"];
+	        this.pause_env_check = source["pause_env_check"];
 	        this.default_proxy_host = source["default_proxy_host"];
 	        this.default_proxy_port = source["default_proxy_port"];
 	        this.default_proxy_username = source["default_proxy_username"];
@@ -231,6 +233,25 @@ export namespace main {
 	        this.release_url = source["release_url"];
 	    }
 	}
+
+    export class Skill {
+        name: string;
+        description: string;
+        type: string;
+        value: string;
+
+        static createFrom(source: any = {}) {
+            return new Skill(source);
+        }
+
+        constructor(source: any = {}) {
+            if ('string' === typeof source) source = JSON.parse(source);
+            this.name = source["name"];
+            this.description = source["description"];
+            this.type = source["type"];
+            this.value = source["value"];
+        }
+    }
 
 }
 

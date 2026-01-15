@@ -9,7 +9,7 @@ import geminiIcon from './assets/images/gemincli.png';
 import iflowIcon from './assets/images/iflow.png';
 import opencodeIcon from './assets/images/opencode.png';
 import qoderIcon from './assets/images/qodercli.png';
-import {CheckToolsStatus, InstallTool, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl, DownloadUpdate, CancelDownload, LaunchInstallerAndExit} from "../wailsjs/go/main/App";
+import {CheckToolsStatus, InstallTool, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl, DownloadUpdate, CancelDownload, LaunchInstallerAndExit, ListSkills, AddSkill, DeleteSkill, SelectSkillFile, GetSkillsDir} from "../wailsjs/go/main/App";
 import {EventsOn, EventsOff, BrowserOpenURL, Quit} from "../wailsjs/runtime";
 import {main} from "../wailsjs/go/models";
 import ReactMarkdown from 'react-markdown';
@@ -164,7 +164,40 @@ const translations: any = {
         "useDefaultProxy": "Use default proxy settings",
         "proxyHostPlaceholder": "e.g., 192.168.1.1 or proxy.company.com",
         "proxyPortPlaceholder": "e.g., 8080",
-        "freeload": "Free"
+        "freeload": "Free",
+        "skills": "Skills",
+        "addSkill": "Add Skill",
+        "skillName": "Skill Name",
+        "skillDesc": "Description",
+        "skillType": "Type",
+        "skillAddress": "Address",
+        "skillZip": "Zip Package",
+        "skillValue": "Value/Path",
+        "browse": "Browse",
+        "skillAdded": "Skill added successfully",
+        "skillDeleted": "Skill deleted successfully",
+        "confirmDeleteSkill": "Are you sure you want to delete this skill?",
+        "noSkills": "No skills added yet.",
+        "installSkills": "Install Skills",
+        "selectSkillsToInstall": "Select Skills to Install",
+        "install": "Install",
+        "installing": "Installing...",
+        "installNotImplemented": "Installation functionality is not yet implemented.",
+        "pauseEnvCheck": "Skip Env Check",
+        "recheckEnv": "Check & Update Environment",
+        "skillRequiredError": "Name and Value are required!",
+        "skillAddError": "Error adding skill: {error}",
+        "skillDeleteError": "Error deleting skill: {error}",
+        "copyLog": "Copy Log",
+        "logsCopied": "Logs copied to clipboard",
+        "currentVersion": "Current Version",
+        "latestVersion": "Latest Version",
+        "foundNewVersionMsg": "New version found. Download and update now?",
+        "isLatestVersion": "Already up to date",
+        "placeholderName": "e.g., Frontend Design",
+        "placeholderDesc": "Description...",
+        "placeholderAddress": "@anthropics/...",
+        "placeholderZip": "Select .zip file"
     },
     "zh-Hans": {
         "title": "AICoder",
@@ -294,7 +327,40 @@ const translations: any = {
         "useDefaultProxy": "使用默认代理设置",
         "proxyHostPlaceholder": "例如：192.168.1.1 或 proxy.company.com",
         "proxyPortPlaceholder": "例如：8080",
-        "freeload": "白嫖中"
+        "freeload": "白嫖中",
+        "skills": "技能",
+        "addSkill": "添加技能",
+        "skillName": "技能名称",
+        "skillDesc": "描述",
+        "skillType": "类型",
+        "skillAddress": "Skills包名",
+        "skillZip": "Zip包",
+        "skillValue": "值/路径",
+        "browse": "浏览",
+        "skillAdded": "技能添加成功",
+        "skillDeleted": "技能删除成功",
+        "confirmDeleteSkill": "确定要删除此技能吗？",
+        "noSkills": "暂无技能。",
+        "installSkills": "安装技能",
+        "selectSkillsToInstall": "选择要安装的技能",
+        "install": "安装",
+        "installing": "正在安装...",
+        "installNotImplemented": "安装功能暂未实现。",
+        "pauseEnvCheck": "跳过环境检测",
+        "recheckEnv": "检测更新运行环境",
+        "skillRequiredError": "名称和地址/路径是必填项！",
+        "skillAddError": "添加技能出错: {error}",
+        "skillDeleteError": "删除技能出错: {error}",
+        "copyLog": "复制日志",
+        "logsCopied": "日志已复制到剪贴板",
+        "currentVersion": "当前版本",
+        "latestVersion": "最新版本",
+        "foundNewVersionMsg": "检查到新版本，是否立即下载更新？",
+        "isLatestVersion": "已是最新版本",
+        "placeholderName": "例如：前端设计",
+        "placeholderDesc": "描述...",
+        "placeholderAddress": "@anthropics/...",
+        "placeholderZip": "选择 .zip 文件"
     },
     "zh-Hant": {
         "title": "AICoder",
@@ -422,7 +488,40 @@ const translations: any = {
         "useDefaultProxy": "使用預設代理設置",
         "proxyHostPlaceholder": "例如：192.168.1.1 或 proxy.company.com",
         "proxyPortPlaceholder": "例如：8080",
-        "freeload": "白嫖中"
+        "freeload": "白嫖中",
+        "skills": "技能",
+        "addSkill": "新增技能",
+        "skillName": "技能名稱",
+        "skillDesc": "描述",
+        "skillType": "類型",
+        "skillAddress": "Skills包名",
+        "skillZip": "Zip包",
+        "skillValue": "值/路徑",
+        "browse": "瀏覽",
+        "skillAdded": "技能新增成功",
+        "skillDeleted": "技能刪除成功",
+        "confirmDeleteSkill": "確定要刪除此技能嗎？",
+        "noSkills": "暫無技能。",
+        "installSkills": "安裝技能",
+        "selectSkillsToInstall": "選擇要安裝的技能",
+        "install": "安裝",
+        "installing": "正在安裝...",
+        "installNotImplemented": "安裝功能暫未實現。",
+        "pauseEnvCheck": "跳過環境檢測",
+        "recheckEnv": "檢測更新運行環境",
+        "skillRequiredError": "名稱和地址/路徑是必填項！",
+        "skillAddError": "新增技能出錯: {error}",
+        "skillDeleteError": "刪除技能出錯: {error}",
+        "copyLog": "複製日誌",
+        "logsCopied": "日誌已複製到剪貼板",
+        "currentVersion": "當前版本",
+        "latestVersion": "最新版本",
+        "foundNewVersionMsg": "檢查到新版本，是否立即下載更新？",
+        "isLatestVersion": "已是最新版本",
+        "placeholderName": "例如：前端設計",
+        "placeholderDesc": "描述...",
+        "placeholderAddress": "@anthropics/...",
+        "placeholderZip": "選擇 .zip 文件"
     }
 };
 
@@ -608,6 +707,7 @@ function App() {
     const [activeTab, setActiveTab] = useState(0);
     const [tabStartIndex, setTabStartIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
+    const [isManualCheck, setIsManualCheck] = useState(false);
     const [showStartupPopup, setShowStartupPopup] = useState(false);
     const [pythonEnvironments, setPythonEnvironments] = useState<any[]>([]);
 
@@ -636,6 +736,9 @@ function App() {
         }
     }, [showModelSettings, activeTab]);
 
+    const [showInstallSkillModal, setShowInstallSkillModal] = useState(false);
+    const [selectedSkillsToInstall, setSelectedSkillsToInstall] = useState<string[]>([]);
+
     const [toolStatuses, setToolStatuses] = useState<any[]>([]);
     const [envLogs, setEnvLogs] = useState<string[]>([]);
     const [showLogs, setShowLogs] = useState(false);
@@ -655,7 +758,18 @@ function App() {
     const [lang, setLang] = useState("en");
     const [toastMessage, setToastMessage] = useState<string>("");
     const [showToast, setShowToast] = useState(false);
-
+    
+    const [skills, setSkills] = useState<main.Skill[]>([]);
+    const [showAddSkillModal, setShowAddSkillModal] = useState(false);
+    const [newSkillName, setNewSkillName] = useState("");
+    const [newSkillDesc, setNewSkillDesc] = useState("");
+    const [newSkillType, setNewSkillType] = useState("address");
+    const [newSkillValue, setNewSkillValue] = useState("");
+    const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+    const [skillContextMenu, setSkillContextMenu] = useState<{x: number, y: number, visible: boolean, skillName: string | null}>({
+        x: 0, y: 0, visible: false, skillName: null
+    });
+    
     const [contextMenu, setContextMenu] = useState<{x: number, y: number, visible: boolean, target: HTMLInputElement | null}>({
         x: 0, y: 0, visible: false, target: null
     });
@@ -703,6 +817,26 @@ function App() {
             console.error("Failed to read thanks content:", err);
             showToastMessage(t("refreshFailed") + err, 5000);
         }
+    };
+
+    const handleDeleteSkill = async (name: string) => {
+        setConfirmDialog({
+            show: true,
+            title: t("confirmDelete"),
+            message: t("confirmDeleteSkill"),
+            onConfirm: async () => {
+                try {
+                    await DeleteSkill(name);
+                    const list = await ListSkills();
+                    setSkills(list || []);
+                    if (selectedSkill === name) setSelectedSkill(null);
+                    showToastMessage(t("skillDeleted"));
+                    setConfirmDialog(prev => ({...prev, show: false}));
+                } catch (err) {
+                    showToastMessage(t("skillDeleteError").replace("{error}", err as string));
+                }
+            }
+        });
     };
 
     const handleDownload = async () => {
@@ -767,10 +901,13 @@ function App() {
     };
 
     useEffect(() => {
-        const handleClick = () => closeContextMenu();
+        const handleClick = () => {
+            closeContextMenu();
+            setSkillContextMenu(prev => ({...prev, visible: false}));
+        };
         window.addEventListener('click', handleClick);
         return () => window.removeEventListener('click', handleClick);
-    }, [contextMenu]);
+    }, [contextMenu, skillContextMenu]);
 
     const getClipboardText = async () => {
         try {
@@ -858,6 +995,7 @@ function App() {
         const doneHandler = () => {
             ResizeWindow(657, 440);
             setIsLoading(false);
+            setIsManualCheck(false);
         };
 
         EventsOn("env-log", logHandler);
@@ -879,8 +1017,7 @@ function App() {
             }
         });
 
-        CheckEnvironment(); // Start checks
-        checkTools();
+        CheckEnvironment(false); // Start checks
 
         // Load Python environments
         ListPythonEnvironments().then((envs) => {
@@ -892,6 +1029,11 @@ function App() {
         // Config Logic
         LoadConfig().then((cfg) => {
             setConfig(cfg);
+            
+            if (!cfg.pause_env_check) {
+                checkTools();
+            }
+
             if (cfg && cfg.language) {
                 setLang(cfg.language);
                 SetLanguage(cfg.language);
@@ -1042,6 +1184,11 @@ function App() {
             ReadTutorial().then(content => setTutorialContent(content)).catch(err => console.error(err));
         }
 
+        if (tool === 'skills') {
+             setShowModelSettings(false);
+             ListSkills().then(list => setSkills(list || [])).catch(err => console.error(err));
+        }
+
         if (config) {
             const newConfig = new main.AppConfig({...config, active_tool: tool});
             setConfig(newConfig);
@@ -1053,6 +1200,18 @@ function App() {
                 if (idx !== -1) setActiveTab(idx);
             }
         }
+    };
+
+    const handleSkillContext = (e: React.MouseEvent, skillName: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedSkill(skillName);
+        setSkillContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            visible: true,
+            skillName: skillName
+        });
     };
 
     const t = (key: string) => {
@@ -1494,9 +1653,18 @@ ${instruction}`;
                     </button>
 
                     {showLogs && (
-                        <button onClick={Quit} className="btn-hide" style={{borderColor: '#ef4444', color: '#ef4444', padding: '4px 12px'}}>
-                            {lang === 'zh-Hans' ? '退出程序' : 'Quit'}
-                        </button>
+                        isManualCheck ? (
+                            <button onClick={() => {
+                                setIsLoading(false);
+                                setIsManualCheck(false);
+                            }} className="btn-hide" style={{borderColor: '#60a5fa', color: '#60a5fa', padding: '4px 12px'}}>
+                                {t("close")}
+                            </button>
+                        ) : (
+                            <button onClick={Quit} className="btn-hide" style={{borderColor: '#ef4444', color: '#ef4444', padding: '4px 12px'}}>
+                                {lang === 'zh-Hans' ? '退出程序' : 'Quit'}
+                            </button>
+                        )
                     )}
                 </div>
                 
@@ -1522,7 +1690,7 @@ ${instruction}`;
         <div id="App">
             <div style={{
                 height: '30px', 
-                width: '100%', 
+                width: '180px', 
                 position: 'absolute', 
                 top: 0, 
                 left: 0, 
@@ -1563,6 +1731,16 @@ ${instruction}`;
                     >
                         <span className="sidebar-icon" style={{margin: 0, fontSize: '1.2rem'}}>📚</span>
                         <span style={{fontSize: '0.65rem', lineHeight: 1}}>{t("tutorial")}</span>
+                    </div>
+
+                    <div 
+                        className={`sidebar-item ${navTab === 'skills' ? 'active' : ''}`} 
+                        onClick={() => switchTool('skills')}
+                        style={{flexDirection: 'column', padding: '10px 0', width: '100%', gap: '4px', borderLeft: 'none', borderRight: navTab === 'skills' ? '3px solid var(--primary-color)' : '3px solid transparent', justifyContent: 'center'}}
+                        title={t("skills")}
+                    >
+                        <span className="sidebar-icon" style={{margin: 0, fontSize: '1.2rem'}}>🛠️</span>
+                        <span style={{fontSize: '0.65rem', lineHeight: 1}}>{t("skills")}</span>
                     </div>
 
                     <div style={{flex: 1}}></div>
@@ -1664,23 +1842,86 @@ ${instruction}`;
                              navTab === 'qoder' ? 'Qoder CLI' :
                              navTab === 'iflow' ? 'iFlow CLI' :
                              navTab === 'projects' ? t("projectManagement") :
+                             navTab === 'skills' ? t("skills") :
                              navTab === 'settings' ? t("globalSettings") : t("about")}
                             </span>
                             {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow') && (
-                                <button 
-                                    className="btn-link" 
-                                    onClick={() => setShowModelSettings(true)}
-                                    style={{
-                                        marginLeft: '10px', 
-                                        padding: '2px 8px', 
-                                        fontSize: '0.8rem',
-                                        borderColor: '#60a5fa', 
-                                        color: '#60a5fa',
-                                        '--wails-draggable': 'no-drag'
-                                    } as any}
-                                >
-                                    {lang === 'zh-Hans' || lang === 'zh-Hant' ? '服务商配置' : 'Provider Config'}
-                                </button>
+                                <>
+                                    <button 
+                                        className="btn-link" 
+                                        onClick={() => setShowModelSettings(true)}
+                                        style={{
+                                            marginLeft: '10px', 
+                                            padding: '2px 8px', 
+                                            fontSize: '0.8rem',
+                                            borderColor: '#60a5fa', 
+                                            color: '#60a5fa',
+                                            '--wails-draggable': 'no-drag'
+                                        } as any}
+                                    >
+                                        {lang === 'zh-Hans' || lang === 'zh-Hant' ? '服务商配置' : 'Provider Config'}
+                                    </button>
+                                    {navTab === 'claude' && (
+                                        <button 
+                                            className="btn-link" 
+                                            onClick={() => {
+                                                setSelectedSkillsToInstall([]);
+                                                setShowInstallSkillModal(true);
+                                            }}
+                                            style={{
+                                                marginLeft: '10px', 
+                                                padding: '2px 8px', 
+                                                fontSize: '0.8rem',
+                                                borderColor: '#10b981', 
+                                                color: '#10b981',
+                                                '--wails-draggable': 'no-drag'
+                                            } as any}
+                                        >
+                                            {t("installSkills")}
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                            {navTab === 'skills' && (
+                                <div style={{display: 'flex', gap: '10px', marginLeft: '10px', alignItems: 'center'}}>
+                                    <button 
+                                        className="btn-link" 
+                                        onClick={() => {
+                                            setNewSkillName("");
+                                            setNewSkillDesc("");
+                                            setNewSkillType("address");
+                                            setNewSkillValue("");
+                                            setShowAddSkillModal(true);
+                                        }}
+                                        style={{
+                                            padding: '2px 8px', 
+                                            fontSize: '0.8rem',
+                                            borderColor: '#60a5fa', 
+                                            color: '#60a5fa',
+                                            '--wails-draggable': 'no-drag'
+                                        } as any}
+                                    >
+                                        {t("addSkill")}
+                                    </button>
+                                    <button 
+                                        className="btn-link"
+                                        disabled={!selectedSkill}
+                                        style={{
+                                            padding: '2px 8px', 
+                                            fontSize: '0.8rem',
+                                            opacity: selectedSkill ? 1 : 0.5, 
+                                            cursor: selectedSkill ? 'pointer' : 'not-allowed',
+                                            borderColor: '#ef4444',
+                                            color: '#ef4444',
+                                            '--wails-draggable': 'no-drag'
+                                        } as any}
+                                        onClick={() => {
+                                            if (selectedSkill) handleDeleteSkill(selectedSkill);
+                                        }}
+                                    >
+                                        {t("delete")}
+                                    </button>
+                                </div>
                             )}
                         </h2>
                         <div style={{display: 'flex', gap: '10px', '--wails-draggable': 'no-drag', marginRight: '5px', pointerEvents: 'auto', position: 'relative', zIndex: 10000} as any}>
@@ -1932,7 +2173,188 @@ ${instruction}`;
                                                     </ReactMarkdown>
                                                 </div>
                                             </div>
-                                        )}                        {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow') && (
+                                        )}
+                    {navTab === 'skills' && (
+                        <div style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
+                            <div style={{flex: 1, overflowY: 'auto', padding: '20px'}}>
+                                {skills.length === 0 ? (
+                                    <div style={{textAlign: 'center', color: '#6b7280', marginTop: '40px'}}>{t("noSkills")}</div>
+                                ) : (
+                                    <div className="skills-list" style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                                        {skills.map((skill, idx) => (
+                                            <div 
+                                                key={idx} 
+                                                onClick={() => setSelectedSkill(skill.name)}
+                                                onContextMenu={(e) => handleSkillContext(e, skill.name)}
+                                                style={{
+                                                    border: selectedSkill === skill.name ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                                    borderRadius: '8px',
+                                                    padding: '10px',
+                                                    backgroundColor: selectedSkill === skill.name ? '#f0f9ff' : '#fff',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: '4px',
+                                                    cursor: 'default',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                                    <span style={{fontWeight: 'bold', fontSize: '1.05rem'}}>{skill.name}</span>
+                                                </div>
+                                                <div 
+                                                    style={{
+                                                        fontSize: '0.85rem', 
+                                                        color: '#6b7280', 
+                                                        whiteSpace: 'nowrap', 
+                                                        overflow: 'hidden', 
+                                                        textOverflow: 'ellipsis'
+                                                    }} 
+                                                    title={skill.description}
+                                                >
+                                                    {skill.description}
+                                                </div>
+                                                <div style={{fontSize: '0.75rem', color: '#9ca3af', display: 'flex', gap: '10px', marginTop: '2px'}}>
+                                                    <span style={{backgroundColor: '#f3f4f6', padding: '2px 6px', borderRadius: '4px'}}>
+                                                        {skill.type === 'address' ? t("skillAddress") : t("skillZip")}
+                                                    </span>
+                                                    <span style={{fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '300px'}}>
+                                                        {skill.value}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {skillContextMenu.visible && (
+                                <div style={{
+                                    position: 'fixed',
+                                    top: skillContextMenu.y,
+                                    left: skillContextMenu.x,
+                                    backgroundColor: 'white',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                    zIndex: 3000,
+                                    padding: '5px 0',
+                                    minWidth: '120px'
+                                }}>
+                                    <div className="context-menu-item" onClick={() => {
+                                        if (skillContextMenu.skillName) handleDeleteSkill(skillContextMenu.skillName);
+                                        setSkillContextMenu({...skillContextMenu, visible: false});
+                                    }}>
+                                        {t("delete")}
+                                    </div>
+                                </div>
+                            )}
+
+                            {showAddSkillModal && (
+                                <div className="modal-backdrop">
+                                    <div className="modal-content" style={{width: '90%', maxWidth: '500px'}}>
+                                        <div className="modal-header">
+                                            <h3>{t("addSkill")}</h3>
+                                            <button onClick={() => setShowAddSkillModal(false)} className="btn-close">&times;</button>
+                                        </div>
+                                        <div className="modal-body">
+                                            <div className="form-group">
+                                                <label>{t("skillType")}</label>
+                                                <div style={{display: 'flex', gap: '20px', marginTop: '5px'}}>
+                                                    <label style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer'}}>
+                                                        <input 
+                                                            type="radio" 
+                                                            checked={newSkillType === 'address'} 
+                                                            onChange={() => setNewSkillType('address')}
+                                                        /> {t("skillAddress")}
+                                                    </label>
+                                                    <label style={{display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer'}}>
+                                                        <input 
+                                                            type="radio" 
+                                                            checked={newSkillType === 'zip'} 
+                                                            onChange={() => setNewSkillType('zip')}
+                                                        /> {t("skillZip")}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="form-group">
+                                                <label>{t("skillName")}</label>
+                                                <input 
+                                                    type="text" 
+                                                    className="form-input" 
+                                                    value={newSkillName}
+                                                    onChange={(e) => setNewSkillName(e.target.value)}
+                                                    placeholder={t("placeholderName")}
+                                                />
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label>{t("skillDesc")}</label>
+                                                <textarea 
+                                                    className="form-input" 
+                                                    value={newSkillDesc}
+                                                    onChange={(e) => setNewSkillDesc(e.target.value)}
+                                                    rows={3}
+                                                    placeholder={t("placeholderDesc")}
+                                                />
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label>{t("skillValue")}</label>
+                                                {newSkillType === 'address' ? (
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-input" 
+                                                        value={newSkillValue}
+                                                        onChange={(e) => setNewSkillValue(e.target.value)}
+                                                        placeholder={t("placeholderAddress")}
+                                                    />
+                                                ) : (
+                                                    <div style={{display: 'flex', gap: '10px'}}>
+                                                        <input 
+                                                            type="text" 
+                                                            className="form-input" 
+                                                            value={newSkillValue}
+                                                            readOnly
+                                                            placeholder={t("placeholderZip")}
+                                                        />
+                                                        <button 
+                                                            className="btn-secondary" 
+                                                            onClick={async () => {
+                                                                const path = await SelectSkillFile();
+                                                                if (path) setNewSkillValue(path);
+                                                            }}
+                                                        >
+                                                            {t("browse")}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="modal-footer">
+                                            <button className="btn-secondary" onClick={() => setShowAddSkillModal(false)}>{t("cancel")}</button>
+                                            <button className="btn-primary" onClick={async () => {
+                                                if (!newSkillName || !newSkillValue) {
+                                                    showToastMessage(t("skillRequiredError"));
+                                                    return;
+                                                }
+                                                try {
+                                                    await AddSkill(newSkillName, newSkillDesc, newSkillType, newSkillValue);
+                                                    setShowAddSkillModal(false);
+                                                    const list = await ListSkills();
+                                                    setSkills(list || []);
+                                                    showToastMessage(t("skillAdded"));
+                                                } catch (err) {
+                                                    showToastMessage(t("skillAddError").replace("{error}", err as string));
+                                                }
+                                            }}>{t("confirm")}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                        {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow') && (
                             <ToolConfiguration 
                                 toolName={navTab} 
                                 toolCfg={toolCfg} 
@@ -2173,6 +2595,37 @@ ${instruction}`;
                                      lang === 'zh-Hant' ? '開啟後，程序啟動時將顯示新手教學和快速入門鏈接' :
                                      'When enabled, a welcome popup with tutorial links will be shown at startup.'}
                                 </p>
+                            </div>
+
+                            <div className="form-group" style={{marginTop: '15px', borderTop: '1px solid #f1f5f9', paddingTop: '15px', display: 'flex', alignItems: 'center', gap: '20px'}}>
+                                <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={config?.pause_env_check}
+                                        onChange={(e) => {
+                                            if (config) {
+                                                const newConfig = new main.AppConfig({...config, pause_env_check: e.target.checked});
+                                                setConfig(newConfig);
+                                                SaveConfig(newConfig);
+                                            }
+                                        }}
+                                        style={{width: '16px', height: '16px'}}
+                                    />
+                                    <span style={{fontSize: '0.8rem', color: '#374151'}}>{t("pauseEnvCheck")}</span>
+                                </label>
+                                <button 
+                                    className="btn-link" 
+                                    onClick={() => {
+                                        setEnvLogs([]);
+                                        setShowLogs(true);
+                                        setIsLoading(true);
+                                        setIsManualCheck(true);
+                                        CheckEnvironment(true);
+                                    }}
+                                    style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', border: '1px solid var(--border-color)', height: '28px', borderRadius: '14px', fontSize: '0.8rem'}}
+                                >
+                                    <span>🔍</span> {t("recheckEnv")}
+                                </button>
                             </div>
                         </div>
                     )}
@@ -2617,11 +3070,11 @@ ${instruction}`;
                                 onClick={() => {
                                     const logText = envLogs.join('\n');
                                     navigator.clipboard.writeText(logText).then(() => {
-                                        showToastMessage(lang === 'zh-Hans' ? '日志已复制到剪贴板' : 'Logs copied to clipboard');
+                                        showToastMessage(t("logsCopied"));
                                     });
                                 }}
                             >
-                                {lang === 'zh-Hans' ? '复制日志' : lang === 'zh-Hant' ? '複製日誌' : 'Copy Log'}
+                                {t("copyLog")}
                             </button>
                             <button
                                 className="btn-link"
@@ -2660,9 +3113,9 @@ ${instruction}`;
                         {updateResult.has_update ? (
                             <>
                                 <div style={{backgroundColor: '#f0f9ff', padding: '12px', borderRadius: '6px', marginBottom: '15px', border: '1px solid #e0f2fe'}}>
-                                    <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{lang === 'zh-Hans' ? '当前版本' : lang === 'zh-Hant' ? '當前版本' : 'Current Version'}</div>
+                                    <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{t("currentVersion")}</div>
                                     <div style={{fontSize: '1rem', fontWeight: '600', color: '#1e40af', marginBottom: '12px'}}>v{APP_VERSION}</div>
-                                    <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{lang === 'zh-Hans' ? '最新版本' : lang === 'zh-Hant' ? '最新版本' : 'Latest Version'}</div>
+                                    <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{t("latestVersion")}</div>
                                     <div style={{fontSize: '1rem', fontWeight: '600', color: '#059669'}}>{updateResult.latest_version}</div>
                                 </div>
 
@@ -2703,7 +3156,7 @@ ${instruction}`;
                                             )}
                                             {!downloadError && (
                                                 <>
-                                                    <p style={{margin: '10px 0', fontSize: '0.9rem', color: '#374151'}}>{lang === 'zh-Hans' ? '检查新版本，是否立即下载更新？' : lang === 'zh-Hant' ? '檢查新版本，是否立即下載更新？' : 'New version found. Download and update now?'}</p>
+                                                    <p style={{margin: '10px 0', fontSize: '0.9rem', color: '#374151'}}>{t("foundNewVersionMsg")}</p>
                                                     <button className="btn-primary" style={{width: '100%'}} onClick={handleDownload}>
                                                         {t("downloadAndUpdate")}
                                                     </button>
@@ -2715,11 +3168,11 @@ ${instruction}`;
                             </>
                         ) : (
                             <div style={{backgroundColor: '#f0f9ff', padding: '12px', borderRadius: '6px', border: '1px solid #e0f2fe'}}>
-                                <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{lang === 'zh-Hans' ? '当前版本' : lang === 'zh-Hant' ? '當前版本' : 'Current Version'}</div>
+                                <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{t("currentVersion")}</div>
                                 <div style={{fontSize: '1rem', fontWeight: '600', color: '#1e40af', marginBottom: '12px'}}>v{APP_VERSION}</div>
-                                <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{lang === 'zh-Hans' ? '最新版本' : lang === 'zh-Hant' ? '最新版本' : 'Latest Version'}</div>
+                                <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px'}}>{t("latestVersion")}</div>
                                 <div style={{fontSize: '1rem', fontWeight: '600', color: '#059669', marginBottom: '12px'}}>{updateResult.latest_version}</div>
-                                <p style={{margin: '0', fontSize: '0.9rem', color: '#059669', fontWeight: '500'}}>✓ {lang === 'zh-Hans' ? '已是最新版本' : lang === 'zh-Hant' ? '已是最新版本' : 'Already up to date'}</p>
+                                <p style={{margin: '0', fontSize: '0.9rem', color: '#059669', fontWeight: '500'}}>✓ {t("isLatestVersion")}</p>
                             </div>
                         )}
                         <div style={{display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px'}}>
@@ -3441,6 +3894,70 @@ ${instruction}`;
                                 style={{padding: '8px 16px'}}
                             >
                                 {t("saveChanges")}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Install Skills Modal */}
+            {showInstallSkillModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{width: '500px', maxWidth: '90vw'}}>
+                        <div className="modal-header">
+                            <h3 style={{margin: 0, color: '#10b981'}}>{t("selectSkillsToInstall")}</h3>
+                            <button onClick={() => setShowInstallSkillModal(false)} className="btn-close">&times;</button>
+                        </div>
+                        <div className="modal-body" style={{maxHeight: '300px', overflowY: 'auto', padding: '10px 0'}}>
+                            {skills.length === 0 ? (
+                                <div style={{textAlign: 'center', color: '#6b7280', padding: '20px'}}>
+                                    {t("noSkills")}
+                                </div>
+                            ) : (
+                                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                                    {skills.map((skill, idx) => (
+                                        <label key={idx} style={{
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            padding: '8px 12px', 
+                                            border: '1px solid var(--border-color)', 
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            backgroundColor: selectedSkillsToInstall.includes(skill.name) ? '#f0fdf4' : '#fff'
+                                        }}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedSkillsToInstall.includes(skill.name)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedSkillsToInstall([...selectedSkillsToInstall, skill.name]);
+                                                    } else {
+                                                        setSelectedSkillsToInstall(selectedSkillsToInstall.filter(n => n !== skill.name));
+                                                    }
+                                                }}
+                                                style={{marginRight: '10px'}}
+                                            />
+                                            <div style={{flex: 1}}>
+                                                <div style={{fontWeight: 'bold', fontSize: '0.9rem'}}>{skill.name}</div>
+                                                <div style={{fontSize: '0.8rem', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '350px'}} title={skill.description}>{skill.description}</div>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="modal-footer" style={{marginTop: '15px'}}>
+                            <button className="btn-secondary" onClick={() => setShowInstallSkillModal(false)}>{t("cancel")}</button>
+                            <button 
+                                className="btn-primary" 
+                                style={{backgroundColor: '#10b981', borderColor: '#10b981'}}
+                                disabled={selectedSkillsToInstall.length === 0}
+                                onClick={() => {
+                                    setShowInstallSkillModal(false);
+                                    showToastMessage(t("installNotImplemented") + " (" + selectedSkillsToInstall.join(", ") + ")");
+                                }}
+                            >
+                                {t("install")}
                             </button>
                         </div>
                     </div>
