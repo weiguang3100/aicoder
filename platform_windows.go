@@ -1530,6 +1530,8 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 		case "kilo":
 			// kilo does not support yolo mode, no flag needed
 			flag = ""
+		case "kode":
+			flag = "--dangerously-skip-permissions"
 		case "qodercli", "qoder":
 			flag = "--yolo"
 		}

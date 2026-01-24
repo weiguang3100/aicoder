@@ -52,6 +52,9 @@ func (tm *ToolManager) GetToolStatus(name string) ToolStatus {
 	if name == "kilo" {
 		binaryNames = []string{"kilo", "kilocode"}
 	}
+	if name == "kode" {
+		binaryNames = []string{"kode"}
+	}
 
 	tm.app.log(fmt.Sprintf("GetToolStatus: Looking for binary names: %v", binaryNames))
 
@@ -403,6 +406,8 @@ func (tm *ToolManager) GetPackageName(name string) string {
 		return "@iflow-ai/iflow-cli"
 	case "kilo":
 		return "@kilocode/cli"
+	case "kode":
+		return "@shareai-lab/kode"
 	default:
 		return ""
 	}
@@ -444,7 +449,7 @@ func (a *App) UpdateTool(name string) error {
 func (a *App) CheckToolsStatus() []ToolStatus {
 	tm := NewToolManager(a)
 	// Check kilo first, then other tools
-	tools := []string{"kilo", "claude", "gemini", "codex", "opencode", "codebuddy", "qoder", "iflow"}
+	tools := []string{"kilo", "claude", "gemini", "codex", "opencode", "codebuddy", "qoder", "kode", "iflow"}
 	statuses := make([]ToolStatus, len(tools))
 	for i, name := range tools {
 		statuses[i] = tm.GetToolStatus(name)

@@ -7,7 +7,11 @@
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "info": {
-    "productName": "AICoder"
+    "productName": "AICoder",
+    "productVersion": "3.6.1.6000",
+    "companyName": "QianXin",
+    "copyright": "Copyright © 2026 QianXin",
+    "comments": "AICoder - AI Coding Assistant"
   },
   "author": {
     "name": "mayong",

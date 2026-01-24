@@ -1,1 +1,1 @@
-﻿export const buildNumber = "5039";
+﻿export const buildNumber = "5072";

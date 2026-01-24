@@ -290,6 +290,8 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 			cmdArgs = append(cmdArgs, "-y")
 		case "iflow":
 			cmdArgs = append(cmdArgs, "-y")
+		case "kode":
+			cmdArgs = append(cmdArgs, "--dangerously-skip-permissions")
 		case "qodercli", "qoder":
 			cmdArgs = append(cmdArgs, "--yolo")
 		}

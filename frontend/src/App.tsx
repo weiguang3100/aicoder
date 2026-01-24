@@ -8,7 +8,8 @@ import codexIcon from './assets/images/Codex.png';
 import geminiIcon from './assets/images/gemincli.png';
 import iflowIcon from './assets/images/iflow.png';
 import opencodeIcon from './assets/images/opencode.png';
-import kiloIcon from './assets/images/kilo.png';
+import kiloIcon from './assets/images/KiloCode.png';
+import kodeIcon from './assets/images/Kodecli.png';
 import qoderIcon from './assets/images/qodercli.png';
 import { CheckToolsStatus, InstallTool, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl, DownloadUpdate, CancelDownload, LaunchInstallerAndExit, ListSkills, ListSkillsWithInstallStatus, AddSkill, DeleteSkill, SelectSkillFile, GetSkillsDir, SetEnvCheckInterval, GetEnvCheckInterval, ShouldCheckEnvironment, UpdateLastEnvCheckTime, InstallDefaultMarketplace, InstallSkill } from "../wailsjs/go/main/App";
 import { EventsOn, EventsOff, BrowserOpenURL, Quit } from "../wailsjs/runtime";
@@ -35,7 +36,7 @@ const subscriptionUrls: { [key: string]: string } = {
 };
 
 
-const APP_VERSION = "3.5.0.5000"
+const APP_VERSION = "3.6.1.6000"
 
 const translations: any = {
     "en": {
@@ -119,6 +120,8 @@ const translations: any = {
         "iflowDesc": "iFlow AI Programming Assistant",
         "kilo": "Kilo Code CLI",
         "kiloDesc": "Kilo Code AI Programming Assistant",
+        "kode": "Kode CLI",
+        "kodeDesc": "Kode AI Programming Assistant",
         "bugReport": "Problem Feedback",
         "businessCooperation": "Business: WeChat znsoft",
         "original": "Original",
@@ -308,6 +311,8 @@ const translations: any = {
         "iflowDesc": "iFlow AI 辅助编程",
         "kilo": "Kilo Code CLI",
         "kiloDesc": "Kilo Code AI 辅助编程",
+        "kode": "Kode CLI",
+        "kodeDesc": "Kode AI 辅助编程",
         "bugReport": "问题反馈",
         "businessCooperation": "商业合作：微信 znsoft",
         "original": "原厂",
@@ -494,6 +499,8 @@ const translations: any = {
         "iflowDesc": "iFlow AI 輔助編程",
         "kilo": "Kilo Code CLI",
         "kiloDesc": "Kilo Code AI 輔助編程",
+        "kode": "Kode CLI",
+        "kodeDesc": "Kode AI 輔助編程",
         "bugReport": "問題反饋",
         "businessCooperation": "商業合作：微信 znsoft",
         "original": "原廠",
@@ -1209,7 +1216,7 @@ function App() {
 
                 // Keep track of the last active tool for settings/launch logic
                 const lastActiveTool = cfg.active_tool || "claude";
-                if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder' || lastActiveTool === 'iflow' || lastActiveTool === 'kilo') {
+                if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder' || lastActiveTool === 'iflow' || lastActiveTool === 'kilo' || lastActiveTool === 'kode') {
                     setActiveTool(lastActiveTool);
                 }
 
@@ -1221,7 +1228,7 @@ function App() {
                     if (idx !== -1) setActiveTab(idx);
 
                     // Check if any model has an API key configured for the active tool
-                    if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder' || lastActiveTool === 'iflow' || lastActiveTool === 'kilo') {
+                    if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder' || lastActiveTool === 'iflow' || lastActiveTool === 'kilo' || lastActiveTool === 'kode') {
                         const hasAnyApiKey = toolCfg.models.some((m: any) => m.api_key && m.api_key.trim() !== "");
                         if (!hasAnyApiKey) {
                             setShowModelSettings(true);
@@ -1239,7 +1246,7 @@ function App() {
             // Sync with tray menu changes
             const tool = cfg.active_tool || "message";
             setNavTab(tool);
-            if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy' || tool === 'iflow' || tool === 'kilo') {
+            if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy' || tool === 'iflow' || tool === 'kilo' || tool === 'kode') {
                 setActiveTool(tool);
                 const toolCfg = (cfg as any)[tool];
                 if (toolCfg && toolCfg.models) {
@@ -1310,6 +1317,15 @@ function App() {
                 await InstallTool("kilo");
             }
 
+            // Add kode check and installation if missing
+            const kodeStatus = statuses?.find((s: any) => s.name === "kode");
+            if (kodeStatus && !kodeStatus.installed) {
+                setEnvLogs(prev => [...prev, lang === 'zh-Hans' ? "正在安装 Kode CLI..." :
+                    lang === 'zh-Hant' ? "正在安裝 Kode CLI..." :
+                        "Installing Kode CLI..."]);
+                await InstallTool("kode");
+            }
+
             // Re-check after installation
             const updatedStatuses = await CheckToolsStatus();
             setToolStatuses(updatedStatuses);
@@ -1331,7 +1347,7 @@ function App() {
 
     const switchTool = (tool: string) => {
         setNavTab(tool);
-        if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy' || tool === 'qoder' || tool === 'iflow' || tool === 'kilo') {
+        if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy' || tool === 'qoder' || tool === 'iflow' || tool === 'kilo' || tool === 'kode') {
             setActiveTool(tool);
             setActiveTab(0); // Reset to Original when switching tools
         }
@@ -1417,7 +1433,7 @@ function App() {
 
         // Skip syncing for "Original" model and custom models
         if (providerPrefix !== "Original" && !isCurrentCustom) {
-            const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow', 'kilo'];
+            const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow', 'kilo', 'kode'];
             let syncCount = 0;
 
             tools.forEach(tool => {
@@ -1533,7 +1549,7 @@ function App() {
             if (p.includes("doubao")) return "doubao-seed-code-preview-latest";
             if (p.includes("kimi")) return "kimi-for-coding";
             if (p.includes("minimax")) return "MiniMax-M2.1";
-        } else if (tool === "opencode" || tool === "codebuddy" || tool === "qoder" || tool === "iflow" || tool === "kilo") {
+        } else if (tool === "opencode" || tool === "codebuddy" || tool === "qoder" || tool === "iflow" || tool === "kilo" || tool === "kode") {
             if (p.includes("deepseek")) return "deepseek-chat";
             if (p.includes("glm")) return "glm-4.7";
             if (p.includes("doubao")) return "doubao-seed-code-preview-latest";
@@ -1662,7 +1678,7 @@ function App() {
 
         // Sanitize: Ensure Custom models have a name (prevent empty tab button)
         const configCopy = JSON.parse(JSON.stringify(config));
-        const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow'];
+        const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow', 'kilo', 'kode'];
         tools.forEach(tool => {
             if (configCopy[tool] && configCopy[tool].models) {
                 configCopy[tool].models.forEach((model: any) => {
@@ -1847,7 +1863,7 @@ ${instruction}`;
 
     if (!config) return <div className="main-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{t("loadingConfig")}</div>;
 
-    const toolCfg = (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo')
+    const toolCfg = (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo' || navTab === 'kode')
         ? (config as any)[navTab]
         : null;
 
@@ -1877,9 +1893,20 @@ ${instruction}`;
                     backgroundColor: '#f8fafc',
                     flexShrink: 0
                 }}>
-                    <div className="sidebar-header" style={{ padding: '0 0 15px 0', justifyContent: 'center', width: '100%' }}>
+                    <div className="sidebar-header" style={{ padding: '0 0 10px 0', justifyContent: 'center', width: '100%' }}>
                         <img src={appIcon} alt="Logo" className="sidebar-logo" style={{ width: '28px', height: '28px' }} />
                     </div>
+                    <div style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        marginBottom: '15px',
+                        background: 'linear-gradient(to right, #60a5fa, #a855f7, #ec4899)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        display: 'inline-block',
+                        width: '100%'
+                    }}>AICoder</div>
 
                     <div
                         className={`sidebar-item ${navTab === 'message' ? 'active' : ''}`}
@@ -1942,16 +1969,7 @@ ${instruction}`;
                 </div>
 
                 {/* Right Tool List */}
-                <div style={{ flex: 1, padding: '10px', overflowY: 'auto', backgroundColor: '#fff', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ marginBottom: '15px', fontSize: '1.1rem', fontWeight: 'bold', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{
-                            background: 'linear-gradient(to right, #60a5fa, #a855f7, #ec4899)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            display: 'inline-block'
-                        }}>AICoder</span>
-                    </div>
-
+                <div style={{ flex: 1, padding: '10px', overflowY: 'auto', backgroundColor: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div className="tool-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
                         <div className={`sidebar-item ${navTab === 'claude' ? 'active' : ''}`} onClick={() => switchTool('claude')}>
                             <span className="sidebar-icon">
@@ -2000,6 +2018,13 @@ ${instruction}`;
                                 </span> <span>Kilo Code</span>
                             </div>
                         )}
+                        {config?.show_kode !== false && (
+                            <div className={`sidebar-item ${navTab === 'kode' ? 'active' : ''}`} onClick={() => switchTool('kode')}>
+                                <span className="sidebar-icon">
+                                    <img src={kodeIcon} style={{ width: '1.1em', height: '1.1em', verticalAlign: 'middle' }} alt="Kode CLI" />
+                                </span> <span>Kode CLI</span>
+                            </div>
+                        )}
                         {config?.show_qoder !== false && (
                             <div className={`sidebar-item ${navTab === 'qoder' ? 'active' : ''}`} onClick={() => switchTool('qoder')}>
                                 <span className="sidebar-icon">
@@ -2025,7 +2050,8 @@ ${instruction}`;
                                                         navTab === 'qoder' ? 'Qoder CLI' :
                                                             navTab === 'iflow' ? 'iFlow CLI' :
                                                                 navTab === 'kilo' ? 'Kilo Code CLI' :
-                                                                    navTab === 'projects' ? t("projectManagement") :
+                                                                    navTab === 'kode' ? 'Kode CLI' :
+                                                                        navTab === 'projects' ? t("projectManagement") :
                                                                     navTab === 'skills' ? t("skills") :
                                                                         navTab === 'tutorial' ? t("tutorial") :
                                                                             navTab === 'api-store' ? t("apiStore") :
@@ -2090,7 +2116,7 @@ ${instruction}`;
                                     {t("refreshMessage")}
                                 </button>
                             )}
-                            {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo') && (
+                            {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo' || navTab === 'kode') && (
                                 <>
                                     <button
                                         className="btn-link"
@@ -2367,11 +2393,11 @@ ${instruction}`;
                     {navTab === 'api-store' && (
                         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-                            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '20px', overflowX: 'hidden' }}>
                                 <div style={{
                                     display: 'grid',
-                                    gridTemplateColumns: 'repeat(3, 1fr)',
-                                    gap: '15px',
+                                    gridTemplateColumns: 'repeat(4, 1fr)',
+                                    gap: '12px',
                                     paddingBottom: '20px'
                                 }}>
                                     {[
@@ -2393,14 +2419,14 @@ ${instruction}`;
                                                 backgroundColor: '#fff',
                                                 border: '1px solid var(--border-color)',
                                                 borderRadius: '8px',
-                                                padding: '9px 16px',
+                                                padding: '8px 12px',
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 justifyContent: 'center',
                                                 transition: 'all 0.2s ease',
                                                 cursor: 'pointer',
                                                 position: 'relative',
-                                                minHeight: '48px'
+                                                minHeight: '42px'
                                             }}
                                             onMouseEnter={(e) => {
                                                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
@@ -2461,7 +2487,7 @@ ${instruction}`;
                                                 </div>
                                             )}
                                             <div style={{
-                                                fontSize: '1rem',
+                                                fontSize: '0.85rem',
                                                 fontWeight: 600,
                                                 color: '#3b82f6',
                                                 marginBottom: '8px'
@@ -2469,7 +2495,7 @@ ${instruction}`;
                                                 {provider.name}
                                             </div>
                                             <div style={{
-                                                fontSize: '1rem',
+                                                fontSize: '0.85rem',
                                                 color: '#6b7280'
                                             }}>
                                                 🛒
@@ -2673,7 +2699,7 @@ ${instruction}`;
                             )}
                         </div>
                     )}
-                    {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo') && (
+                    {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo' || navTab === 'kode') && (
                         <ToolConfiguration
                             toolName={navTab}
                             toolCfg={toolCfg}
@@ -2905,6 +2931,21 @@ ${instruction}`;
                                         />
                                         <span style={{ fontSize: '0.8rem', color: '#4b5563' }}>Kilo Code CLI</span>
                                     </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={config?.show_kode !== false}
+                                            onChange={(e) => {
+                                                if (config) {
+                                                    const newConfig = new main.AppConfig({ ...config, show_kode: e.target.checked });
+                                                    setConfig(newConfig);
+                                                    SaveConfig(newConfig);
+                                                }
+                                            }}
+                                            style={{ width: '16px', height: '16px' }}
+                                        />
+                                        <span style={{ fontSize: '0.8rem', color: '#4b5563' }}>Kode CLI</span>
+                                    </label>
                                 </div>
                             </div>
 
@@ -3080,7 +3121,7 @@ ${instruction}`;
                 </div>
 
                 {/* Global Action Bar (Footer) */}
-                {config && (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo') && (
+                {config && (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo' || navTab === 'kode') && (
                     <div className="global-action-bar">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '100%', padding: '2px 0' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'flex-start' }}>

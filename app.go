@@ -91,6 +91,7 @@ type AppConfig struct {
 	Qoder                ToolConfig      `json:"qoder"`
 	IFlow                ToolConfig      `json:"iflow"`
 	Kilo                 ToolConfig      `json:"kilo"`
+	Kode                 ToolConfig      `json:"kode"`
 	Projects             []ProjectConfig `json:"projects"`
 	CurrentProject       string          `json:"current_project"` // ID of the current project
 	ActiveTool           string          `json:"active_tool"`     // "claude", "gemini", or "codex"
@@ -102,6 +103,7 @@ type AppConfig struct {
 	ShowQoder            bool            `json:"show_qoder"`
 	ShowIFlow            bool            `json:"show_iflow"`
 	ShowKilo             bool            `json:"show_kilo"`
+	ShowKode             bool            `json:"show_kode"`
 	Language             string          `json:"language"`
 	CheckUpdateOnStartup bool            `json:"check_update_on_startup"`
 	// Environment check settings
@@ -328,6 +330,17 @@ func (a *App) clearKiloConfig() {
 	_, configPath := a.getKiloConfigPaths()
 	os.Remove(configPath)
 	a.log("Cleared Kilo Code configuration file")
+}
+func (a *App) getKodeConfigPaths() (string, string) {
+	home, _ := os.UserHomeDir()
+	dir := filepath.Join(home, ".kode", "cli")
+	config := filepath.Join(dir, "config.json")
+	return dir, config
+}
+func (a *App) clearKodeConfig() {
+	_, configPath := a.getKodeConfigPaths()
+	os.Remove(configPath)
+	a.log("Cleared Kode CLI configuration file")
 }
 func (a *App) clearEnvVars() {
 	vars := []string{
@@ -1017,6 +1030,62 @@ func (a *App) syncToKiloSettings(config AppConfig) error {
 	}
 	return os.WriteFile(configPath, data, 0644)
 }
+
+func (a *App) syncToKodeSettings(config AppConfig) error {
+	// Kode CLI uses .kode.json configuration file in user home directory
+	var selectedModel *ModelConfig
+	for _, m := range config.Kode.Models {
+		if m.ModelName == config.Kode.CurrentModel {
+			selectedModel = &m
+			break
+		}
+	}
+	if selectedModel == nil {
+		return fmt.Errorf("selected kode model not found")
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	kodeConfigPath := filepath.Join(home, ".kode.json")
+
+	// Create model profile
+	modelProfile := map[string]interface{}{
+		"name":          fmt.Sprintf("Custom OpenAI-Compatible API %s", selectedModel.ModelId),
+		"provider":      "custom-openai",
+		"modelName":     selectedModel.ModelId,
+		"baseURL":       selectedModel.ModelUrl,
+		"apiKey":        selectedModel.ApiKey,
+		"maxTokens":     4096,
+		"contextLength": 128000,
+		"createdAt":     time.Now().UnixMilli(),
+		"isActive":      true,
+	}
+
+	// Create full config structure
+	kodeConfig := map[string]interface{}{
+		"modelProfiles": []interface{}{modelProfile},
+		"modelPointers": map[string]string{
+			"main":    selectedModel.ModelId,
+			"task":    selectedModel.ModelId,
+			"compact": selectedModel.ModelId,
+			"quick":   selectedModel.ModelId,
+		},
+		"defaultModelName":        selectedModel.ModelId,
+		"hasCompletedOnboarding":  true,
+		"lastOnboardingVersion":   "2.0.3",
+	}
+
+	// Write config file
+	data, err := json.MarshalIndent(kodeConfig, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(kodeConfigPath, data, 0644)
+}
 func (a *App) syncToCodeBuddySettings(config AppConfig, projectPath string) error {
 	if projectPath == "" {
 		projectPath = a.GetCurrentProjectPath()
@@ -1244,6 +1313,11 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 		envKey = "KILO_API_KEY"
 		envBaseUrl = "KILO_BASE_URL"
 		binaryName = "kilo"
+	case "kode":
+		toolCfg = config.Kode
+		envKey = "OPENAI_API_KEY"
+		envBaseUrl = "OPENAI_BASE_URL"
+		binaryName = "kode"
 	case "opencode":
 		toolCfg = config.Opencode
 		envKey = "OPENCODE_API_KEY"
@@ -1418,6 +1492,9 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 		case "kilo":
 			// Configure Kilo Code settings
 			a.syncToKiloSettings(config)
+		case "kode":
+			// Configure Kode CLI settings - uses .kode.json configuration file
+			a.syncToKodeSettings(config)
 		}
 	} else {
 		// --- ORIGINAL MODE: CLEANUP SPECIFIC TOOL ONLY ---
@@ -1457,6 +1534,9 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 		} else if strings.ToLower(toolName) == "kilo" {
 			os.Unsetenv("KILO_MODEL")
 			a.clearKiloConfig()
+		} else if strings.ToLower(toolName) == "kode" {
+			os.Unsetenv("KODE_MODEL")
+			a.clearKodeConfig()
 		}
 		a.log(fmt.Sprintf("Running %s in Original mode: Custom configurations cleared.", toolName))
 	}
@@ -1548,7 +1628,16 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	}
 	defaultKiloModels := []ModelConfig{
 		{ModelName: "Original", ModelId: "", ModelUrl: "", ApiKey: ""},
-		{ModelName: "AiCodeMirror", ModelId: "sonnet", ModelUrl: "https://api.aicodemirror.com/api/kilo", ApiKey: ""},
+		{ModelName: "ChatFire", ModelId: "gpt-4o", ModelUrl: "https://api.chatfire.cn/v1", ApiKey: ""},
+		{ModelName: "DeepSeek", ModelId: "deepseek-chat", ModelUrl: "https://api.deepseek.com/v1", ApiKey: ""},
+		{ModelName: "GLM", ModelId: "glm-4.7", ModelUrl: "https://open.bigmodel.cn/api/paas/v4", ApiKey: ""},
+		{ModelName: "Doubao", ModelId: "doubao-seed-code-preview-latest", ModelUrl: "https://ark.cn-beijing.volces.com/api/coding/v3", ApiKey: ""},
+		{ModelName: "Kimi", ModelId: "kimi-for-coding", ModelUrl: "https://api.kimi.com/coding/v1", ApiKey: ""},
+		{ModelName: "MiniMax", ModelId: "MiniMax-M2.1", ModelUrl: "https://api.minimaxi.com/v1", ApiKey: ""},
+		{ModelName: "XiaoMi", ModelId: "mimo-v2-flash", ModelUrl: "https://api.xiaomimimo.com/v1", ApiKey: ""},
+		{ModelName: "Custom", ModelId: "", ModelUrl: "", ApiKey: "", IsCustom: true},
+	}
+	defaultKodeModels := []ModelConfig{
 		{ModelName: "ChatFire", ModelId: "gpt-4o", ModelUrl: "https://api.chatfire.cn/v1", ApiKey: ""},
 		{ModelName: "DeepSeek", ModelId: "deepseek-chat", ModelUrl: "https://api.deepseek.com/v1", ApiKey: ""},
 		{ModelName: "GLM", ModelId: "glm-4.7", ModelUrl: "https://open.bigmodel.cn/api/paas/v4", ApiKey: ""},
@@ -1674,6 +1763,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 			ShowQoder:        true,
 			ShowIFlow:        true,
 			ShowKilo:         true,
+			ShowKode:         true,
 			EnvCheckInterval: 7, // Default to 7 days
 		}
 		err = a.SaveConfig(defaultConfig)
@@ -1687,6 +1777,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 		ShowQoder:     true,
 		ShowIFlow:     true,
 		ShowKilo:      true,
+		ShowKode:      true,
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -1765,7 +1856,11 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	}
 	if config.Kilo.Models == nil || len(config.Kilo.Models) == 0 {
 		config.Kilo.Models = defaultKiloModels
-		config.Kilo.CurrentModel = "AiCodeMirror"
+		config.Kilo.CurrentModel = "Original"
+	}
+	if config.Kode.Models == nil || len(config.Kode.Models) == 0 {
+		config.Kode.Models = defaultKodeModels
+		config.Kode.CurrentModel = "ChatFire"
 	}
 	ensureModel(&config.Claude.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/claudecode", "sonnet", "")
 	ensureModel(&config.Claude.Models, "Noin.AI", "https://ai.ourines.com/api", "sonnet", "")
@@ -1842,7 +1937,6 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	ensureModel(&config.IFlow.Models, "Kimi", "https://api.kimi.com/coding/v1", "kimi-for-coding", "")
 	ensureModel(&config.IFlow.Models, "MiniMax", "https://api.minimaxi.com/v1", "MiniMax-M2.1", "")
 	ensureModel(&config.IFlow.Models, "XiaoMi", "https://api.xiaomimimo.com/v1", "mimo-v2-flash", "")
-	ensureModel(&config.Kilo.Models, "AiCodeMirror", "https://api.aicodemirror.com/api/kilo", "sonnet", "")
 	ensureModel(&config.Kilo.Models, "ChatFire", "https://api.chatfire.cn/v1", "gpt-4o", "")
 	ensureModel(&config.Kilo.Models, "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat", "")
 	ensureModel(&config.Kilo.Models, "GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4.7", "")
@@ -1992,10 +2086,17 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	}
 	if config.Kilo.Models == nil || len(config.Kilo.Models) == 0 {
 		config.Kilo.Models = defaultKiloModels
-		config.Kilo.CurrentModel = "AiCodeMirror"
+		config.Kilo.CurrentModel = "Original"
 	}
 	if config.Kilo.CurrentModel == "" {
-		config.Kilo.CurrentModel = "AiCodeMirror"
+		config.Kilo.CurrentModel = "Original"
+	}
+	if config.Kode.Models == nil || len(config.Kode.Models) == 0 {
+		config.Kode.Models = defaultKodeModels
+		config.Kode.CurrentModel = "ChatFire"
+	}
+	if config.Kode.CurrentModel == "" {
+		config.Kode.CurrentModel = "ChatFire"
 	}
 	if config.ActiveTool == "" {
 		config.ActiveTool = "message"
@@ -2017,6 +2118,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	normalizeCurrentModel(&config.Qoder)
 	normalizeCurrentModel(&config.IFlow)
 	normalizeCurrentModel(&config.Kilo)
+	normalizeCurrentModel(&config.Kode)
 	return config, nil
 }
 // getProviderModel gets the model for a specific provider name from a tool config

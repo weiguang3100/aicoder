@@ -227,6 +227,30 @@ func setupTray(app *App, appOptions *options.App) {
 			})
 		}
 
+		// 9. Kode CLI Submenu
+		mKode := systray.AddMenuItem("Kode CLI", "Kode CLI Models")
+		for _, model := range config.Kode.Models {
+			m := mKode.AddSubMenuItemCheckbox(model.ModelName, "Switch to "+model.ModelName, model.ModelName == config.Kode.CurrentModel && config.ActiveTool == "kode")
+			toolItems["kode-"+model.ModelName] = m
+
+			modelName := model.ModelName
+			m.Click(func() {
+				go func() {
+					currentConfig, _ := app.LoadConfig()
+					currentConfig.Kode.CurrentModel = modelName
+					currentConfig.ActiveTool = "kode"
+					app.SaveConfig(currentConfig)
+
+					for _, m := range currentConfig.Kode.Models {
+						if m.ModelName == modelName && m.ApiKey == "" {
+							runtime.WindowShow(app.ctx)
+							break
+						}
+					}
+				}()
+			})
+		}
+
 				systray.AddSeparator()
 				mQuit := systray.AddMenuItem("Quit", "Quit Application")
 
@@ -256,7 +280,9 @@ func setupTray(app *App, appOptions *options.App) {
 							(cfg.ActiveTool == "opencode" && key == "opencode-"+cfg.Opencode.CurrentModel) ||
 							(cfg.ActiveTool == "codebuddy" && key == "codebuddy-"+cfg.CodeBuddy.CurrentModel) ||
 							(cfg.ActiveTool == "qoder" && key == "qoder-"+cfg.Qoder.CurrentModel) ||
-						(cfg.ActiveTool == "iflow" && key == "iflow-"+cfg.IFlow.CurrentModel) {
+						(cfg.ActiveTool == "iflow" && key == "iflow-"+cfg.IFlow.CurrentModel) ||
+						(cfg.ActiveTool == "kilo" && key == "kilo-"+cfg.Kilo.CurrentModel) ||
+						(cfg.ActiveTool == "kode" && key == "kode-"+cfg.Kode.CurrentModel) {
 							item.Check()
 						} else {
 							item.Uncheck()
