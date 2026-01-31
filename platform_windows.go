@@ -284,6 +284,7 @@ func (a *App) CheckEnvironment(force bool) {
 
 		if force {
 			a.log(a.tr("Forced environment check triggered (ignoring configuration)."))
+			a.log(a.tr("Checking base environment..."))
 		} else {
 			config, err := a.LoadConfig()
 			if err == nil {
@@ -298,23 +299,24 @@ func (a *App) CheckEnvironment(force bool) {
 		}
 
 		// ===== Check and Install Visual C++ Redistributable =====
-		a.log(a.tr("Checking Visual C++ Redistributable installation..."))
+		a.log(a.tr("Checking Visual C++ Redistributable..."))
 		if !a.isVCRedistInstalled() {
 			a.log(a.tr("Visual C++ Redistributable not found. Installing..."))
 			if err := a.installVCRedist(); err != nil {
 				a.log(a.tr("WARNING: Failed to install VC Redistributable: %v", err))
 			} else {
-				a.log(a.tr("Visual C++ Redistributable installed successfully."))
+				a.log(a.tr("✓ Visual C++ Redistributable installed successfully."))
 			}
 		} else {
-			a.log(a.tr("Visual C++ Redistributable is already installed."))
+			a.log(a.tr("✓ Visual C++ Redistributable is already installed."))
 		}
 
-		a.log(a.tr("Checking Node.js installation..."))
+		a.log(a.tr("Checking Node.js..."))
 
 		nodeCmd := exec.Command("node", "--version")
 		nodeCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-		nodeInstalled := nodeCmd.Run() == nil
+		nodeOutput, nodeErr := nodeCmd.Output()
+		nodeInstalled := nodeErr == nil
 
 		if !nodeInstalled {
 			a.installMutex.Lock()
@@ -356,7 +358,7 @@ func (a *App) CheckEnvironment(force bool) {
 				nodeInstalled = true
 			}
 		} else {
-			a.log(a.tr("Node.js is already installed."))
+			a.log(a.tr("✓ Node.js found: %s", strings.TrimSpace(string(nodeOutput))))
 			nodeInstalled = true
 		}
 
@@ -369,8 +371,16 @@ func (a *App) CheckEnvironment(force bool) {
 		a.updatePathForNode()
 
 		// Check for Git
-		a.log(a.tr("Checking Git installation..."))
-		if _, err := exec.LookPath("git"); err != nil {
+		a.log(a.tr("Checking Git..."))
+		if gitPath, err := exec.LookPath("git"); err == nil {
+			gitCmd := exec.Command(gitPath, "--version")
+			gitCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			if out, err := gitCmd.Output(); err == nil {
+				a.log(a.tr("✓ Git found: %s", strings.TrimSpace(string(out))))
+			} else {
+				a.log(a.tr("✓ Git found at: %s", gitPath))
+			}
+		} else {
 			gitFound := false
 			if _, err := os.Stat(`C:\Program Files\Git\cmd\git.exe`); err == nil {
 				gitFound = true
@@ -378,7 +388,7 @@ func (a *App) CheckEnvironment(force bool) {
 
 			if gitFound {
 				a.updatePathForGit()
-				a.log(a.tr("Git found in standard location."))
+				a.log(a.tr("✓ Git found in standard location."))
 			} else {
 				a.installMutex.Lock()
 				if a.installingGit {
@@ -396,7 +406,7 @@ func (a *App) CheckEnvironment(force bool) {
 						a.installingGit = false
 						a.installMutex.Unlock()
 					} else {
-						a.log(a.tr("Git installed successfully."))
+						a.log(a.tr("✓ Git installed successfully."))
 						a.updatePathForGit()
 						a.installMutex.Lock()
 						a.installingGit = false
@@ -404,13 +414,11 @@ func (a *App) CheckEnvironment(force bool) {
 					}
 				}
 			}
-		} else {
-			a.log(a.tr("Git is installed."))
 		}
 
 		a.ensureLocalNodeBinary()
 
-		a.log(a.tr("Base environment check complete. Starting background tool check/update..."))
+		a.log(a.tr("✓ Base environment check complete."))
 
 		// Update config to mark base env check done
 		if cfg, err := a.LoadConfig(); err == nil {
@@ -427,8 +435,10 @@ func (a *App) CheckEnvironment(force bool) {
 
 		a.emitEvent("env-check-done")
 
-		// Check and update AI Tools in background (runs on every startup)
-		go a.installToolsInBackground()
+		// Check and update AI Tools in background (runs on every startup, but not for manual check)
+		if !force {
+			go a.installToolsInBackground()
+		}
 	}()
 }
 

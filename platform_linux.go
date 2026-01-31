@@ -63,7 +63,7 @@ func (a *App) CheckEnvironment(force bool) {
 			}
 		}
 
-		a.log(a.tr("Checking Node.js installation..."))
+		a.log(a.tr("Checking base environment..."))
 
 		home, _ = os.UserHomeDir()
 		localNodeDir := filepath.Join(home, ".cceasy", "tools")
@@ -92,6 +92,7 @@ func (a *App) CheckEnvironment(force bool) {
 		}
 
 		// 2. Search for Node.js
+		a.log(a.tr("Checking Node.js..."))
 		nodePath, err := exec.LookPath("node")
 		if err != nil {
 			for _, p := range commonPaths {
@@ -124,11 +125,18 @@ func (a *App) CheckEnvironment(force bool) {
 				wails_runtime.EventsEmit(a.ctx, "env-check-done")
 				return
 			}
+		} else {
+			// Get Node.js version
+			cmd := exec.Command(nodePath, "--version")
+			if out, err := cmd.Output(); err == nil {
+				a.log(a.tr("✓ Node.js found: %s (%s)", strings.TrimSpace(string(out)), nodePath))
+			} else {
+				a.log(a.tr("✓ Node.js found at: ") + nodePath)
+			}
 		}
 
-		a.log(a.tr("Node.js found at: ") + nodePath)
-
 		// 4. Check for npm
+		a.log(a.tr("Checking npm..."))
 		npmPath, err := exec.LookPath("npm")
 		if err != nil {
 			localNpmPath := filepath.Join(localBinDir, "npm")
@@ -138,12 +146,20 @@ func (a *App) CheckEnvironment(force bool) {
 		}
 
 		if npmPath == "" {
-			a.log(a.tr("npm not found. Check Node.js installation."))
+			a.log(a.tr("✗ npm not found. Check Node.js installation."))
 			wails_runtime.EventsEmit(a.ctx, "env-check-done")
 			return
 		}
+		
+		// Get npm version
+		npmCmd := exec.Command(npmPath, "--version")
+		if out, err := npmCmd.Output(); err == nil {
+			a.log(a.tr("✓ npm found: %s (%s)", strings.TrimSpace(string(out)), npmPath))
+		} else {
+			a.log(a.tr("✓ npm found at: ") + npmPath)
+		}
 
-		a.log(a.tr("Base environment check complete. Starting background tool check/update..."))
+		a.log(a.tr("✓ Base environment check complete."))
 		
 		// Update config to mark base env check done
 		if cfg, err := a.LoadConfig(); err == nil {
@@ -160,8 +176,10 @@ func (a *App) CheckEnvironment(force bool) {
 		
 		a.emitEvent("env-check-done")
 		
-		// 5. Check and update AI Tools in background (runs on every startup)
-		go a.installToolsInBackground()
+		// Check and update AI Tools in background (runs on every startup, but not for manual check)
+		if !force {
+			go a.installToolsInBackground()
+		}
 	}()
 }
 
