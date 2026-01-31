@@ -870,6 +870,7 @@ function App() {
     const [envLogs, setEnvLogs] = useState<string[]>([]);
     const [showLogs, setShowLogs] = useState(false);
     const [toolRepairStatus, setToolRepairStatus] = useState<{show: boolean, toolName: string, status: 'installing' | 'success' | 'failed', message: string}>({show: false, toolName: '', status: 'installing', message: ''});
+    const [isToolInstalling, setIsToolInstalling] = useState(false);
     const [yoloMode, setYoloMode] = useState(false);
     const [selectedProjectForLaunch, setSelectedProjectForLaunch] = useState<string>("");
     const [showAbout, setShowAbout] = useState(false);
@@ -3370,6 +3371,7 @@ ${instruction}`;
                                 <button
                                     className="btn-launch"
                                     style={{ padding: '8px 24px', textAlign: 'center' }}
+                                    disabled={isToolInstalling}
                                     onClick={async () => {
                                         console.log("Launch button clicked. activeTool:", activeTool);
                                         const selectedProj = config?.projects?.find((p: any) => p.id === selectedProjectForLaunch);
@@ -3377,17 +3379,36 @@ ${instruction}`;
                                             // Check if tool is installed
                                             const toolStatus = toolStatuses?.find((s: any) => s.name === activeTool);
                                             if (toolStatus && !toolStatus.installed) {
-                                                // Tool not installed, try to install on demand
-                                                setStatus(lang === 'zh-Hans' ? `正在安装 ${activeTool}...` : `Installing ${activeTool}...`);
+                                                // Tool not installed, show install dialog and install on demand
+                                                setIsToolInstalling(true);
+                                                setToolRepairStatus({show: true, toolName: activeTool, status: 'installing', message: ''});
                                                 try {
                                                     await InstallToolOnDemand(activeTool);
                                                     // Refresh tool statuses
                                                     const updatedStatuses = await CheckToolsStatus();
                                                     setToolStatuses(updatedStatuses);
-                                                    setStatus(lang === 'zh-Hans' ? `${activeTool} 安装成功` : `${activeTool} installed successfully`);
+                                                    setToolRepairStatus({show: true, toolName: activeTool, status: 'success', message: ''});
+                                                    
+                                                    // Auto launch after successful installation
+                                                    setTimeout(async () => {
+                                                        setToolRepairStatus(prev => ({...prev, show: false}));
+                                                        setIsToolInstalling(false);
+                                                        // Launch the tool
+                                                        setStatus(lang === 'zh-Hans' ? "正在启动..." : "Launching...");
+                                                        try {
+                                                            await LaunchTool(activeTool, selectedProj.yolo_mode, selectedProj.admin_mode || false, selectedProj.python_project || false, selectedProj.python_env || "", selectedProj.path || "", selectedProj.use_proxy || false);
+                                                            console.log("LaunchTool call returned successfully after install");
+                                                            setTimeout(() => setStatus(""), 2000);
+                                                        } catch (err) {
+                                                            console.error("LaunchTool call failed after install:", err);
+                                                            setStatus("Error: " + err);
+                                                        }
+                                                    }, 1500);
+                                                    return;
                                                 } catch (err) {
                                                     console.error("Failed to install tool on demand:", err);
-                                                    setStatus(lang === 'zh-Hans' ? `安装 ${activeTool} 失败: ${err}` : `Failed to install ${activeTool}: ${err}`);
+                                                    setToolRepairStatus({show: true, toolName: activeTool, status: 'failed', message: String(err)});
+                                                    setIsToolInstalling(false);
                                                     return;
                                                 }
                                             }
@@ -3535,49 +3556,89 @@ ${instruction}`;
 
             {/* Tool Repair Progress Dialog */}
             {toolRepairStatus.show && (
-                <div className="modal-overlay">
-                    <div className="modal-content" style={{ width: '350px', textAlign: 'center' }}>
-                        <h3>{t("toolRepairTitle")}</h3>
-                        <div style={{ padding: '20px 0' }}>
-                            {toolRepairStatus.status === 'installing' && (
-                                <>
-                                    <div className="spinner" style={{ margin: '0 auto 15px', width: '40px', height: '40px', border: '4px solid #e2e8f0', borderTop: '4px solid #3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                                    <p style={{ color: '#374151', fontSize: '0.95rem' }}>
-                                        {t("toolRepairInstalling").replace("{tool}", toolRepairStatus.toolName)}
-                                    </p>
-                                </>
-                            )}
-                            {toolRepairStatus.status === 'success' && (
-                                <>
-                                    <div style={{ fontSize: '48px', marginBottom: '15px', color: '#059669' }}>✓</div>
-                                    <p style={{ color: '#059669', fontWeight: 'bold', marginBottom: '10px' }}>
-                                        {t("toolRepairSuccess").replace("{tool}", toolRepairStatus.toolName)}
-                                    </p>
-                                    <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>
-                                        {t("toolRepairVersion").replace("{version}", toolRepairStatus.message)}
-                                    </p>
-                                </>
-                            )}
-                            {toolRepairStatus.status === 'failed' && (
-                                <>
-                                    <div style={{ fontSize: '48px', marginBottom: '15px', color: '#ef4444' }}>✗</div>
-                                    <p style={{ color: '#ef4444', fontWeight: 'bold', marginBottom: '10px' }}>
-                                        {t("toolRepairFailed").replace("{tool}", toolRepairStatus.toolName)}
-                                    </p>
-                                    <p style={{ color: '#6b7280', fontSize: '0.85rem', wordBreak: 'break-word' }}>
-                                        {toolRepairStatus.message}
-                                    </p>
-                                </>
-                            )}
-                        </div>
+                <div className="modal-overlay" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '16px',
+                        padding: '20px 28px',
+                        textAlign: 'center',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                        minWidth: '220px',
+                        maxWidth: '280px'
+                    }}>
+                        {toolRepairStatus.status === 'installing' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                <div style={{
+                                    width: '24px',
+                                    height: '24px',
+                                    border: '3px solid #e2e8f0',
+                                    borderTop: '3px solid #3b82f6',
+                                    borderRadius: '50%',
+                                    animation: 'spin 0.8s linear infinite',
+                                    flexShrink: 0
+                                }}></div>
+                                <span style={{ color: '#475569', fontSize: '0.9rem', fontWeight: 500 }}>
+                                    {t("toolRepairInstalling").replace("{tool}", toolRepairStatus.toolName)}
+                                </span>
+                            </div>
+                        )}
+                        {toolRepairStatus.status === 'success' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{
+                                    width: '28px',
+                                    height: '28px',
+                                    backgroundColor: '#dcfce7',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0
+                                }}>
+                                    <span style={{ color: '#16a34a', fontSize: '16px' }}>✓</span>
+                                </div>
+                                <span style={{ color: '#16a34a', fontSize: '0.9rem', fontWeight: 500 }}>
+                                    {t("toolRepairSuccess").replace("{tool}", toolRepairStatus.toolName)}
+                                </span>
+                            </div>
+                        )}
                         {toolRepairStatus.status === 'failed' && (
-                            <button
-                                className="btn-primary"
-                                style={{ marginTop: '10px' }}
-                                onClick={() => setToolRepairStatus(prev => ({...prev, show: false}))}
-                            >
-                                {t("close")}
-                            </button>
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                                    <div style={{
+                                        width: '28px',
+                                        height: '28px',
+                                        backgroundColor: '#fee2e2',
+                                        borderRadius: '50%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0
+                                    }}>
+                                        <span style={{ color: '#dc2626', fontSize: '14px' }}>✕</span>
+                                    </div>
+                                    <span style={{ color: '#dc2626', fontSize: '0.9rem', fontWeight: 500 }}>
+                                        {t("toolRepairFailed").replace("{tool}", toolRepairStatus.toolName)}
+                                    </span>
+                                </div>
+                                <p style={{ color: '#6b7280', fontSize: '0.8rem', margin: '0 0 12px 0', wordBreak: 'break-word', textAlign: 'left' }}>
+                                    {toolRepairStatus.message}
+                                </p>
+                                <button
+                                    style={{
+                                        backgroundColor: '#f1f5f9',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        padding: '6px 16px',
+                                        fontSize: '0.85rem',
+                                        color: '#475569',
+                                        cursor: 'pointer',
+                                        fontWeight: 500
+                                    }}
+                                    onClick={() => setToolRepairStatus(prev => ({...prev, show: false}))}
+                                >
+                                    {t("close")}
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>

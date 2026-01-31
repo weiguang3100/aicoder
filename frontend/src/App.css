@@ -415,6 +415,15 @@ body {
     box-shadow: 0 4px 6px rgba(59, 130, 246, 0.15);
 }
 
+.btn-launch:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    border-color: #d1d5db;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 .status-message {
     margin-top: 15px;
     font-size: 0.9rem;
