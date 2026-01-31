@@ -269,8 +269,38 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 	tm := NewToolManager(a)
 	status := tm.GetToolStatus(binaryName)
 	if !status.Installed {
-		a.ShowMessage("Error", "Tool not installed")
-		return
+		// Tool not found, attempt automatic repair/installation
+		a.log(fmt.Sprintf("Tool %s not found. Attempting automatic installation...", binaryName))
+
+		// Emit event to show installation progress dialog
+		wails_runtime.EventsEmit(a.ctx, "tool-repair-start", binaryName)
+
+		// Check if npm is available first
+		npmPath := tm.getNpmPath()
+		if npmPath == "" {
+			wails_runtime.EventsEmit(a.ctx, "tool-repair-failed", binaryName, a.tr("npm not found. Please run environment check first."))
+			a.ShowMessage(a.tr("Installation Error"), a.tr("npm not found. Please run environment check first."))
+			return
+		}
+
+		// Attempt to install the tool
+		err := tm.InstallTool(binaryName)
+		if err != nil {
+			wails_runtime.EventsEmit(a.ctx, "tool-repair-failed", binaryName, err.Error())
+			a.ShowMessage(a.tr("Installation Error"), a.tr("Failed to install %s: %v", binaryName, err))
+			return
+		}
+
+		// Re-check tool status after installation
+		status = tm.GetToolStatus(binaryName)
+		if !status.Installed {
+			wails_runtime.EventsEmit(a.ctx, "tool-repair-failed", binaryName, a.tr("Installation completed but tool not found"))
+			a.ShowMessage(a.tr("Installation Error"), a.tr("Installation completed but %s still not found. Please try running environment check.", binaryName))
+			return
+		}
+
+		wails_runtime.EventsEmit(a.ctx, "tool-repair-success", binaryName, status.Version)
+		a.log(fmt.Sprintf("Tool %s installed successfully. Version: %s", binaryName, status.Version))
 	}
 	
 	cmdArgs := []string{}

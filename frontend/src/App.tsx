@@ -104,6 +104,11 @@ const translations: any = {
         "downloading": "Downloading...",
         "downloadCancelled": "Download cancelled",
         "downloadError": "Download error: {error}",
+        "toolRepairTitle": "Installing Tool",
+        "toolRepairInstalling": "Installing {tool}...",
+        "toolRepairSuccess": "{tool} installed successfully!",
+        "toolRepairFailed": "Failed to install {tool}",
+        "toolRepairVersion": "Version: {version}",
         "installNow": "Install Now",
         "downloadAndUpdate": "Download and Update",
         "cancelDownload": "Cancel",
@@ -295,6 +300,11 @@ const translations: any = {
         "downloading": "正在下载...",
         "downloadCancelled": "下载已取消",
         "downloadError": "下载错误: {error}",
+        "toolRepairTitle": "安装工具",
+        "toolRepairInstalling": "正在安装 {tool}...",
+        "toolRepairSuccess": "{tool} 安装成功！",
+        "toolRepairFailed": "安装 {tool} 失败",
+        "toolRepairVersion": "版本: {version}",
         "installNow": "立即安装",
         "downloadAndUpdate": "下载并更新",
         "cancelDownload": "取消下载",
@@ -483,6 +493,11 @@ const translations: any = {
         "downloading": "正在下載...",
         "downloadCancelled": "下載已取消",
         "downloadError": "下載錯誤: {error}",
+        "toolRepairTitle": "安裝工具",
+        "toolRepairInstalling": "正在安裝 {tool}...",
+        "toolRepairSuccess": "{tool} 安裝成功！",
+        "toolRepairFailed": "安裝 {tool} 失敗",
+        "toolRepairVersion": "版本: {version}",
         "installNow": "立即安裝",
         "downloadAndUpdate": "下載並更新",
         "cancelDownload": "取消下載",
@@ -854,6 +869,7 @@ function App() {
     const [toolStatuses, setToolStatuses] = useState<any[]>([]);
     const [envLogs, setEnvLogs] = useState<string[]>([]);
     const [showLogs, setShowLogs] = useState(false);
+    const [toolRepairStatus, setToolRepairStatus] = useState<{show: boolean, toolName: string, status: 'installing' | 'success' | 'failed', message: string}>({show: false, toolName: '', status: 'installing', message: ''});
     const [yoloMode, setYoloMode] = useState(false);
     const [selectedProjectForLaunch, setSelectedProjectForLaunch] = useState<string>("");
     const [showAbout, setShowAbout] = useState(false);
@@ -1127,6 +1143,21 @@ function App() {
             setEnvLogs([]);
             setShowLogs(true);
             setIsManualCheck(true);
+        });
+
+        // Tool repair events
+        EventsOn("tool-repair-start", (toolName: string) => {
+            setToolRepairStatus({show: true, toolName, status: 'installing', message: ''});
+        });
+        EventsOn("tool-repair-success", (toolName: string, version: string) => {
+            setToolRepairStatus({show: true, toolName, status: 'success', message: version});
+            // Auto-close after 2 seconds on success
+            setTimeout(() => {
+                setToolRepairStatus(prev => ({...prev, show: false}));
+            }, 2000);
+        });
+        EventsOn("tool-repair-failed", (toolName: string, error: string) => {
+            setToolRepairStatus({show: true, toolName, status: 'failed', message: error});
         });
 
         EventsOn("download-progress", (data: any) => {
@@ -3508,6 +3539,56 @@ ${instruction}`;
                                 {t("sendLog")}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Tool Repair Progress Dialog */}
+            {toolRepairStatus.show && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ width: '350px', textAlign: 'center' }}>
+                        <h3>{t("toolRepairTitle")}</h3>
+                        <div style={{ padding: '20px 0' }}>
+                            {toolRepairStatus.status === 'installing' && (
+                                <>
+                                    <div className="spinner" style={{ margin: '0 auto 15px', width: '40px', height: '40px', border: '4px solid #e2e8f0', borderTop: '4px solid #3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                    <p style={{ color: '#374151', fontSize: '0.95rem' }}>
+                                        {t("toolRepairInstalling").replace("{tool}", toolRepairStatus.toolName)}
+                                    </p>
+                                </>
+                            )}
+                            {toolRepairStatus.status === 'success' && (
+                                <>
+                                    <div style={{ fontSize: '48px', marginBottom: '15px', color: '#059669' }}>✓</div>
+                                    <p style={{ color: '#059669', fontWeight: 'bold', marginBottom: '10px' }}>
+                                        {t("toolRepairSuccess").replace("{tool}", toolRepairStatus.toolName)}
+                                    </p>
+                                    <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>
+                                        {t("toolRepairVersion").replace("{version}", toolRepairStatus.message)}
+                                    </p>
+                                </>
+                            )}
+                            {toolRepairStatus.status === 'failed' && (
+                                <>
+                                    <div style={{ fontSize: '48px', marginBottom: '15px', color: '#ef4444' }}>✗</div>
+                                    <p style={{ color: '#ef4444', fontWeight: 'bold', marginBottom: '10px' }}>
+                                        {t("toolRepairFailed").replace("{tool}", toolRepairStatus.toolName)}
+                                    </p>
+                                    <p style={{ color: '#6b7280', fontSize: '0.85rem', wordBreak: 'break-word' }}>
+                                        {toolRepairStatus.message}
+                                    </p>
+                                </>
+                            )}
+                        </div>
+                        {toolRepairStatus.status === 'failed' && (
+                            <button
+                                className="btn-primary"
+                                style={{ marginTop: '10px' }}
+                                onClick={() => setToolRepairStatus(prev => ({...prev, show: false}))}
+                            >
+                                {t("close")}
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
