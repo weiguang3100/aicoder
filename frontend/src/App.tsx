@@ -36,7 +36,7 @@ const subscriptionUrls: { [key: string]: string } = {
 };
 
 
-const APP_VERSION = "3.6.1.6000"
+const APP_VERSION = "3.7.0.7000"
 
 const translations: any = {
     "en": {
@@ -1513,7 +1513,22 @@ function App() {
     const handleModelNameChange = (name: string) => {
         if (!config) return;
         const toolCfg = JSON.parse(JSON.stringify((config as any)[activeTool]));
-        toolCfg.models[activeTab].model_name = name;
+        const currentModel = toolCfg.models[activeTab];
+        
+        // Check for duplicate names (case-insensitive)
+        const nameLower = name.toLowerCase().trim();
+        const isDuplicate = toolCfg.models.some((m: any, idx: number) => {
+            if (idx === activeTab) return false; // Skip current model
+            return m.model_name.toLowerCase().trim() === nameLower;
+        });
+        
+        if (isDuplicate) {
+            // Show warning and don't update
+            setStatus(lang === 'zh-Hans' ? `名称 "${name}" 已存在，请使用其他名称` : `Name "${name}" already exists, please use a different name`);
+            return;
+        }
+        
+        currentModel.model_name = name;
         const newConfig = new main.AppConfig({ ...config, [activeTool]: toolCfg });
         setConfig(newConfig);
     };
