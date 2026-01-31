@@ -1702,12 +1702,17 @@ func (a *App) LoadConfig() (AppConfig, error) {
 							CurrentModel: "AiCodeMirror",
 							Models:       defaultKiloModels,
 						},
+					Kode: ToolConfig{
+						CurrentModel: "ChatFire",
+						Models:       defaultKodeModels,
+					},
 						Projects:       oldConfig.Projects,
 						CurrentProject: oldConfig.CurrentProj,
 						ActiveTool:     "claude",
 						ShowGemini:     true,
 						ShowCodex:      true,
 						ShowOpenCode:   true,
+						ShowKode:      true,
 						ShowCodeBuddy:  true,
 						ShowQoder:      true,
 						ShowIFlow:      true,
@@ -1753,6 +1758,10 @@ func (a *App) LoadConfig() (AppConfig, error) {
 				CurrentModel: "AiCodeMirror",
 				Models:       defaultKiloModels,
 			},
+		Kode: ToolConfig{
+			CurrentModel: "ChatFire",
+			Models:       defaultKodeModels,
+		},
 			Projects: []ProjectConfig{
 				{
 					Id:       "default",
