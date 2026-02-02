@@ -633,6 +633,10 @@ const ToolConfiguration = ({
     toolName, toolCfg, showModelSettings, setShowModelSettings,
     handleModelSwitch, t
 }: ToolConfigurationProps) => {
+    // Safety check for toolCfg and models
+    if (!toolCfg || !toolCfg.models) {
+        return <div style={{ padding: '15px', color: '#6b7280' }}>Loading configuration...</div>;
+    }
     return (
         <div style={{
             backgroundColor: '#f8faff',

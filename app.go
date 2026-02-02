@@ -1699,7 +1699,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 							Models:       defaultIFlowModels,
 						},
 						Kilo: ToolConfig{
-							CurrentModel: "AiCodeMirror",
+							CurrentModel: "Original",
 							Models:       defaultKiloModels,
 						},
 					Kode: ToolConfig{
@@ -1755,7 +1755,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 				Models:       defaultIFlowModels,
 			},
 			Kilo: ToolConfig{
-				CurrentModel: "AiCodeMirror",
+				CurrentModel: "Original",
 				Models:       defaultKiloModels,
 			},
 		Kode: ToolConfig{
@@ -1995,23 +1995,23 @@ func (a *App) LoadConfig() (AppConfig, error) {
 	cleanOpencodeModels(&config.Opencode.Models)
 	cleanOpencodeModels(&config.CodeBuddy.Models)
 	cleanOpencodeModels(&config.IFlow.Models)
-	// Ensure 'Custom' and 'Custom1' are always present
+	// Ensure at least 2 custom models are always present
+	// Custom models are identified by IsCustom flag, not by name
 	ensureCustom := func(models *[]ModelConfig) {
-		foundCustom := false
-		foundCustom1 := false
+		customCount := 0
 		for _, m := range *models {
-			if m.ModelName == "Custom" {
-				foundCustom = true
-			}
-			if m.ModelName == "Custom1" {
-				foundCustom1 = true
+			if m.IsCustom {
+				customCount++
 			}
 		}
-		if !foundCustom {
-			*models = append(*models, ModelConfig{ModelName: "Custom", ModelUrl: "", ApiKey: "", IsCustom: true})
-		}
-		if !foundCustom1 {
-			*models = append(*models, ModelConfig{ModelName: "Custom1", ModelUrl: "", ApiKey: "", IsCustom: true})
+		// Ensure at least 2 custom models exist
+		for customCount < 2 {
+			customCount++
+			name := "Custom"
+			if customCount > 1 {
+				name = fmt.Sprintf("Custom%d", customCount-1)
+			}
+			*models = append(*models, ModelConfig{ModelName: name, ModelUrl: "", ApiKey: "", IsCustom: true})
 		}
 	}
 	ensureCustom(&config.Claude.Models)
@@ -2040,35 +2040,20 @@ func (a *App) LoadConfig() (AppConfig, error) {
 			}
 		}
 	}
-	// Ensure 'Custom' and 'Custom1' are always last for all tools
+	// Ensure custom models are always last for all tools
+	// Custom models are identified by IsCustom flag, not by name
 	moveCustomToLast := func(models *[]ModelConfig) {
-		var customModel *ModelConfig
-		var custom1Model *ModelConfig
+		var customModels []ModelConfig
 		var newModels []ModelConfig
 		for _, m := range *models {
-			if m.ModelName == "Custom" {
-				m.IsCustom = true // Ensure flag is set
-				customModel = &m
-			} else if m.ModelName == "Custom1" {
-				m.IsCustom = true // Ensure flag is set
-				custom1Model = &m
-			} else if m.IsCustom {
-				// Handle other custom models with IsCustom flag
-				m.IsCustom = true
-				if customModel == nil {
-					customModel = &m
-				}
+			if m.IsCustom {
+				customModels = append(customModels, m)
 			} else {
 				newModels = append(newModels, m)
 			}
 		}
-		if customModel != nil {
-			newModels = append(newModels, *customModel)
-		}
-		if custom1Model != nil {
-			newModels = append(newModels, *custom1Model)
-		}
-		*models = newModels
+		// Append all custom models at the end
+		*models = append(newModels, customModels...)
 	}
 	// Ensure 'Original' is always first for all tools
 	ensureOriginalFirst := func(models *[]ModelConfig) {
