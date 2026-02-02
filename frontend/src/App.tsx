@@ -1518,6 +1518,7 @@ function App() {
         if (!config) return;
         const toolCfg = JSON.parse(JSON.stringify((config as any)[activeTool]));
         const currentModel = toolCfg.models[activeTab];
+        const oldName = currentModel.model_name;
         
         // Check for duplicate names (case-insensitive)
         const nameLower = name.toLowerCase().trim();
@@ -1533,6 +1534,12 @@ function App() {
         }
         
         currentModel.model_name = name;
+        
+        // If the renamed model is the current_model, update current_model as well
+        if (toolCfg.current_model === oldName) {
+            toolCfg.current_model = name;
+        }
+        
         const newConfig = new main.AppConfig({ ...config, [activeTool]: toolCfg });
         setConfig(newConfig);
     };
