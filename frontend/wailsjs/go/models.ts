@@ -120,6 +120,7 @@ export namespace main {
 	    default_proxy_port: string;
 	    default_proxy_username: string;
 	    default_proxy_password: string;
+	    use_windows_terminal: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppConfig(source);
@@ -158,6 +159,7 @@ export namespace main {
 	        this.default_proxy_port = source["default_proxy_port"];
 	        this.default_proxy_username = source["default_proxy_username"];
 	        this.default_proxy_password = source["default_proxy_password"];
+	        this.use_windows_terminal = source["use_windows_terminal"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

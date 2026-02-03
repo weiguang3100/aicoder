@@ -11,7 +11,7 @@ import opencodeIcon from './assets/images/opencode.png';
 import kiloIcon from './assets/images/KiloCode.png';
 import kodeIcon from './assets/images/Kodecli.png';
 import qoderIcon from './assets/images/qodercli.png';
-import { CheckToolsStatus, InstallTool, InstallToolOnDemand, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl, DownloadUpdate, CancelDownload, LaunchInstallerAndExit, ListSkills, ListSkillsWithInstallStatus, AddSkill, DeleteSkill, SelectSkillFile, GetSkillsDir, SetEnvCheckInterval, GetEnvCheckInterval, ShouldCheckEnvironment, UpdateLastEnvCheckTime, InstallDefaultMarketplace, InstallSkill } from "../wailsjs/go/main/App";
+import { CheckToolsStatus, InstallTool, InstallToolOnDemand, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl, DownloadUpdate, CancelDownload, LaunchInstallerAndExit, ListSkills, ListSkillsWithInstallStatus, AddSkill, DeleteSkill, SelectSkillFile, GetSkillsDir, SetEnvCheckInterval, GetEnvCheckInterval, ShouldCheckEnvironment, UpdateLastEnvCheckTime, InstallDefaultMarketplace, InstallSkill, IsWindowsTerminalAvailable } from "../wailsjs/go/main/App";
 import { EventsOn, EventsOff, BrowserOpenURL, Quit } from "../wailsjs/runtime";
 import { main } from "../wailsjs/go/models";
 import ReactMarkdown from 'react-markdown';
@@ -206,6 +206,7 @@ const translations: any = {
         "installing": "Installing...",
         "installNotImplemented": "Installation functionality is not yet implemented.",
         "pauseEnvCheck": "Skip Env Check",
+        "useWindowsTerminal": "Use Windows Terminal",
         "envCheckIntervalPrefix": "Every",
         "envCheckIntervalSuffix": "days, remind to check environment",
         "envCheckDueTitle": "Environment Check Reminder",
@@ -401,6 +402,7 @@ const translations: any = {
         "installing": "正在安装...",
         "installNotImplemented": "安装功能暂未实现。",
         "pauseEnvCheck": "跳过环境检测",
+        "useWindowsTerminal": "使用 Windows Terminal",
         "envCheckIntervalPrefix": "每隔",
         "envCheckIntervalSuffix": "日提醒检测环境",
         "envCheckDueTitle": "环境检测提醒",
@@ -594,6 +596,7 @@ const translations: any = {
         "installing": "正在安裝...",
         "installNotImplemented": "安裝功能暫未實現。",
         "pauseEnvCheck": "跳過環境檢測",
+        "useWindowsTerminal": "使用 Windows Terminal",
         "envCheckIntervalPrefix": "每隔",
         "envCheckIntervalSuffix": "日提醒檢測環境",
         "envCheckDueTitle": "環境檢測提醒",
@@ -887,6 +890,8 @@ function App() {
     const [installerPath, setInstallerPath] = useState("");
     const [isStartupUpdateCheck, setIsStartupUpdateCheck] = useState(false);
     const isWindows = /window/i.test(navigator.userAgent);
+    const [isWindowsOS, setIsWindowsOS] = useState(false);
+    const [hasWindowsTerminal, setHasWindowsTerminal] = useState(false);
     const [projectOffset, setProjectOffset] = useState(0);
     const [lang, setLang] = useState("en");
     const [toastMessage, setToastMessage] = useState<string>("");
@@ -1123,6 +1128,22 @@ function App() {
         }
         setLang(initialLang);
         SetLanguage(initialLang);
+
+        // Detect OS from backend
+        GetSystemInfo().then(info => {
+            setIsWindowsOS(info.os === "windows");
+            // Check Windows Terminal availability only on Windows
+            if (info.os === "windows") {
+                IsWindowsTerminalAvailable().then(available => {
+                    setHasWindowsTerminal(available);
+                }).catch(() => {
+                    setHasWindowsTerminal(false);
+                });
+            }
+        }).catch(() => {
+            // Fallback to userAgent detection
+            setIsWindowsOS(/window/i.test(navigator.userAgent));
+        });
 
         // Environment Check Logic
         const logHandler = (msg: string) => {
@@ -3003,7 +3024,7 @@ ${instruction}`;
                             </div>
 
                             <div className="form-group" style={{ marginTop: '10px', borderTop: '1px solid #f1f5f9', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                                         <input
                                             type="checkbox"
@@ -3019,19 +3040,24 @@ ${instruction}`;
                                         />
                                         <span style={{ fontSize: '0.8rem', color: '#374151' }}>{t("pauseEnvCheck")}</span>
                                     </label>
-                                    <button
-                                        className="btn-link"
-                                        onClick={() => {
-                                            setEnvLogs([]);
-                                            setShowLogs(true);
-                                            setIsLoading(true);
-                                            setIsManualCheck(true);
-                                            CheckEnvironment(true);
-                                        }}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', border: '1px solid var(--border-color)', height: '28px', borderRadius: '14px', fontSize: '0.8rem' }}
-                                    >
-                                        <span>🔍</span> {t("recheckEnv")}
-                                    </button>
+                                    {/* Windows Terminal option - only show when available */}
+                                    {hasWindowsTerminal && (
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={config?.use_windows_terminal}
+                                            onChange={(e) => {
+                                                if (config) {
+                                                    const newConfig = new main.AppConfig({ ...config, use_windows_terminal: e.target.checked });
+                                                    setConfig(newConfig);
+                                                    SaveConfig(newConfig);
+                                                }
+                                            }}
+                                            style={{ width: '16px', height: '16px' }}
+                                        />
+                                        <span style={{ fontSize: '0.8rem', color: '#374151' }}>{t("useWindowsTerminal")}</span>
+                                    </label>
+                                    )}
                                 </div>
                                 {config?.pause_env_check && (
                                     <div style={{ marginLeft: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>

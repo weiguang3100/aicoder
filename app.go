@@ -116,6 +116,8 @@ type AppConfig struct {
 	DefaultProxyPort     string `json:"default_proxy_port"`
 	DefaultProxyUsername string `json:"default_proxy_username"`
 	DefaultProxyPassword string `json:"default_proxy_password"`
+	// Terminal settings (Windows only)
+	UseWindowsTerminal bool `json:"use_windows_terminal"` // Use Windows Terminal instead of cmd.exe
 }
 type Skill struct {
 	Name        string `json:"name"`
@@ -1781,6 +1783,7 @@ func (a *App) LoadConfig() (AppConfig, error) {
 			ShowKilo:         true,
 			ShowKode:         true,
 			EnvCheckInterval: 7, // Default to 7 days
+			UseWindowsTerminal: true, // Default to true, will only work if Windows Terminal is installed
 		}
 		err = a.SaveConfig(defaultConfig)
 		return defaultConfig, err

@@ -1552,13 +1552,24 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 		os.Remove(tempBatchPath)
 	}()
 
+	// Check if user prefers Windows Terminal
+	config, _ := a.LoadConfig()
+	useWT := config.UseWindowsTerminal && a.isWindowsTerminalAvailable()
+	a.log(fmt.Sprintf("UseWindowsTerminal config: %v, isAvailable: %v, useWT: %v", config.UseWindowsTerminal, a.isWindowsTerminalAvailable(), useWT))
+
 	if adminMode {
 		shell32 := syscall.NewLazyDLL("shell32.dll")
 		shellExecute := shell32.NewProc("ShellExecuteW")
 
 		verb := syscall.StringToUTF16Ptr("runas")
-		file := syscall.StringToUTF16Ptr("cmd.exe")
-		params := syscall.StringToUTF16Ptr(fmt.Sprintf("/c \"%s\"", tempBatchPath))
+		var file, params *uint16
+		if useWT {
+			file = syscall.StringToUTF16Ptr("wt.exe")
+			params = syscall.StringToUTF16Ptr(fmt.Sprintf("-d \"%s\" cmd /k \"%s\"", projectDir, tempBatchPath))
+		} else {
+			file = syscall.StringToUTF16Ptr("cmd.exe")
+			params = syscall.StringToUTF16Ptr(fmt.Sprintf("/c \"%s\"", tempBatchPath))
+		}
 		dir := syscall.StringToUTF16Ptr(projectDir)
 
 		ret, _, _ := shellExecute.Call(
@@ -1618,8 +1629,14 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 				os.Remove(codexBatchPath)
 			}()
 
-			cmdLine := fmt.Sprintf(`cmd /c start "AICoder - %s" /d "%s" cmd /k "%s"`,
-				binaryName, projectDir, codexBatchPath)
+			var cmdLine string
+			if useWT {
+				cmdLine = fmt.Sprintf(`cmd /c wt.exe -d "%s" --title "AICoder - %s" cmd /k "%s"`,
+					projectDir, binaryName, codexBatchPath)
+			} else {
+				cmdLine = fmt.Sprintf(`cmd /c start "AICoder - %s" /d "%s" cmd /k "%s"`,
+					binaryName, projectDir, codexBatchPath)
+			}
 
 			cmd := exec.Command("cmd")
 			cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -1632,7 +1649,13 @@ func (a *App) platformLaunch(binaryName string, yoloMode bool, adminMode bool, p
 				a.ShowMessage("Launch Error", "Failed to start process: "+err.Error())
 			}
 		} else {
-			cmdLine := fmt.Sprintf(`cmd /c start "AICoder - %s" /d "%s" cmd /k "%s"`, binaryName, projectDir, tempBatchPath)
+			var cmdLine string
+			if useWT {
+				cmdLine = fmt.Sprintf(`cmd /c wt.exe -d "%s" --title "AICoder - %s" cmd /k "%s"`,
+					projectDir, binaryName, tempBatchPath)
+			} else {
+				cmdLine = fmt.Sprintf(`cmd /c start "AICoder - %s" /d "%s" cmd /k "%s"`, binaryName, projectDir, tempBatchPath)
+			}
 
 			cmd := exec.Command("cmd")
 			cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -1866,4 +1889,32 @@ func createHiddenCmd(name string, args ...string) *exec.Cmd {
 	cmd := exec.Command(name, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd
+}
+
+// isWindowsTerminalAvailable checks if Windows Terminal (wt.exe) is installed and available
+func (a *App) isWindowsTerminalAvailable() bool {
+	// Check if wt.exe is in PATH
+	if wtPath, err := exec.LookPath("wt.exe"); err == nil {
+		a.log(fmt.Sprintf("Windows Terminal found in PATH: %s", wtPath))
+		return true
+	}
+
+	// Check common installation paths
+	localAppData := os.Getenv("LOCALAPPDATA")
+	if localAppData != "" {
+		// Windows Terminal from Microsoft Store
+		wtPath := filepath.Join(localAppData, "Microsoft", "WindowsApps", "wt.exe")
+		if _, err := os.Stat(wtPath); err == nil {
+			a.log(fmt.Sprintf("Windows Terminal found at: %s", wtPath))
+			return true
+		}
+	}
+
+	a.log("Windows Terminal not found")
+	return false
+}
+
+// IsWindowsTerminalAvailable is exported for frontend to check availability
+func (a *App) IsWindowsTerminalAvailable() bool {
+	return a.isWindowsTerminalAvailable()
 }
