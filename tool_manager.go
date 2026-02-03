@@ -1,7 +1,12 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -146,12 +151,22 @@ func (tm *ToolManager) getToolVersion(name, path string) (string, error) {
 	output := strings.TrimSpace(string(out))
 	// Parse version based on tool output format
 	if strings.Contains(name, "claude") {
-		// claude-code/0.2.29 darwin-arm64 node-v22.12.0
-		parts := strings.Split(output, " ")
-		if len(parts) > 0 {
-			verParts := strings.Split(parts[0], "/")
-			if len(verParts) == 2 {
-				return verParts[1], nil
+		// Native format: "2.1.29 (Claude Code)"
+		// NPM format: "claude-code/0.2.29 darwin-arm64 node-v22.12.0"
+		if strings.Contains(output, "(Claude Code)") {
+			// Native format
+			parts := strings.Split(output, " ")
+			if len(parts) > 0 {
+				return parts[0], nil
+			}
+		} else {
+			// NPM format
+			parts := strings.Split(output, " ")
+			if len(parts) > 0 {
+				verParts := strings.Split(parts[0], "/")
+				if len(verParts) == 2 {
+					return verParts[1], nil
+				}
 			}
 		}
 	}
@@ -160,6 +175,11 @@ func (tm *ToolManager) getToolVersion(name, path string) (string, error) {
 }
 
 func (tm *ToolManager) InstallTool(name string) error {
+	// Use native installation for Claude Code
+	if name == "claude" {
+		return tm.installClaudeNative("latest")
+	}
+
 	npmPath := tm.getNpmPath()
 	if npmPath == "" {
 		return fmt.Errorf("npm not found. Please ensure Node.js is installed.")
@@ -337,6 +357,11 @@ func (tm *ToolManager) InstallTool(name string) error {
 }
 
 func (tm *ToolManager) UpdateTool(name string) error {
+	// Use native update for Claude Code
+	if name == "claude" {
+		return tm.installClaudeNative("latest")
+	}
+
 	// Verify the tool is installed in our private directory first
 	status := tm.GetToolStatus(name)
 	if !status.Installed {
@@ -434,6 +459,209 @@ func (tm *ToolManager) UpdateTool(name string) error {
 	}
 
 	tm.app.log(tm.app.tr("Successfully updated %s in private directory", name))
+	return nil
+}
+
+// ClaudeManifest represents the manifest.json structure from Claude Code releases
+type ClaudeManifest struct {
+	Version   string `json:"version"`
+	BuildDate string `json:"buildDate"`
+	Platforms map[string]struct {
+		Checksum string `json:"checksum"`
+		Size     int64  `json:"size"`
+	} `json:"platforms"`
+}
+
+// installClaudeNative installs Claude Code using the native binary installer
+func (tm *ToolManager) installClaudeNative(target string) error {
+	const gcsBucket = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
+
+	home, _ := os.UserHomeDir()
+	installDir := filepath.Join(home, ".cceasy", "tools")
+	downloadDir := filepath.Join(home, ".claude", "downloads")
+
+	// Determine platform
+	var platform string
+	switch runtime.GOOS {
+	case "windows":
+		platform = "win32-x64"
+	case "darwin":
+		if runtime.GOARCH == "arm64" {
+			platform = "darwin-arm64"
+		} else {
+			platform = "darwin-x64"
+		}
+	case "linux":
+		if runtime.GOARCH == "arm64" {
+			platform = "linux-arm64"
+		} else {
+			platform = "linux-x64"
+		}
+	default:
+		return fmt.Errorf("unsupported platform: %s/%s", runtime.GOOS, runtime.GOARCH)
+	}
+
+	// Create directories
+	if err := os.MkdirAll(installDir, 0755); err != nil {
+		return fmt.Errorf("failed to create install directory: %w", err)
+	}
+	if err := os.MkdirAll(downloadDir, 0755); err != nil {
+		return fmt.Errorf("failed to create download directory: %w", err)
+	}
+
+	tm.app.log(tm.app.tr("Fetching latest Claude Code version..."))
+
+	// Get version
+	var version string
+	if target == "latest" || target == "stable" {
+		resp, err := http.Get(fmt.Sprintf("%s/%s", gcsBucket, target))
+		if err != nil {
+			return fmt.Errorf("failed to get %s version: %w", target, err)
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read version: %w", err)
+		}
+		version = strings.TrimSpace(string(body))
+	} else {
+		version = target
+	}
+
+	tm.app.log(tm.app.tr("Installing Claude Code version: %s", version))
+
+	// Get manifest
+	manifestURL := fmt.Sprintf("%s/%s/manifest.json", gcsBucket, version)
+	resp, err := http.Get(manifestURL)
+	if err != nil {
+		return fmt.Errorf("failed to get manifest: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var manifest ClaudeManifest
+	if err := json.NewDecoder(resp.Body).Decode(&manifest); err != nil {
+		return fmt.Errorf("failed to parse manifest: %w", err)
+	}
+
+	platformInfo, ok := manifest.Platforms[platform]
+	if !ok {
+		return fmt.Errorf("platform %s not found in manifest", platform)
+	}
+
+	expectedChecksum := platformInfo.Checksum
+	expectedSize := platformInfo.Size
+
+	tm.app.log(tm.app.tr("Expected size: %.2f MB", float64(expectedSize)/1024/1024))
+
+	// Determine binary name and download URL
+	var binaryName string
+	if runtime.GOOS == "windows" {
+		binaryName = "claude.exe"
+	} else {
+		binaryName = "claude"
+	}
+
+	downloadURL := fmt.Sprintf("%s/%s/%s/%s", gcsBucket, version, platform, binaryName)
+	downloadPath := filepath.Join(downloadDir, fmt.Sprintf("claude-%s-%s%s", version, platform, filepath.Ext(binaryName)))
+
+	tm.app.log(tm.app.tr("Downloading from: %s", downloadURL))
+
+	// Download binary
+	resp, err = http.Get(downloadURL)
+	if err != nil {
+		return fmt.Errorf("failed to download binary: %w", err)
+	}
+	defer resp.Body.Close()
+
+	outFile, err := os.Create(downloadPath)
+	if err != nil {
+		return fmt.Errorf("failed to create download file: %w", err)
+	}
+
+	// Calculate checksum while downloading
+	hasher := sha256.New()
+	writer := io.MultiWriter(outFile, hasher)
+
+	_, err = io.Copy(writer, resp.Body)
+	outFile.Close()
+	if err != nil {
+		os.Remove(downloadPath)
+		return fmt.Errorf("failed to download binary: %w", err)
+	}
+
+	// Verify checksum
+	tm.app.log(tm.app.tr("Verifying checksum..."))
+	actualChecksum := hex.EncodeToString(hasher.Sum(nil))
+
+	if actualChecksum != expectedChecksum {
+		os.Remove(downloadPath)
+		return fmt.Errorf("checksum verification failed!\nExpected: %s\nActual: %s", expectedChecksum, actualChecksum)
+	}
+
+	tm.app.log(tm.app.tr("Checksum verified successfully."))
+
+	// Install to private directory
+	targetPath := filepath.Join(installDir, binaryName)
+
+	// Remove old version if exists
+	if _, err := os.Stat(targetPath); err == nil {
+		tm.app.log(tm.app.tr("Removing old version..."))
+		// On Windows, retry removal in case file is locked
+		for i := 0; i < 3; i++ {
+			err = os.Remove(targetPath)
+			if err == nil {
+				break
+			}
+			time.Sleep(time.Second)
+		}
+		if err != nil {
+			os.Remove(downloadPath)
+			return fmt.Errorf("failed to remove old version: %w", err)
+		}
+	}
+
+	// Copy to install directory
+	tm.app.log(tm.app.tr("Installing to: %s", installDir))
+
+	srcFile, err := os.Open(downloadPath)
+	if err != nil {
+		return fmt.Errorf("failed to open downloaded file: %w", err)
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.OpenFile(targetPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create target file: %w", err)
+	}
+	defer dstFile.Close()
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf("failed to copy binary: %w", err)
+	}
+
+	// Create wrapper scripts (Windows only)
+	if runtime.GOOS == "windows" {
+		cmdWrapper := fmt.Sprintf("@echo off\n\"%%USERPROFILE%%\\.cceasy\\tools\\claude.exe\" %%*\n")
+		ps1Wrapper := `& "$env:USERPROFILE\.cceasy\tools\claude.exe" @args`
+
+		os.WriteFile(filepath.Join(installDir, "claude.cmd"), []byte(cmdWrapper), 0755)
+		os.WriteFile(filepath.Join(installDir, "claude.ps1"), []byte(ps1Wrapper), 0755)
+	}
+
+	// Clean up download
+	os.Remove(downloadPath)
+
+	// Verify installation
+	tm.app.log(tm.app.tr("Verifying installation..."))
+	time.Sleep(500 * time.Millisecond)
+
+	status := tm.GetToolStatus("claude")
+	if !status.Installed {
+		return fmt.Errorf("installation completed but verification failed - claude not found")
+	}
+
+	tm.app.log(tm.app.tr("✓ Claude Code %s installed successfully!", status.Version))
 	return nil
 }
 
