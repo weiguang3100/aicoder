@@ -435,10 +435,8 @@ func (a *App) CheckEnvironment(force bool) {
 
 		a.emitEvent("env-check-done")
 
-		// Check and update AI Tools in background (runs on every startup, but not for manual check)
-		if !force {
-			go a.installToolsInBackground()
-		}
+		// Always start background tool check/update after base environment is ready
+		go a.installToolsInBackground()
 	}()
 }
 
@@ -492,16 +490,24 @@ func (a *App) installToolsInBackground() {
 	a.log(a.tr("npm verified successfully: %s", npmExec))
 
 	tm := NewToolManager(a)
-	tools := []string{"kilo", "claude", "gemini", "codex", "opencode", "codebuddy", "qoder", "iflow"}
+	tools := []string{"kilo", "claude", "gemini", "codex", "opencode", "codebuddy", "qoder", "kode", "iflow"}
 	home, _ := os.UserHomeDir()
 	expectedPrefix := filepath.Join(home, ".cceasy", "tools")
 
 	for _, tool := range tools {
+		// Try to acquire lock for this tool
+		if !a.tryLockTool(tool) {
+			a.log(a.tr("Background: %s is being installed by user, skipping...", tool))
+			continue
+		}
+
 		a.log(a.tr("Background: Checking %s in private directory...", tool))
+		a.emitEvent("tool-checking", tool)
 		status := tm.GetToolStatus(tool)
 
 		if !status.Installed {
 			a.log(a.tr("Background: %s not found in private directory. Installing...", tool))
+			a.emitEvent("tool-installing", tool)
 			if err := tm.InstallTool(tool); err != nil {
 				a.log(a.tr("Background: ERROR: Failed to install %s: %v", tool, err))
 			} else {
@@ -512,6 +518,7 @@ func (a *App) installToolsInBackground() {
 		} else {
 			if !strings.HasPrefix(status.Path, expectedPrefix) {
 				a.log(a.tr("Background: WARNING: %s found at %s (not in private directory, skipping)", tool, status.Path))
+				a.unlockTool(tool)
 				continue
 			}
 
@@ -524,6 +531,7 @@ func (a *App) installToolsInBackground() {
 				needsUpdate := a.compareVersions(status.Version, latest) < 0
 				if needsUpdate {
 					a.log(a.tr("Background: New version available for %s: %s (current: %s). Updating...", tool, latest, status.Version))
+					a.emitEvent("tool-updating", tool)
 					if err := tm.UpdateTool(tool); err != nil {
 						errStr := err.Error()
 						if strings.Contains(errStr, "ripgrep") && strings.Contains(errStr, "403") {
@@ -542,6 +550,9 @@ func (a *App) installToolsInBackground() {
 				}
 			}
 		}
+
+		// Release lock for this tool
+		a.unlockTool(tool)
 	}
 
 	a.log(a.tr("Background tool check/update complete."))
@@ -550,6 +561,30 @@ func (a *App) installToolsInBackground() {
 
 // InstallToolOnDemand installs a specific tool when user clicks on it
 func (a *App) InstallToolOnDemand(toolName string) error {
+	// Try to acquire lock for this tool
+	if !a.tryLockTool(toolName) {
+		a.log(a.tr("On-demand installation: %s is already being installed in background, waiting...", toolName))
+		// Wait for background installation to complete
+		for i := 0; i < 60; i++ { // Wait up to 60 seconds
+			time.Sleep(1 * time.Second)
+			if !a.isToolLocked(toolName) {
+				break
+			}
+		}
+		// Check if tool is now installed
+		tm := NewToolManager(a)
+		status := tm.GetToolStatus(toolName)
+		if status.Installed {
+			a.log(a.tr("On-demand installation: %s was installed by background process.", toolName))
+			return nil
+		}
+		// Try to acquire lock again
+		if !a.tryLockTool(toolName) {
+			return fmt.Errorf("tool %s is still being installed", toolName)
+		}
+	}
+	defer a.unlockTool(toolName)
+
 	tm := NewToolManager(a)
 	status := tm.GetToolStatus(toolName)
 
@@ -562,6 +597,9 @@ func (a *App) InstallToolOnDemand(toolName string) error {
 		a.log(a.tr("On-demand installation: ERROR: Failed to install %s: %v", toolName, err))
 		return err
 	}
+
+	// Update PATH to include newly installed tool
+	a.updatePathForNode()
 
 	a.log(a.tr("On-demand installation: %s installed successfully.", toolName))
 	a.emitEvent("tool-installed", toolName)

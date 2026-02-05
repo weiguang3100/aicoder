@@ -31,6 +31,8 @@ type App struct {
 	installingGit     bool               // Flag to prevent concurrent Git installation
 	nodeInstallDone   chan bool          // Channel to signal Node.js installation completion
 	installMutex      sync.Mutex
+	toolInstallLocks  map[string]bool    // Track which tools are currently being installed
+	toolLockMutex     sync.Mutex         // Mutex for toolInstallLocks map
 }
 var OnConfigChanged func(AppConfig)
 var UpdateTrayMenu func(string)
@@ -131,8 +133,42 @@ func NewApp() *App {
 	return &App{
 		downloadCancelers: make(map[string]context.CancelFunc),
 		nodeInstallDone:   make(chan bool, 1), // Buffered channel to signal Node.js installation completion
+		toolInstallLocks:  make(map[string]bool),
 	}
 }
+
+// tryLockTool attempts to acquire a lock for installing a specific tool
+// Returns true if lock acquired, false if tool is already being installed
+func (a *App) tryLockTool(toolName string) bool {
+	a.toolLockMutex.Lock()
+	defer a.toolLockMutex.Unlock()
+	
+	if a.toolInstallLocks[toolName] {
+		return false // Already being installed
+	}
+	a.toolInstallLocks[toolName] = true
+	return true
+}
+
+// unlockTool releases the lock for a specific tool
+func (a *App) unlockTool(toolName string) {
+	a.toolLockMutex.Lock()
+	defer a.toolLockMutex.Unlock()
+	delete(a.toolInstallLocks, toolName)
+}
+
+// isToolLocked checks if a tool is currently being installed
+func (a *App) isToolLocked(toolName string) bool {
+	a.toolLockMutex.Lock()
+	defer a.toolLockMutex.Unlock()
+	return a.toolInstallLocks[toolName]
+}
+
+// IsToolBeingInstalled checks if a tool is currently being installed (exported for frontend)
+func (a *App) IsToolBeingInstalled(toolName string) bool {
+	return a.isToolLocked(toolName)
+}
+
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {

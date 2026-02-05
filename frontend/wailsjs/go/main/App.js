@@ -82,6 +82,10 @@ export function InstallToolOnDemand(arg1) {
   return window['go']['main']['App']['InstallToolOnDemand'](arg1);
 }
 
+export function IsToolBeingInstalled(arg1) {
+  return window['go']['main']['App']['IsToolBeingInstalled'](arg1);
+}
+
 export function IsWindowsTerminalAvailable() {
   return window['go']['main']['App']['IsWindowsTerminalAvailable']();
 }

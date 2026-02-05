@@ -139,4 +139,19 @@ Section "uninstall"
     Delete "$DESKTOP\${INFO_PRODUCTNAME}.lnk"
 
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}"
+
+    # Ask user if they want to delete user data
+    MessageBox MB_YESNO|MB_ICONQUESTION "Do you want to delete all user data (.cceasy and .cc folders)?$\n$\nThis will remove all AI tools, configurations and cache." IDYES deleteUserData IDNO skipUserData
+    
+    deleteUserData:
+    # Delete user data directories using cmd /c rd for faster deletion
+    # RMDir /r is very slow for large directories like node_modules
+    # Using rd /s /q is much faster on Windows
+    DetailPrint "Deleting user data directories..."
+    nsExec::ExecToLog 'cmd /c rd /s /q "$PROFILE\.cceasy"'
+    nsExec::ExecToLog 'cmd /c rd /s /q "$PROFILE\.cc"'
+    # Also delete config file
+    Delete "$PROFILE\.aicoder_config.json"
+    
+    skipUserData:
 SectionEnd

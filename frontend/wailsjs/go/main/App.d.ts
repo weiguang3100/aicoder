@@ -42,6 +42,8 @@ export function InstallTool(arg1:string):Promise<void>;
 
 export function InstallToolOnDemand(arg1:string):Promise<void>;
 
+export function IsToolBeingInstalled(arg1:string):Promise<boolean>;
+
 export function IsWindowsTerminalAvailable():Promise<boolean>;
 
 export function LaunchInstallerAndExit(arg1:string):Promise<void>;

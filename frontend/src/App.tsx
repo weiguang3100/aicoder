@@ -11,7 +11,7 @@ import opencodeIcon from './assets/images/opencode.png';
 import kiloIcon from './assets/images/KiloCode.png';
 import kodeIcon from './assets/images/Kodecli.png';
 import qoderIcon from './assets/images/qodercli.png';
-import { CheckToolsStatus, InstallTool, InstallToolOnDemand, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl, DownloadUpdate, CancelDownload, LaunchInstallerAndExit, ListSkills, ListSkillsWithInstallStatus, AddSkill, DeleteSkill, SelectSkillFile, GetSkillsDir, SetEnvCheckInterval, GetEnvCheckInterval, ShouldCheckEnvironment, UpdateLastEnvCheckTime, InstallDefaultMarketplace, InstallSkill, IsWindowsTerminalAvailable } from "../wailsjs/go/main/App";
+import { CheckToolsStatus, InstallTool, InstallToolOnDemand, IsToolBeingInstalled, LoadConfig, SaveConfig, CheckEnvironment, ResizeWindow, WindowHide, LaunchTool, SelectProjectDir, SetLanguage, GetUserHomeDir, CheckUpdate, ShowMessage, ReadBBS, ReadTutorial, ReadThanks, ClipboardGetText, ListPythonEnvironments, PackLog, ShowItemInFolder, GetSystemInfo, OpenSystemUrl, DownloadUpdate, CancelDownload, LaunchInstallerAndExit, ListSkills, ListSkillsWithInstallStatus, AddSkill, DeleteSkill, SelectSkillFile, GetSkillsDir, SetEnvCheckInterval, GetEnvCheckInterval, ShouldCheckEnvironment, UpdateLastEnvCheckTime, InstallDefaultMarketplace, InstallSkill, IsWindowsTerminalAvailable } from "../wailsjs/go/main/App";
 import { EventsOn, EventsOff, BrowserOpenURL, Quit } from "../wailsjs/runtime";
 import { main } from "../wailsjs/go/models";
 import ReactMarkdown from 'react-markdown';
@@ -877,7 +877,10 @@ function App() {
     const [envLogs, setEnvLogs] = useState<string[]>([]);
     const [showLogs, setShowLogs] = useState(false);
     const [toolRepairStatus, setToolRepairStatus] = useState<{show: boolean, toolName: string, status: 'installing' | 'success' | 'failed', message: string}>({show: false, toolName: '', status: 'installing', message: ''});
-    const [isToolInstalling, setIsToolInstalling] = useState(false);
+    const [onDemandInstallingTool, setOnDemandInstallingTool] = useState<string>("");  // Track which tool is being installed on-demand
+    const [backgroundInstallStatus, setBackgroundInstallStatus] = useState<string>("");
+    const [backgroundInstallingTool, setBackgroundInstallingTool] = useState<string>("");  // Track which tool is being installed in background
+    const [launchingTool, setLaunchingTool] = useState<string>("");  // Track which tool is being launched
     const [yoloMode, setYoloMode] = useState(false);
     const [selectedProjectForLaunch, setSelectedProjectForLaunch] = useState<string>("");
     const [showAbout, setShowAbout] = useState(false);
@@ -1316,8 +1319,26 @@ function App() {
         EventsOn("config-updated", handleConfigChange);
 
         // Listen for background tool installation events
+        EventsOn("tool-checking", (toolName: string) => {
+            setBackgroundInstallStatus(lang === 'zh-Hans' ? `检查 ${toolName}...` : `Checking ${toolName}...`);
+            setBackgroundInstallingTool("");  // Clear previous tool's installing state
+        });
+
+        EventsOn("tool-installing", (toolName: string) => {
+            setBackgroundInstallStatus(lang === 'zh-Hans' ? `安装 ${toolName}...` : `Installing ${toolName}...`);
+            setBackgroundInstallingTool(toolName);
+        });
+
+        EventsOn("tool-updating", (toolName: string) => {
+            setBackgroundInstallStatus(lang === 'zh-Hans' ? `更新 ${toolName}...` : `Updating ${toolName}...`);
+            setBackgroundInstallingTool(toolName);
+        });
+
         EventsOn("tool-installed", (toolName: string) => {
             console.log("Tool installed in background:", toolName);
+            setBackgroundInstallStatus(lang === 'zh-Hans' ? `✓ ${toolName} 安装完成` : `✓ ${toolName} installed`);
+            setBackgroundInstallingTool("");
+            setTimeout(() => setBackgroundInstallStatus(""), 3000);
             // Refresh tool statuses
             CheckToolsStatus().then(statuses => {
                 setToolStatuses(statuses);
@@ -1326,6 +1347,9 @@ function App() {
 
         EventsOn("tool-updated", (toolName: string) => {
             console.log("Tool updated in background:", toolName);
+            setBackgroundInstallStatus(lang === 'zh-Hans' ? `✓ ${toolName} 已更新` : `✓ ${toolName} updated`);
+            setBackgroundInstallingTool("");
+            setTimeout(() => setBackgroundInstallStatus(""), 3000);
             // Refresh tool statuses
             CheckToolsStatus().then(statuses => {
                 setToolStatuses(statuses);
@@ -1334,6 +1358,8 @@ function App() {
 
         EventsOn("tools-install-done", () => {
             console.log("Background tool installation complete");
+            setBackgroundInstallStatus("");
+            setBackgroundInstallingTool("");
             // Final refresh of tool statuses
             CheckToolsStatus().then(statuses => {
                 setToolStatuses(statuses);
@@ -1346,6 +1372,9 @@ function App() {
             EventsOff("download-progress");
             EventsOff("config-changed");
             EventsOff("config-updated");
+            EventsOff("tool-checking");
+            EventsOff("tool-installing");
+            EventsOff("tool-updating");
             EventsOff("tool-installed");
             EventsOff("tool-updated");
             EventsOff("tools-install-done");
@@ -3178,8 +3207,8 @@ ${instruction}`;
 
                 {/* Global Action Bar (Footer) */}
                 {config && (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo' || navTab === 'kode') && (
-                    <div className="global-action-bar">
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '100%', padding: '2px 0' }}>
+                    <div className="global-action-bar" style={{ '--wails-draggable': 'no-drag' } as any}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '100%', padding: '2px 0', '--wails-draggable': 'no-drag' } as any}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'flex-start' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{t("runnerStatus")}:</span>
@@ -3422,8 +3451,8 @@ ${instruction}`;
                                 </div>
                                 <button
                                     className="btn-launch"
-                                    style={{ padding: '8px 24px', textAlign: 'center' }}
-                                    disabled={isToolInstalling}
+                                    style={{ padding: '8px 24px', textAlign: 'center', '--wails-draggable': 'no-drag', pointerEvents: 'auto' } as any}
+                                    disabled={onDemandInstallingTool === activeTool || backgroundInstallingTool === activeTool || launchingTool === activeTool}
                                     onClick={async () => {
                                         console.log("Launch button clicked. activeTool:", activeTool);
                                         const selectedProj = config?.projects?.find((p: any) => p.id === selectedProjectForLaunch);
@@ -3431,8 +3460,40 @@ ${instruction}`;
                                             // Check if tool is installed
                                             const toolStatus = toolStatuses?.find((s: any) => s.name === activeTool);
                                             if (toolStatus && !toolStatus.installed) {
-                                                // Tool not installed, show install dialog and install on demand
-                                                setIsToolInstalling(true);
+                                                // Check if tool is being installed in background
+                                                const isBeingInstalled = await IsToolBeingInstalled(activeTool);
+                                                if (isBeingInstalled) {
+                                                    // Tool is being installed in background, just wait
+                                                    setStatus(lang === 'zh-Hans' ? `${activeTool} 正在后台安装中，请稍候...` : `${activeTool} is being installed in background, please wait...`);
+                                                    setOnDemandInstallingTool(activeTool);
+                                                    try {
+                                                        await InstallToolOnDemand(activeTool);
+                                                        // Refresh tool statuses
+                                                        const updatedStatuses = await CheckToolsStatus();
+                                                        setToolStatuses(updatedStatuses);
+                                                        setStatus(lang === 'zh-Hans' ? `${activeTool} 安装完成` : `${activeTool} installed`);
+                                                        setOnDemandInstallingTool("");
+                                                        // Auto launch
+                                                        setTimeout(async () => {
+                                                            setStatus(lang === 'zh-Hans' ? "正在启动..." : "Launching...");
+                                                            setLaunchingTool(activeTool);
+                                                            try {
+                                                                await LaunchTool(activeTool, selectedProj.yolo_mode, selectedProj.admin_mode || false, selectedProj.python_project || false, selectedProj.python_env || "", selectedProj.path || "", selectedProj.use_proxy || false);
+                                                                setTimeout(() => { setStatus(""); setLaunchingTool(""); }, 2000);
+                                                            } catch (err) {
+                                                                setStatus("Error: " + err);
+                                                                setLaunchingTool("");
+                                                            }
+                                                        }, 500);
+                                                    } catch (err) {
+                                                        setStatus("Error: " + err);
+                                                        setOnDemandInstallingTool("");
+                                                    }
+                                                    return;
+                                                }
+                                                
+                                                // Tool not installed and not being installed, show install dialog
+                                                setOnDemandInstallingTool(activeTool);
                                                 setToolRepairStatus({show: true, toolName: activeTool, status: 'installing', message: ''});
                                                 try {
                                                     await InstallToolOnDemand(activeTool);
@@ -3444,37 +3505,41 @@ ${instruction}`;
                                                     // Auto launch after successful installation
                                                     setTimeout(async () => {
                                                         setToolRepairStatus(prev => ({...prev, show: false}));
-                                                        setIsToolInstalling(false);
+                                                        setOnDemandInstallingTool("");
                                                         // Launch the tool
                                                         setStatus(lang === 'zh-Hans' ? "正在启动..." : "Launching...");
+                                                        setLaunchingTool(activeTool);
                                                         try {
                                                             await LaunchTool(activeTool, selectedProj.yolo_mode, selectedProj.admin_mode || false, selectedProj.python_project || false, selectedProj.python_env || "", selectedProj.path || "", selectedProj.use_proxy || false);
                                                             console.log("LaunchTool call returned successfully after install");
-                                                            setTimeout(() => setStatus(""), 2000);
+                                                            setTimeout(() => { setStatus(""); setLaunchingTool(""); }, 2000);
                                                         } catch (err) {
                                                             console.error("LaunchTool call failed after install:", err);
                                                             setStatus("Error: " + err);
+                                                            setLaunchingTool("");
                                                         }
                                                     }, 1500);
                                                     return;
                                                 } catch (err) {
                                                     console.error("Failed to install tool on demand:", err);
                                                     setToolRepairStatus({show: true, toolName: activeTool, status: 'failed', message: String(err)});
-                                                    setIsToolInstalling(false);
+                                                    setOnDemandInstallingTool("");
                                                     return;
                                                 }
                                             }
                                             
                                             console.log("Launching tool with project:", selectedProj.name, "path:", selectedProj.path);
                                             setStatus(lang === 'zh-Hans' ? "正在启动..." : "Launching...");
+                                            setLaunchingTool(activeTool);
                                             LaunchTool(activeTool, selectedProj.yolo_mode, selectedProj.admin_mode || false, selectedProj.python_project || false, selectedProj.python_env || "", selectedProj.path || "", selectedProj.use_proxy || false)
                                                 .then(() => {
                                                     console.log("LaunchTool call returned successfully");
-                                                    setTimeout(() => setStatus(""), 2000);
+                                                    setTimeout(() => { setStatus(""); setLaunchingTool(""); }, 2000);
                                                 })
                                                 .catch(err => {
                                                     console.error("LaunchTool call failed:", err);
                                                     setStatus("Error: " + err);
+                                                    setLaunchingTool("");
                                                 });
                                             // Update current project if different
                                             if (selectedProjectForLaunch !== config?.current_project) {
@@ -3493,10 +3558,32 @@ ${instruction}`;
                     </div>
                 )}
 
-                <div className="status-message" style={{ padding: '0 20px 4px 20px', minHeight: '20px' }}>
+                <div className="status-message" style={{ padding: '0 20px 4px 20px', minHeight: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span key={status} style={{ color: (status.includes("Error") || status.includes("!") || status.includes("first")) ? '#ef4444' : '#10b981' }}>
                         {status}
                     </span>
+                    {backgroundInstallStatus && (
+                        <span style={{ 
+                            fontSize: '0.75rem', 
+                            color: backgroundInstallStatus.startsWith('✓') ? '#10b981' : '#9ca3af',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                        }}>
+                            {!backgroundInstallStatus.startsWith('✓') && (
+                                <span style={{ 
+                                    display: 'inline-block', 
+                                    width: '10px', 
+                                    height: '10px', 
+                                    border: '2px solid #9ca3af',
+                                    borderTopColor: 'transparent',
+                                    borderRadius: '50%',
+                                    animation: 'spin 1s linear infinite'
+                                }}></span>
+                            )}
+                            {backgroundInstallStatus}
+                        </span>
+                    )}
                 </div>
             </div>
 
