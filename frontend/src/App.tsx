@@ -181,6 +181,7 @@ const translations: any = {
         "proxyHostPlaceholder": "e.g., 192.168.1.1 or proxy.company.com",
         "proxyPortPlaceholder": "e.g., 8080",
         "freeload": "Free",
+        "bigSpender": "Big Spender",
         "skills": "Skills",
         "addSkill": "Add Skill",
         "skillName": "Skill Name",
@@ -377,6 +378,7 @@ const translations: any = {
         "proxyHostPlaceholder": "例如：192.168.1.1 或 proxy.company.com",
         "proxyPortPlaceholder": "例如：8080",
         "freeload": "白嫖中",
+        "bigSpender": "大力氪金",
         "skills": "技能",
         "addSkill": "添加技能",
         "skillName": "技能名称",
@@ -571,6 +573,7 @@ const translations: any = {
         "proxyHostPlaceholder": "例如：192.168.1.1 或 proxy.company.com",
         "proxyPortPlaceholder": "例如：8080",
         "freeload": "白嫖中",
+        "bigSpender": "大力氪金",
         "skills": "技能",
         "addSkill": "新增技能",
         "skillName": "技能名稱",
@@ -733,7 +736,7 @@ const ToolConfiguration = ({
                                 position: 'absolute',
                                 top: '-8px',
                                 right: '0px',
-                                backgroundColor: '#60a5fa',
+                                backgroundColor: '#f59e0b',
                                 color: 'white',
                                 fontSize: '10px',
                                 padding: '1px 5px',
@@ -743,7 +746,7 @@ const ToolConfiguration = ({
                                 transform: 'scale(0.85)',
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                             }}>
-                                {t("freeload")}
+                                {t("bigSpender")}
                             </span>
                         )}
                         {model.is_custom ? (
