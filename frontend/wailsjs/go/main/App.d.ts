@@ -32,8 +32,6 @@ export function GetSystemInfo():Promise<main.SystemInfo>;
 
 export function GetUserHomeDir():Promise<string>;
 
-export function Greet(arg1:string):Promise<string>;
-
 export function InstallDefaultMarketplace():Promise<void>;
 
 export function InstallSkill(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string):Promise<void>;

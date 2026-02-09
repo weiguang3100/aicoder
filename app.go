@@ -245,9 +245,6 @@ func (a *App) SetLanguage(lang string) {
 	}
 }
 // Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
-}
 func (a *App) ResizeWindow(width, height int) {
 	runtime.WindowSetSize(a.ctx, width, height)
 	runtime.WindowCenter(a.ctx)
@@ -2508,13 +2505,6 @@ func getMapKeys(m map[string]interface{}) []string {
 		keys = append(keys, k)
 	}
 	return keys
-}
-// Helper function for min
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 type DownloadProgress struct {
 	Percentage float64 `json:"percentage"`

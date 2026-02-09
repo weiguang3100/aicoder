@@ -84,6 +84,60 @@ const knownProviderEndpoints: ProviderEndpoint[] = [
 
 const APP_VERSION = "3.8.1.9100"
 
+// Tool name constants to avoid repeated string arrays
+const TOOL_NAMES = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow', 'kilo', 'kode'] as const;
+const SKILL_TOOLS = ['claude', 'gemini', 'codex'] as const;
+const isToolTab = (tab: string): boolean => (TOOL_NAMES as readonly string[]).includes(tab);
+const isSkillTool = (tab: string): boolean => (SKILL_TOOLS as readonly string[]).includes(tab);
+
+// Shared badge style for model buttons
+const badgeBaseStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: '-8px',
+    right: '0px',
+    color: 'white',
+    fontSize: '10px',
+    padding: '1px 5px',
+    borderRadius: '4px',
+    fontWeight: 'bold',
+    zIndex: 10,
+    transform: 'scale(0.85)',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+};
+
+// Reusable markdown link component
+const MarkdownLink = ({ node, ...props }: any) => (
+    <a
+        {...props}
+        onClick={(e: React.MouseEvent) => {
+            e.preventDefault();
+            if (props.href) BrowserOpenURL(props.href);
+        }}
+        style={{ cursor: 'pointer', color: '#3b82f6', textDecoration: 'underline' }}
+    />
+);
+
+// Localized display names for providers that use non-English ModelName identifiers
+const providerDisplayNames: { [lang: string]: { [key: string]: string } } = {
+    "en": {
+        "摩尔线程": "MooreThreads",
+        "快手": "Kuaishou"
+    },
+    "zh-Hans": {
+        "摩尔线程": "摩尔线程",
+        "快手": "快手"
+    },
+    "zh-Hant": {
+        "摩尔线程": "摩爾線程",
+        "快手": "快手"
+    }
+};
+
+// Get localized display name for a model, falling back to the raw name
+const getModelDisplayName = (modelName: string, lang: string): string => {
+    return providerDisplayNames[lang]?.[modelName] ?? providerDisplayNames["en"]?.[modelName] ?? modelName;
+};
+
 const translations: any = {
     "en": {
         "title": "AICoder",
@@ -703,16 +757,30 @@ interface ToolConfigurationProps {
     setShowModelSettings: (show: boolean) => void;
     handleModelSwitch: (name: string) => void;
     t: (key: string) => string;
+    lang: string;
 }
 
 const ToolConfiguration = ({
     toolName, toolCfg, showModelSettings, setShowModelSettings,
-    handleModelSwitch, t
+    handleModelSwitch, t, lang
 }: ToolConfigurationProps) => {
-    // Safety check for toolCfg and models
     if (!toolCfg || !toolCfg.models) {
         return <div style={{ padding: '15px', color: '#6b7280' }}>Loading configuration...</div>;
     }
+
+    const getBadge = (model: any): { bg: string; label: string } | null => {
+        const name = model.model_name.toLowerCase();
+        if (model.model_name === "Original") return { bg: '#3b82f6', label: t("originalFlag") };
+        if (name.includes("glm") || name.includes("kimi") || name.includes("doubao") || name.includes("minimax"))
+            return { bg: '#ec4899', label: t("monthly") };
+        if (name.includes("deepseek")) return { bg: '#f59e0b', label: t("premium") };
+        if (name.includes("xiaomi")) return { bg: '#f59e0b', label: t("bigSpender") };
+        if (model.is_custom) return { bg: '#9ca3af', label: t("customized") };
+        if (["aicodemirror", "aigocode", "noin.ai", "gaccode", "chatfire", "coderelay"].some(p => name.includes(p)))
+            return { bg: '#14b8a6', label: t("forward") };
+        return null;
+    };
+
     return (
         <div style={{
             backgroundColor: '#f8faff',
@@ -730,140 +798,31 @@ const ToolConfiguration = ({
                 paddingBottom: '6px',
                 overflow: 'visible'
             }}>
-                {toolCfg.models.map((model: any) => (
-                    <button
-                        key={model.model_name}
-                        className={`model-btn ${toolCfg.current_model === model.model_name ? 'selected' : ''}`}
-                        onClick={() => handleModelSwitch(model.model_name)}
-                        style={{
-                            minWidth: '94px',
-                            padding: '3px 4px',
-                            fontSize: '0.75rem',
-                            borderBottom: (model.api_key && model.api_key.trim() !== "") ? '3px solid #60a5fa' : '1px solid var(--border-color)',
-                            position: 'relative',
-                            overflow: 'visible'
-                        }}
-                    >
-                        {model.model_name === "Original" ? t("original") : model.model_name}
-                        {model.model_name === "Original" && (
-                            <span style={{
-                                position: 'absolute',
-                                top: '-8px',
-                                right: '0px',
-                                backgroundColor: '#3b82f6',
-                                color: 'white',
-                                fontSize: '10px',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                fontWeight: 'bold',
-                                zIndex: 10,
-                                transform: 'scale(0.85)',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                            }}>
-                                {t("originalFlag")}
-                            </span>
-                        )}
-                        {(model.model_name.toLowerCase().includes("glm") ||
-                            model.model_name.toLowerCase().includes("kimi") ||
-                            model.model_name.toLowerCase().includes("doubao") ||
-                            model.model_name.toLowerCase().includes("minimax")) && (
-                                <span style={{
-                                    position: 'absolute',
-                                    top: '-8px',
-                                    right: '0px',
-                                    backgroundColor: '#ec4899',
-                                    color: 'white',
-                                    fontSize: '10px',
-                                    padding: '1px 5px',
-                                    borderRadius: '4px',
-                                    fontWeight: 'bold',
-                                    zIndex: 10,
-                                    transform: 'scale(0.85)',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                                }}>
-                                    {t("monthly")}
+                {toolCfg.models.map((model: any) => {
+                    const badge = getBadge(model);
+                    return (
+                        <button
+                            key={model.model_name}
+                            className={`model-btn ${toolCfg.current_model === model.model_name ? 'selected' : ''}`}
+                            onClick={() => handleModelSwitch(model.model_name)}
+                            style={{
+                                minWidth: '94px',
+                                padding: '3px 4px',
+                                fontSize: '0.75rem',
+                                borderBottom: (model.api_key && model.api_key.trim() !== "") ? '3px solid #60a5fa' : '1px solid var(--border-color)',
+                                position: 'relative',
+                                overflow: 'visible'
+                            }}
+                        >
+                            {model.model_name === "Original" ? t("original") : getModelDisplayName(model.model_name, lang)}
+                            {badge && (
+                                <span style={{ ...badgeBaseStyle, backgroundColor: badge.bg }}>
+                                    {badge.label}
                                 </span>
                             )}
-                        {model.model_name.toLowerCase().includes("deepseek") && (
-                            <span style={{
-                                position: 'absolute',
-                                top: '-8px',
-                                right: '0px',
-                                backgroundColor: '#f59e0b',
-                                color: 'white',
-                                fontSize: '10px',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                fontWeight: 'bold',
-                                zIndex: 10,
-                                transform: 'scale(0.85)',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                            }}>
-                                {t("premium")}
-                            </span>
-                        )}
-                        {model.model_name.toLowerCase().includes("xiaomi") && (
-                            <span style={{
-                                position: 'absolute',
-                                top: '-8px',
-                                right: '0px',
-                                backgroundColor: '#f59e0b',
-                                color: 'white',
-                                fontSize: '10px',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                fontWeight: 'bold',
-                                zIndex: 10,
-                                transform: 'scale(0.85)',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                            }}>
-                                {t("bigSpender")}
-                            </span>
-                        )}
-                        {model.is_custom ? (
-                            <span style={{
-                                position: 'absolute',
-                                top: '-8px',
-                                right: '0px',
-                                backgroundColor: '#9ca3af',
-                                color: 'white',
-                                fontSize: '10px',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                fontWeight: 'bold',
-                                zIndex: 10,
-                                transform: 'scale(0.85)',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                            }}>
-                                {t("customized")}
-                            </span>
-                        ) : (
-                            (model.model_name.toLowerCase().includes("aicodemirror") ||
-                                model.model_name.toLowerCase().includes("aigocode") ||
-                                model.model_name.toLowerCase().includes("noin.ai") ||
-                                model.model_name.toLowerCase().includes("gaccode") ||
-                                model.model_name.toLowerCase().includes("chatfire") ||
-                                model.model_name.toLowerCase().includes("coderelay")) && (
-                                <span style={{
-                                    position: 'absolute',
-                                    top: '-8px',
-                                    right: '0px',
-                                    backgroundColor: '#14b8a6',
-                                    color: 'white',
-                                    fontSize: '10px',
-                                    padding: '1px 5px',
-                                    borderRadius: '4px',
-                                    fontWeight: 'bold',
-                                    zIndex: 10,
-                                    transform: 'scale(0.85)',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                                }}>
-                                    {t("forward")}
-                                </span>
-                            )
-                        )}
-                    </button>
-                ))}
+                        </button>
+                    );
+                })}
             </div>
         </div>
     );
@@ -955,9 +914,7 @@ function App() {
     const [backgroundInstallStatus, setBackgroundInstallStatus] = useState<string>("");
     const [backgroundInstallingTool, setBackgroundInstallingTool] = useState<string>("");  // Track which tool is being installed in background
     const [launchingTool, setLaunchingTool] = useState<string>("");  // Track which tool is being launched
-    const [yoloMode, setYoloMode] = useState(false);
     const [selectedProjectForLaunch, setSelectedProjectForLaunch] = useState<string>("");
-    const [showAbout, setShowAbout] = useState(false);
     const [showInstallLog, setShowInstallLog] = useState(false);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
     const [updateResult, setUpdateResult] = useState<any>(null);
@@ -967,9 +924,7 @@ function App() {
     const [installerPath, setInstallerPath] = useState("");
     const [isStartupUpdateCheck, setIsStartupUpdateCheck] = useState(false);
     const isWindows = /window/i.test(navigator.userAgent);
-    const [isWindowsOS, setIsWindowsOS] = useState(false);
     const [hasWindowsTerminal, setHasWindowsTerminal] = useState(false);
-    const [projectOffset, setProjectOffset] = useState(0);
     const [lang, setLang] = useState("en");
     const [toastMessage, setToastMessage] = useState<string>("");
     const [showToast, setShowToast] = useState(false);
@@ -1212,10 +1167,8 @@ function App() {
         setLang(initialLang);
         SetLanguage(initialLang);
 
-        // Detect OS from backend
+        // Detect OS from backend for Windows Terminal check
         GetSystemInfo().then(info => {
-            setIsWindowsOS(info.os === "windows");
-            // Check Windows Terminal availability only on Windows
             if (info.os === "windows") {
                 IsWindowsTerminalAvailable().then(available => {
                     setHasWindowsTerminal(available);
@@ -1223,10 +1176,7 @@ function App() {
                     setHasWindowsTerminal(false);
                 });
             }
-        }).catch(() => {
-            // Fallback to userAgent detection
-            setIsWindowsOS(/window/i.test(navigator.userAgent));
-        });
+        }).catch(() => {});
 
         // Environment Check Logic
         const logHandler = (msg: string) => {
@@ -1356,7 +1306,7 @@ function App() {
 
                 // Keep track of the last active tool for settings/launch logic
                 const lastActiveTool = cfg.active_tool || "claude";
-                if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder' || lastActiveTool === 'iflow' || lastActiveTool === 'kilo' || lastActiveTool === 'kode') {
+                if (isToolTab(lastActiveTool)) {
                     setActiveTool(lastActiveTool);
                 }
 
@@ -1368,7 +1318,7 @@ function App() {
                     if (idx !== -1) setActiveTab(idx);
 
                     // Check if any model has an API key configured for the active tool
-                    if (lastActiveTool === 'claude' || lastActiveTool === 'gemini' || lastActiveTool === 'codex' || lastActiveTool === 'opencode' || lastActiveTool === 'codebuddy' || lastActiveTool === 'qoder' || lastActiveTool === 'iflow' || lastActiveTool === 'kilo' || lastActiveTool === 'kode') {
+                    if (isToolTab(lastActiveTool)) {
                         const hasAnyApiKey = toolCfg.models.some((m: any) => m.api_key && m.api_key.trim() !== "");
                         if (!hasAnyApiKey) {
                             setShowModelSettings(true);
@@ -1485,9 +1435,9 @@ function App() {
 
     const switchTool = (tool: string) => {
         setNavTab(tool);
-        if (tool === 'claude' || tool === 'gemini' || tool === 'codex' || tool === 'opencode' || tool === 'codebuddy' || tool === 'qoder' || tool === 'iflow' || tool === 'kilo' || tool === 'kode') {
+        if (isToolTab(tool)) {
             setActiveTool(tool);
-            setActiveTab(0); // Reset to Original when switching tools
+            setActiveTab(0);
         }
 
         if (tool === 'message') {
@@ -1567,40 +1517,21 @@ function App() {
 
         const providerPrefix = getProviderPrefix(currentModelName);
 
-        console.log('[API Key Sync] Current tool:', activeTool, 'Model:', currentModelName, 'Provider:', providerPrefix, 'Is custom:', isCurrentCustom);
-
         // Skip syncing for "Original" model and custom models
         if (providerPrefix !== "Original" && !isCurrentCustom) {
-            const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow', 'kilo', 'kode'];
-            let syncCount = 0;
-
-            tools.forEach(tool => {
+            TOOL_NAMES.forEach(tool => {
                 if (configCopy[tool] && configCopy[tool].models && Array.isArray(configCopy[tool].models)) {
                     configCopy[tool].models.forEach((model: any, index: number) => {
-                        // Skip the current model being edited
-                        if (tool === activeTool && index === activeTab) {
-                            return;
-                        }
+                        if (tool === activeTool && index === activeTab) return;
+                        if (model.is_custom) return;
 
-                        // Skip custom models
-                        if (model.is_custom) {
-                            return;
-                        }
-
-                        // Check if model belongs to the same provider
                         const modelProvider = getProviderPrefix(model.model_name);
                         if (modelProvider === providerPrefix) {
-                            console.log('[API Key Sync] Syncing to:', tool, 'index:', index, 'model:', model.model_name);
                             configCopy[tool].models[index].api_key = newKey;
-                            syncCount++;
                         }
                     });
                 }
             });
-
-            console.log('[API Key Sync] Total synced models:', syncCount);
-        } else {
-            console.log('[API Key Sync] Skipped - Original model or custom model');
         }
 
         const newConfig = new main.AppConfig(configCopy);
@@ -1892,8 +1823,7 @@ function App() {
 
         // Sanitize: Ensure Custom models have a name (prevent empty tab button)
         const configCopy = JSON.parse(JSON.stringify(config));
-        const tools = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow', 'kilo', 'kode'];
-        tools.forEach(tool => {
+        TOOL_NAMES.forEach(tool => {
             if (configCopy[tool] && configCopy[tool].models) {
                 configCopy[tool].models.forEach((model: any) => {
                     if (model.is_custom && (!model.model_name || model.model_name.trim() === '')) {
@@ -2077,7 +2007,7 @@ ${instruction}`;
 
     if (!config) return <div className="main-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{t("loadingConfig")}</div>;
 
-    const toolCfg = (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo' || navTab === 'kode')
+    const toolCfg = isToolTab(navTab)
         ? (config as any)[navTab]
         : null;
 
@@ -2330,7 +2260,7 @@ ${instruction}`;
                                     {t("refreshMessage")}
                                 </button>
                             )}
-                            {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo' || navTab === 'kode') && (
+                            {isToolTab(navTab) && (
                                 <>
                                     <button
                                         className="btn-link"
@@ -2346,7 +2276,7 @@ ${instruction}`;
                                     >
                                         {lang === 'zh-Hans' || lang === 'zh-Hant' ? '服务商配置' : 'Provider Config'}
                                     </button>
-                                    {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex') && (
+                                    {isSkillTool(navTab) && (
                                         <button
                                             className="btn-link"
                                             onClick={() => {
@@ -2489,52 +2419,10 @@ ${instruction}`;
                                     remarkPlugins={[remarkGfm]}
                                     // @ts-ignore - rehype-raw type compatibility
                                     rehypePlugins={[rehypeRaw]}
-                                    components={{
-                                        a: ({ node, ...props }) => (
-                                            <a
-                                                {...props}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    if (props.href) BrowserOpenURL(props.href);
-                                                }}
-                                                style={{ cursor: 'pointer', color: '#3b82f6', textDecoration: 'underline' }}
-                                            />
-                                        )
-                                    }}
+                                    components={{ a: MarkdownLink }}
                                 >
                                     {bbsContent}
                                 </ReactMarkdown>
-                            </div>
-                        </div>
-                    )}
-                    {showThanksModal && (
-                        <div className="modal-backdrop">
-                            <div className="modal-content elegant-scrollbar" style={{ width: '80%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
-                                <div className="modal-header">
-                                    <h3 style={{ margin: 0 }}>{t("thanks")}</h3>
-                                    <button onClick={() => setShowThanksModal(false)} className="btn-close">&times;</button>
-                                </div>
-                                <div className="modal-body markdown-content" style={{ textAlign: 'left', fontSize: '0.8rem' }}>
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        // @ts-ignore
-                                        rehypePlugins={[rehypeRaw]}
-                                        components={{
-                                            a: ({ node, ...props }) => (
-                                                <a
-                                                    {...props}
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        if (props.href) BrowserOpenURL(props.href);
-                                                    }}
-                                                    style={{ cursor: 'pointer', color: '#3b82f6', textDecoration: 'underline' }}
-                                                />
-                                            )
-                                        }}
-                                    >
-                                        {thanksContent}
-                                    </ReactMarkdown>
-                                </div>
                             </div>
                         </div>
                     )}
@@ -2586,18 +2474,7 @@ ${instruction}`;
                                     remarkPlugins={[remarkGfm]}
                                     // @ts-ignore - rehype-raw type compatibility
                                     rehypePlugins={[rehypeRaw]}
-                                    components={{
-                                        a: ({ node, ...props }) => (
-                                            <a
-                                                {...props}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    if (props.href) BrowserOpenURL(props.href);
-                                                }}
-                                                style={{ cursor: 'pointer', color: '#3b82f6', textDecoration: 'underline' }}
-                                            />
-                                        )
-                                    }}
+                                    components={{ a: MarkdownLink }}
                                 >
                                     {tutorialContent}
                                 </ReactMarkdown>
@@ -2913,7 +2790,7 @@ ${instruction}`;
                             )}
                         </div>
                     )}
-                    {(navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo' || navTab === 'kode') && (
+                    {isToolTab(navTab) && (
                         <ToolConfiguration
                             toolName={navTab}
                             toolCfg={toolCfg}
@@ -2921,6 +2798,7 @@ ${instruction}`;
                             setShowModelSettings={setShowModelSettings}
                             handleModelSwitch={handleModelSwitch}
                             t={t}
+                            lang={lang}
                         />
                     )}
                     {navTab === 'projects' && (
@@ -3340,7 +3218,7 @@ ${instruction}`;
                 </div>
 
                 {/* Global Action Bar (Footer) */}
-                {config && (navTab === 'claude' || navTab === 'gemini' || navTab === 'codex' || navTab === 'opencode' || navTab === 'codebuddy' || navTab === 'qoder' || navTab === 'iflow' || navTab === 'kilo' || navTab === 'kode') && (
+                {config && isToolTab(navTab) && (
                     <div className="global-action-bar" style={{ '--wails-draggable': 'no-drag' } as any}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '100%', padding: '2px 0', '--wails-draggable': 'no-drag' } as any}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'flex-start' }}>
@@ -3722,25 +3600,6 @@ ${instruction}`;
             </div>
 
             {/* Modals */}
-            {showAbout && (
-                <div className="modal-overlay" onClick={() => setShowAbout(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <button className="modal-close" onClick={() => setShowAbout(false)}>&times;</button>
-                        <img src={appIcon} alt="Logo" style={{ width: '64px', height: '64px', marginBottom: '15px' }} />
-                        <h3 style={{
-                            background: 'linear-gradient(to right, #60a5fa, #a855f7, #ec4899)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            display: 'inline-block',
-                            fontWeight: 'bold',
-                            margin: '0 0 10px 0'
-                        }}>AICoder</h3>
-                        <p>Version {APP_VERSION}</p>
-                        <button className="btn-primary" onClick={() => BrowserOpenURL("https://github.com/RapidAI/cceasy")}>GitHub</button>
-                    </div>
-                </div>
-            )}
-
             {showInstallLog && (
                 <div className="modal-overlay" onClick={() => setShowInstallLog(false)}>
                     <div className="modal-content" style={{ width: '600px', maxWidth: '90vw' }} onClick={e => e.stopPropagation()}>
@@ -4045,7 +3904,7 @@ ${instruction}`;
                                                         onClick={() => setActiveTab(globalIndex)}
                                                         style={{ overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 0 }}
                                                     >
-                                                        {model.model_name}
+                                                        {getModelDisplayName(model.model_name, lang)}
                                                     </button>
                                                 );
                                             })}
@@ -4499,18 +4358,7 @@ ${instruction}`;
                                 remarkPlugins={[remarkGfm]}
                                 // @ts-ignore
                                 rehypePlugins={[rehypeRaw]}
-                                components={{
-                                    a: ({ node, ...props }) => (
-                                        <a
-                                            {...props}
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                if (props.href) BrowserOpenURL(props.href);
-                                            }}
-                                            style={{ cursor: 'pointer', color: '#3b82f6', textDecoration: 'underline' }}
-                                        />
-                                    )
-                                }}
+                                components={{ a: MarkdownLink }}
                             >
                                 {thanksContent}
                             </ReactMarkdown>
