@@ -137,6 +137,7 @@ body {
     flex: 1;
     padding: 15px 15px 0 15px;
     overflow-y: auto;
+    min-height: 0;
     background: linear-gradient(to bottom, #ffffff, #f8faff);
 }
 

@@ -32,8 +32,54 @@ const subscriptionUrls: { [key: string]: string } = {
     "DeepSeek": "https://platform.deepseek.com/api_keys",
     "CodeRelay": "https://api.code-relay.com/register?aff=0ZtO",
     "ChatFire": "https://api.chatfire.cn/register?aff=jira",
-    "XiaoMi": "https://platform.xiaomimimo.com/#/console/api-keys"
+    "XiaoMi": "https://platform.xiaomimimo.com/#/console/api-keys",
+    "摩尔线程": "https://code.mthreads.com/",
+    "快手": "https://www.streamlake.com/marketing/coding-plan"
 };
+
+// Known provider API endpoints database
+// Organized by protocol type: anthropic (Claude), gemini, openai (Codex)
+interface ProviderEndpoint {
+    name: string;
+    url: string;
+    protocol: 'anthropic' | 'gemini' | 'openai';
+    region: 'china' | 'global';
+    description?: string;
+}
+
+const knownProviderEndpoints: ProviderEndpoint[] = [
+    // Anthropic Protocol (Claude)
+    { name: "Claude Official", url: "https://api.anthropic.com/v1", protocol: "anthropic", region: "global", description: "Official Claude API" },
+    { name: "MiniMax", url: "https://api.minimaxi.com/anthropic", protocol: "anthropic", region: "china" },
+    { name: "DeepSeek", url: "https://api.deepseek.com/anthropic", protocol: "anthropic", region: "china" },
+    { name: "AICodeMirror", url: "https://api.aicodemirror.com/api/claudecode", protocol: "anthropic", region: "china" },
+    { name: "AIgoCode", url: "https://api.aigocode.com/api", protocol: "anthropic", region: "china" },
+    { name: "GACCode", url: "https://gaccode.com/claudecode", protocol: "anthropic", region: "china" },
+    { name: "CodeRelay", url: "https://api.code-relay.com/v1", protocol: "anthropic", region: "china" },
+    { name: "ChatFire", url: "https://api.chatfire.cn/v1", protocol: "anthropic", region: "china" },
+    { name: "Noin.AI", url: "https://api.ourines.com/v1", protocol: "anthropic", region: "china" },
+    { name: "OpenRouter", url: "https://openrouter.ai/api/v1", protocol: "anthropic", region: "global" },
+    
+    // Gemini Protocol
+    { name: "Google Gemini Official", url: "https://generativelanguage.googleapis.com/v1beta", protocol: "gemini", region: "global", description: "Official Google Gemini API" },
+    { name: "AICodeMirror Gemini", url: "https://api.aicodemirror.com/api/gemini", protocol: "gemini", region: "china" },
+    { name: "AIgoCode Gemini", url: "https://api.aigocode.com/gemini", protocol: "gemini", region: "china" },
+    
+    // OpenAI Protocol (Codex)
+    { name: "OpenAI Official", url: "https://api.openai.com/v1", protocol: "openai", region: "global", description: "Official OpenAI API" },
+    { name: "xAI (Grok)", url: "https://api.x.ai/v1", protocol: "openai", region: "global", description: "xAI Grok API" },
+    { name: "GLM", url: "https://open.bigmodel.cn/api/paas/v4", protocol: "openai", region: "china" },
+    { name: "Kimi", url: "https://api.kimi.com/coding/v1", protocol: "openai", region: "china" },
+    { name: "Doubao", url: "https://ark.cn-beijing.volces.com/api/coding", protocol: "openai", region: "china" },
+    { name: "Doubao Codex", url: "https://ark.cn-beijing.volces.com/api/coding/v3", protocol: "openai", region: "china" },
+    { name: "AICodeMirror Codex", url: "https://api.aicodemirror.com/api/codex/backend-api/codex", protocol: "openai", region: "china" },
+    { name: "AIgoCode Codex", url: "https://api.aigocode.com/openai", protocol: "openai", region: "china" },
+    { name: "DeepSeek Codex", url: "https://api.aicodemirror.com/api/codex/backend-api/codex", protocol: "openai", region: "china" },
+    { name: "OpenRouter", url: "https://openrouter.ai/api/v1", protocol: "openai", region: "global" },
+    { name: "Together AI", url: "https://api.together.xyz/v1", protocol: "openai", region: "global" },
+    { name: "Groq", url: "https://api.groq.com/openai/v1", protocol: "openai", region: "global" },
+    { name: "Perplexity", url: "https://api.perplexity.ai", protocol: "openai", region: "global" },
+];
 
 
 const APP_VERSION = "3.8.0.8000"
@@ -234,7 +280,15 @@ const translations: any = {
         "envCheckExitWarningTitle": "Warning: Exit During Environment Setup",
         "envCheckExitWarningMessage": "Exiting now will result in incomplete environment setup, and the application may not function properly.\n\nOnly exit in extreme cases (such as infinite loops or unresponsive behavior).\n\nAre you sure you want to exit?",
         "envCheckExitConfirm": "Yes, Exit",
-        "envCheckExitCancel": "No, Continue Setup"
+        "envCheckExitCancel": "No, Continue Setup",
+        "selectProvider": "Select Provider",
+        "knownProviders": "Known Providers",
+        "providerList": "Provider List",
+        "selectProviderTitle": "Select API Provider",
+        "chinaProviders": "China Providers",
+        "globalProviders": "Global Providers",
+        "allProviders": "All Providers",
+        "filterByRegion": "Filter by Region"
     },
     "zh-Hans": {
         "title": "AICoder",
@@ -431,7 +485,15 @@ const translations: any = {
         "envCheckExitWarningTitle": "警告：退出环境安装",
         "envCheckExitWarningMessage": "退出将导致环境安装不完整，程序无法正常运行。\n\n只有在程序死循环等极端情况下才建议退出。\n\n确定要退出吗？",
         "envCheckExitConfirm": "是的，退出",
-        "envCheckExitCancel": "否，继续安装"
+        "envCheckExitCancel": "否，继续安装",
+        "selectProvider": "选择服务商",
+        "knownProviders": "已知服务商",
+        "providerList": "服务商列表",
+        "selectProviderTitle": "选择 API 服务商",
+        "chinaProviders": "国内服务商",
+        "globalProviders": "国外服务商",
+        "allProviders": "全部服务商",
+        "filterByRegion": "按地区筛选"
     },
     "zh-Hant": {
         "title": "AICoder",
@@ -622,7 +684,15 @@ const translations: any = {
         "placeholderZip": "選擇 .zip 文件",
         "cannotDeleteSystemSkill": "系統技能包不能刪除。",
         "systemDefault": "系統默認",
-        "envCheckTitle": "AICoder 運行環境檢測安裝"
+        "envCheckTitle": "AICoder 運行環境檢測安裝",
+        "selectProvider": "選擇服務商",
+        "knownProviders": "已知服務商",
+        "providerList": "服務商列表",
+        "selectProviderTitle": "選擇 API 服務商",
+        "chinaProviders": "國內服務商",
+        "globalProviders": "國外服務商",
+        "allProviders": "全部服務商",
+        "filterByRegion": "按地區篩選"
     }
 };
 
@@ -646,18 +716,19 @@ const ToolConfiguration = ({
     return (
         <div style={{
             backgroundColor: '#f8faff',
-            padding: '15px',
+            padding: '10px 12px',
             borderRadius: '12px',
             border: '1px solid rgba(96, 165, 250, 0.1)',
-            marginBottom: '15px'
+            marginBottom: '10px'
         }}>
             <div className="model-switcher" style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '12px',
+                gap: '8px',
                 width: '100%',
-                paddingTop: '8px',
-                overflowY: 'hidden'
+                paddingTop: '6px',
+                paddingBottom: '6px',
+                overflow: 'visible'
             }}>
                 {toolCfg.models.map((model: any) => (
                     <button
@@ -666,8 +737,8 @@ const ToolConfiguration = ({
                         onClick={() => handleModelSwitch(model.model_name)}
                         style={{
                             minWidth: '94px',
-                            padding: '4px 4px',
-                            fontSize: '0.8rem',
+                            padding: '3px 4px',
+                            fontSize: '0.75rem',
                             borderBottom: (model.api_key && model.api_key.trim() !== "") ? '3px solid #60a5fa' : '1px solid var(--border-color)',
                             position: 'relative',
                             overflow: 'visible'
@@ -930,6 +1001,12 @@ function App() {
         message: "",
         onConfirm: () => { }
     });
+
+    // Provider selector state
+    const [showProviderSelector, setShowProviderSelector] = useState(false);
+    const [providerFilter, setProviderFilter] = useState<'all' | 'china' | 'global'>('all');
+    const [selectedProviderForUrl, setSelectedProviderForUrl] = useState<ProviderEndpoint | null>(null);
+    const [hoveredProvider, setHoveredProvider] = useState<{ provider: ProviderEndpoint, x: number, y: number } | null>(null);
 
     const handleContextMenu = (e: React.MouseEvent, target: HTMLInputElement) => {
         e.preventDefault();
@@ -1567,6 +1644,56 @@ function App() {
         setConfig(newConfig);
     };
 
+    // Get protocol type for current tool
+    const getToolProtocol = (): 'anthropic' | 'gemini' | 'openai' => {
+        if (activeTool === 'claude') {
+            return 'anthropic';
+        } else if (activeTool === 'gemini') {
+            return 'gemini';
+        } else {
+            return 'openai'; // codex, opencode, codebuddy, qoder, iflow, kilo, kode
+        }
+    };
+
+    // Filter providers by current tool's protocol, excluding those already in the model list
+    const getFilteredProviders = (): ProviderEndpoint[] => {
+        const protocol = getToolProtocol();
+        let filtered = knownProviderEndpoints.filter(p => p.protocol === protocol);
+
+        if (providerFilter !== 'all') {
+            filtered = filtered.filter(p => p.region === providerFilter);
+        }
+
+        // Exclude providers whose name already exists as a non-custom model
+        if (config) {
+            const toolCfg = (config as any)[activeTool];
+            if (toolCfg?.models) {
+                const existingNames = new Set(
+                    toolCfg.models
+                        .filter((m: any) => !m.is_custom)
+                        .map((m: any) => (m.model_name || '').toLowerCase().trim())
+                );
+                filtered = filtered.filter(p => !existingNames.has(p.name.toLowerCase().trim()));
+            }
+        }
+
+        return filtered;
+    };
+
+    // Handle provider selection
+    const handleProviderSelect = (provider: ProviderEndpoint) => {
+        setSelectedProviderForUrl(provider);
+    };
+
+    // Confirm provider selection and fill URL
+    const confirmProviderSelection = () => {
+        if (selectedProviderForUrl) {
+            handleModelUrlChange(selectedProviderForUrl.url);
+            setShowProviderSelector(false);
+            setSelectedProviderForUrl(null);
+        }
+    };
+
     const handleModelNameChange = (name: string) => {
         if (!config) return;
         const toolCfg = JSON.parse(JSON.stringify((config as any)[activeTool]));
@@ -1623,6 +1750,8 @@ function App() {
             if (p.includes("aigocode")) return "claude-3-5-sonnet-20241022";
             if (p.includes("aicodemirror")) return "Haiku";
             if (p.includes("coderelay")) return "claude-3-5-sonnet-20241022";
+            if (p.includes("摩尔线程")) return "GLM-4.7";
+            if (p.includes("快手")) return "kat-coder-pro-v1";
         } else if (tool === "gemini") {
             return "gemini-2.0-flash-exp";
         } else if (tool === "codex") {
@@ -1638,6 +1767,8 @@ function App() {
             if (p.includes("doubao")) return "doubao-seed-code-preview-latest";
             if (p.includes("kimi")) return "kimi-for-coding";
             if (p.includes("minimax")) return "MiniMax-M2.1";
+            if (p.includes("摩尔线程")) return "GLM-4.7";
+            if (p.includes("快手")) return "kat-coder-pro-v1";
         }
         return "";
     };
@@ -2292,7 +2423,7 @@ ${instruction}`;
                     </div>
                 </div>
 
-                <div className={`main-content ${navTab === 'tutorial' || navTab === 'message' ? 'elegant-scrollbar' : 'no-scrollbar'} ${navTab === 'settings' || navTab === 'about' ? '' : ''}`} style={{ overflowY: 'auto', paddingBottom: '20px' }}>
+                <div className={`main-content ${navTab === 'tutorial' || navTab === 'message' ? 'elegant-scrollbar' : 'no-scrollbar'} ${navTab === 'settings' || navTab === 'about' ? '' : ''}`} style={{ overflowY: 'auto', paddingBottom: '20px', '--wails-draggable': 'no-drag' } as any}>
                     {navTab === 'message' && (
                         <div style={{
                             width: '100%',
@@ -4036,7 +4167,22 @@ ${instruction}`;
 
                                 {activeTool !== 'qoder' && (
                                     <div className="form-group">
-                                        <label className="form-label">{t("apiEndpoint")}</label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <label className="form-label" style={{ margin: 0 }}>{t("apiEndpoint")}</label>
+                                            {(config as any)[activeTool].models[activeTab].is_custom && (
+                                                <button
+                                                    className="btn-link"
+                                                    style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                                                    onClick={() => {
+                                                        setProviderFilter('all');
+                                                        setSelectedProviderForUrl(null);
+                                                        setShowProviderSelector(true);
+                                                    }}
+                                                >
+                                                    {t("knownProviders")}
+                                                </button>
+                                            )}
+                                        </div>
                                         <input
                                             type="text"
                                             className="form-input"
@@ -4081,6 +4227,106 @@ ${instruction}`;
                     <div className="context-menu-item" onClick={() => handleContextAction('copy')}>{t("copy")}</div>
                     <div className="context-menu-item" onClick={() => handleContextAction('cut')}>{t("cut")}</div>
                     <div className="context-menu-item" onClick={() => handleContextAction('paste')}>{t("contextPaste")}</div>
+                </div>
+            )}
+
+            {showProviderSelector && (
+                <div className="modal-overlay" style={{ backgroundColor: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(3px)' }} onClick={() => { setShowProviderSelector(false); setHoveredProvider(null); }}>
+                    <div className="modal-content" style={{ maxWidth: '480px', maxHeight: '70vh', padding: '20px', borderRadius: '16px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
+                        <h2 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: 700, color: '#1e293b', textAlign: 'center' }}>{t("selectProviderTitle")}</h2>
+                        
+                        {/* Filter pills */}
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', justifyContent: 'center' }}>
+                            {(['all', 'china', 'global'] as const).map(f => (
+                                <button
+                                    key={f}
+                                    onClick={() => setProviderFilter(f)}
+                                    style={{
+                                        padding: '5px 16px', fontSize: '0.8rem', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 600,
+                                        backgroundColor: providerFilter === f ? '#3b82f6' : '#f1f5f9',
+                                        color: providerFilter === f ? '#fff' : '#64748b',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {f === 'all' ? t("allProviders") : f === 'china' ? t("chinaProviders") : t("globalProviders")}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Provider grid */}
+                        <div style={{ maxHeight: 'calc(70vh - 180px)', overflowY: 'auto', padding: '2px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                {getFilteredProviders().map((provider, index) => {
+                                    const isSelected = selectedProviderForUrl?.name === provider.name && selectedProviderForUrl?.url === provider.url;
+                                    return (
+                                        <div
+                                            key={index}
+                                            onClick={() => handleProviderSelect(provider)}
+                                            onDoubleClick={() => { handleProviderSelect(provider); confirmProviderSelection(); }}
+                                            onMouseEnter={(e) => {
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                setHoveredProvider({ provider, x: rect.left + rect.width / 2, y: rect.top - 4 });
+                                            }}
+                                            onMouseLeave={() => setHoveredProvider(null)}
+                                            style={{
+                                                padding: '10px 8px', borderRadius: '10px', cursor: 'pointer', textAlign: 'center',
+                                                border: isSelected ? '2px solid #3b82f6' : '1.5px solid #e8ecf1',
+                                                backgroundColor: isSelected ? '#eff6ff' : '#fff',
+                                                transition: 'all 0.15s ease',
+                                                boxShadow: isSelected ? '0 2px 8px rgba(59,130,246,0.15)' : '0 1px 3px rgba(0,0,0,0.04)',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: isSelected ? '#2563eb' : '#334155', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                                                <span title={provider.region === 'china' ? (lang === 'en' ? 'China' : '国内') : (lang === 'en' ? 'Global' : '国外')} style={{ fontSize: '0.7rem', flexShrink: 0 }}>{provider.region === 'china' ? '🇨🇳' : '🌐'}</span>
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{provider.name}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
+                            <button className="btn-primary" style={{ flex: 1, borderRadius: '10px' }} onClick={confirmProviderSelection} disabled={!selectedProviderForUrl}>{t("confirm")}</button>
+                            <button className="btn-hide" style={{ flex: 1, borderRadius: '10px' }} onClick={() => { setShowProviderSelector(false); setSelectedProviderForUrl(null); setHoveredProvider(null); }}>{t("cancel")}</button>
+                        </div>
+                    </div>
+
+                    {/* Tooltip bubble for URL */}
+                    {hoveredProvider && (
+                        <div style={{
+                            position: 'fixed',
+                            left: hoveredProvider.x,
+                            top: hoveredProvider.y,
+                            transform: 'translate(-50%, -100%)',
+                            backgroundColor: '#1e293b',
+                            color: '#e2e8f0',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '0.75rem',
+                            fontFamily: 'monospace',
+                            whiteSpace: 'nowrap',
+                            zIndex: 9999,
+                            pointerEvents: 'none',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                            maxWidth: '360px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        }}>
+                            {hoveredProvider.provider.url}
+                            {hoveredProvider.provider.description && (
+                                <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '2px' }}>{hoveredProvider.provider.description}</div>
+                            )}
+                            {/* Arrow */}
+                            <div style={{
+                                position: 'absolute', bottom: '-5px', left: '50%', transform: 'translateX(-50%)',
+                                width: 0, height: 0,
+                                borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #1e293b'
+                            }} />
+                        </div>
+                    )}
                 </div>
             )}
 

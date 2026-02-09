@@ -73,8 +73,8 @@ func main() {
 			app,
 		},
 		Windows: &windows.Options{
-			WebviewIsTransparent: true,
-			WindowIsTranslucent:  true,
+			WebviewIsTransparent: false,
+			WindowIsTranslucent:  false,
 			BackdropType:         windows.Auto,
 		},
 		Mac: &mac.Options{
