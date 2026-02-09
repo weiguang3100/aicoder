@@ -82,7 +82,7 @@ const knownProviderEndpoints: ProviderEndpoint[] = [
 ];
 
 
-const APP_VERSION = "3.8.0.8000"
+const APP_VERSION = "3.8.1.9100"
 
 const translations: any = {
     "en": {
