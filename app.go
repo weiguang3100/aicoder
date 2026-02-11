@@ -1883,7 +1883,8 @@ func (a *App) LoadConfig() (AppConfig, error) {
 				if url != "" {
 					(*models)[i].ModelUrl = url
 				}
-				if id != "" {
+				// Only set ModelId if user hasn't customized it (empty means not set yet)
+				if id != "" && (*models)[i].ModelId == "" {
 					(*models)[i].ModelId = id
 				}
 				if wireApi != "" {
