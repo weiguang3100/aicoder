@@ -28,7 +28,7 @@ echo [Step 2/8] Updating version number...
 powershell -NoProfile -Command "if (Test-Path 'build_number') { $n = [int](Get-Content 'build_number') + 1 } else { $n = 1 }; Set-Content -Path 'build_number' -Value $n -NoNewline; Set-Content -Path 'temp_build_num.txt' -Value $n -NoNewline"
 set /p BUILD_NUM=<temp_build_num.txt
 del temp_build_num.txt
-set "VERSION=3.8.0.%BUILD_NUM%"
+set "VERSION=3.8.2.%BUILD_NUM%"
 echo [INFO] Building Version: %VERSION% 
 
 REM -- Sync version with frontend --

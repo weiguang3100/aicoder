@@ -82,7 +82,7 @@ const knownProviderEndpoints: ProviderEndpoint[] = [
 ];
 
 
-const APP_VERSION = "3.8.1.9100"
+const APP_VERSION = "3.8.2.9200"
 
 // Tool name constants to avoid repeated string arrays
 const TOOL_NAMES = ['claude', 'gemini', 'codex', 'opencode', 'codebuddy', 'qoder', 'iflow', 'kilo', 'kode'] as const;
