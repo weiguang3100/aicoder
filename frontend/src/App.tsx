@@ -195,6 +195,7 @@ const translations: any = {
         "yoloModeLabel": "Yolo Mode",
         "adminModeLabel": "As Admin",
         "rootModeLabel": "As root",
+        "teamModeLabel": "Team Mode",
         "pythonProjectLabel": "Python Project",
         "pythonEnvLabel": "Env",
         "customProviderPlaceholder": "Custom Provider Name",
@@ -401,6 +402,7 @@ const translations: any = {
         "yoloModeLabel": "Yolo 模式",
         "adminModeLabel": "管理员权限",
         "rootModeLabel": "Root 权限",
+        "teamModeLabel": "团队模式",
         "pythonProjectLabel": "Python 项目",
         "pythonEnvLabel": "环境",
         "customProviderPlaceholder": "自定义服务商名称",
@@ -604,6 +606,7 @@ const translations: any = {
         "yoloModeLabel": "Yolo 模式",
         "adminModeLabel": "管理員權限",
         "rootModeLabel": "Root 權限",
+        "teamModeLabel": "團隊模式",
         "pythonProjectLabel": "Python 項目",
         "pythonEnvLabel": "環境",
         "customProviderPlaceholder": "自定義服務商名稱",
@@ -3277,6 +3280,27 @@ ${instruction}`;
                                                 {t("danger")}
                                             </span>
                                         )}
+                                    </label>
+                                )}
+                                {activeTool === 'claude' && (
+                                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '0.8rem', color: '#6b7280' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={config?.projects?.find((p: any) => p.id === selectedProjectForLaunch)?.team_mode || false}
+                                            onChange={(e) => {
+                                                const proj = config?.projects?.find((p: any) => p.id === selectedProjectForLaunch);
+                                                if (proj) {
+                                                    const newProjects = config.projects.map((p: any) =>
+                                                        p.id === proj.id ? { ...p, team_mode: e.target.checked } : p
+                                                    );
+                                                    const newConfig = new main.AppConfig({ ...config, projects: newProjects });
+                                                    setConfig(newConfig);
+                                                    SaveConfig(newConfig);
+                                                }
+                                            }}
+                                            style={{ marginRight: '6px' }}
+                                        />
+                                        <span>{t("teamModeLabel")}</span>
                                     </label>
                                 )}
                                 {!isWindows && (

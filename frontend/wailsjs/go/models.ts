@@ -8,6 +8,7 @@ export namespace main {
 	    admin_mode: boolean;
 	    python_project: boolean;
 	    python_env: string;
+	    team_mode: boolean;
 	    use_proxy: boolean;
 	    proxy_host: string;
 	    proxy_port: string;
@@ -27,6 +28,7 @@ export namespace main {
 	        this.admin_mode = source["admin_mode"];
 	        this.python_project = source["python_project"];
 	        this.python_env = source["python_env"];
+	        this.team_mode = source["team_mode"];
 	        this.use_proxy = source["use_proxy"];
 	        this.proxy_host = source["proxy_host"];
 	        this.proxy_port = source["proxy_port"];

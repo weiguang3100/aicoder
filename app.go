@@ -53,6 +53,7 @@ type ProjectConfig struct {
 	AdminMode     bool   `json:"admin_mode"`
 	PythonProject bool   `json:"python_project"` // Whether this is a Python project
 	PythonEnv     string `json:"python_env"`     // Selected Python/Anaconda environment
+	TeamMode      bool   `json:"team_mode"`      // Claude Code Agent Teams mode
 	// Proxy settings (project-specific)
 	UseProxy      bool   `json:"use_proxy"`
 	ProxyHost     string `json:"proxy_host"`
@@ -1575,6 +1576,24 @@ func (a *App) LaunchTool(toolName string, yoloMode bool, adminMode bool, pythonP
 		}
 		a.log(fmt.Sprintf("Running %s in Original mode: Custom configurations cleared.", toolName))
 	}
+
+	// Claude Code Agent Teams mode
+	if strings.ToLower(toolName) == "claude" {
+		// Find the current project config to check team_mode
+		for _, proj := range config.Projects {
+			if proj.Path == projectDir || proj.Id == config.CurrentProject {
+				if proj.TeamMode {
+					os.Setenv("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", "1")
+					env["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1"
+					a.log("Claude Code Agent Teams mode enabled")
+				} else {
+					os.Unsetenv("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS")
+				}
+				break
+			}
+		}
+	}
+
 	// Platform specific launch
 	a.platformLaunch(binaryName, yoloMode, adminMode, pythonEnv, projectDir, env, selectedModel.ModelId)
 }
