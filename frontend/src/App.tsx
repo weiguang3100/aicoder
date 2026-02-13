@@ -3290,9 +3290,17 @@ ${instruction}`;
                                             onChange={(e) => {
                                                 const proj = config?.projects?.find((p: any) => p.id === selectedProjectForLaunch);
                                                 if (proj) {
-                                                    const newProjects = config.projects.map((p: any) =>
-                                                        p.id === proj.id ? { ...p, team_mode: e.target.checked } : p
-                                                    );
+                                                    const newProjects = config.projects.map((p: any) => {
+                                                        if (p.id === proj.id) {
+                                                            const updated = { ...p, team_mode: e.target.checked };
+                                                            // Team mode requires yolo mode
+                                                            if (e.target.checked) {
+                                                                updated.yolo_mode = true;
+                                                            }
+                                                            return updated;
+                                                        }
+                                                        return p;
+                                                    });
                                                     const newConfig = new main.AppConfig({ ...config, projects: newProjects });
                                                     setConfig(newConfig);
                                                     SaveConfig(newConfig);

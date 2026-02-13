@@ -3388,6 +3388,23 @@ func (a *App) ListSkillsWithInstallStatus(toolName string, location string, proj
 		installedMap[dir] = true
 	}
 
+	// Also check enabledPlugins in ~/.claude/settings.json for address-type skills
+	enabledPlugins := make(map[string]bool)
+	home, _ := os.UserHomeDir()
+	settingsFile := filepath.Join(home, ".claude", "settings.json")
+	if data, err := os.ReadFile(settingsFile); err == nil {
+		var settings map[string]interface{}
+		if err := json.Unmarshal(data, &settings); err == nil {
+			if plugins, ok := settings["enabledPlugins"].(map[string]interface{}); ok {
+				for k, v := range plugins {
+					if enabled, ok := v.(bool); ok && enabled {
+						enabledPlugins[k] = true
+					}
+				}
+			}
+		}
+	}
+
 	// Mark skills as installed based on their type
 	for i := range allSkills {
 		skill := &allSkills[i]
@@ -3403,12 +3420,15 @@ func (a *App) ListSkillsWithInstallStatus(toolName string, location string, proj
 			// Check if this directory exists in installed dirs
 			skill.Installed = installedMap[dirName]
 		} else if skill.Type == "address" {
-			// For address skills, the value is like "document-skills@anthropic-agent-skills"
-			// The installed directory name is the part before @
-			parts := strings.Split(skill.Value, "@")
-			if len(parts) > 0 {
-				dirName := parts[0]
-				skill.Installed = installedMap[dirName]
+			// For address skills, check enabledPlugins in settings.json
+			skill.Installed = enabledPlugins[skill.Value]
+			// Fallback: also check skill directories
+			if !skill.Installed {
+				parts := strings.Split(skill.Value, "@")
+				if len(parts) > 0 {
+					dirName := parts[0]
+					skill.Installed = installedMap[dirName]
+				}
 			}
 		}
 	}
@@ -3575,60 +3595,66 @@ func (a *App) AddSkill(name, description, skillType, value, toolName string) err
 	return os.WriteFile(metadataPath, data, 0644)
 }
 func (a *App) InstallDefaultMarketplace() error {
-	// Find Claude
-	tm := NewToolManager(a)
-	status := tm.GetToolStatus("claude")
-	if !status.Installed {
-		return fmt.Errorf("claude tool not found or not installed")
-	}
-	// Check existing marketplaces
 	home, _ := os.UserHomeDir()
-	marketplacesFile := filepath.Join(home, ".claude", "plugins", "known_marketplaces.json")
-	var existingMarketplaces string
-	if data, err := os.ReadFile(marketplacesFile); err == nil {
-		existingMarketplaces = string(data)
+	settingsFile := filepath.Join(home, ".claude", "settings.json")
+
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0755); err != nil {
+		return fmt.Errorf("failed to create .claude directory: %v", err)
 	}
-	// Helper to execute claude command
-	execClaude := func(args ...string) error {
-		var cmd *exec.Cmd
-		// If path is a JS file, run with node
-		if strings.HasSuffix(status.Path, ".js") {
-			// Try to find node
-			nodePath, err := exec.LookPath("node")
-			if err != nil {
-				return fmt.Errorf("node not found")
-			}
-			cmdArgs := append([]string{status.Path}, args...)
-			cmd = createHiddenCmd(nodePath, cmdArgs...)
-		} else {
-			cmd = createHiddenCmd(status.Path, args...)
+
+	// Read existing settings
+	var settings map[string]interface{}
+	if data, err := os.ReadFile(settingsFile); err == nil {
+		if err := json.Unmarshal(data, &settings); err != nil {
+			settings = make(map[string]interface{})
 		}
-		// Ensure environment variables are passed (HOME is crucial)
-		cmd.Env = os.Environ()
-		out, err := cmd.CombinedOutput()
+	} else {
+		settings = make(map[string]interface{})
+	}
+
+	// Ensure extraKnownMarketplaces exists
+	marketplaces, ok := settings["extraKnownMarketplaces"].(map[string]interface{})
+	if !ok {
+		marketplaces = make(map[string]interface{})
+	}
+
+	changed := false
+
+	// Add anthropic-agent-skills marketplace (anthropics/skills repo)
+	if _, exists := marketplaces["anthropic-agent-skills"]; !exists {
+		marketplaces["anthropic-agent-skills"] = map[string]interface{}{
+			"source": map[string]interface{}{
+				"source": "github",
+				"repo":   "anthropics/skills",
+			},
+		}
+		changed = true
+	}
+
+	// Add superpowers-marketplace (obra/superpowers-marketplace repo)
+	if _, exists := marketplaces["superpowers-marketplace"]; !exists {
+		marketplaces["superpowers-marketplace"] = map[string]interface{}{
+			"source": map[string]interface{}{
+				"source": "github",
+				"repo":   "obra/superpowers-marketplace",
+			},
+		}
+		changed = true
+	}
+
+	if changed {
+		settings["extraKnownMarketplaces"] = marketplaces
+		data, err := json.MarshalIndent(settings, "", "  ")
 		if err != nil {
-			// For removal, we often ignore errors if it wasn't there
-			if args[2] == "remove" {
-				return nil
-			}
-			return fmt.Errorf("failed to run claude %s: %v\nOutput: %s", strings.Join(args, " "), err, string(out))
+			return fmt.Errorf("failed to marshal settings: %v", err)
 		}
-		return nil
-	}
-	// 1. Re-install anthropics/skills if not present
-	if !strings.Contains(existingMarketplaces, "anthropics/skills") {
-		execClaude("plugin", "marketplace", "remove", "anthropics/skills")
-		if err := execClaude("plugin", "marketplace", "add", "anthropics/skills"); err != nil {
-			return err
+		if err := os.WriteFile(settingsFile, data, 0644); err != nil {
+			return fmt.Errorf("failed to write settings: %v", err)
 		}
+		a.log("Default marketplaces added to ~/.claude/settings.json")
 	}
-	// 2. Re-install obra/superpowers-marketplace if not present
-	if !strings.Contains(existingMarketplaces, "obra/superpowers-marketplace") {
-		execClaude("plugin", "marketplace", "remove", "obra/superpowers-marketplace")
-		if err := execClaude("plugin", "marketplace", "add", "obra/superpowers-marketplace"); err != nil {
-			return err
-		}
-	}
+
 	return nil
 }
 func (a *App) unzip(src, dest string) error {
@@ -3712,23 +3738,35 @@ func (a *App) InstallSkill(name, description, skillType, value, location, projec
 			if strings.ToLower(toolName) != "claude" {
 				return fmt.Errorf("skill ID installation is currently only supported for Claude")
 			}
-			// claude plugin install <value>
-			tm := NewToolManager(a)
-			status := tm.GetToolStatus("claude")
-			if !status.Installed {
-				return fmt.Errorf("claude not installed")
+			// Ensure default marketplaces are registered
+			if err := a.InstallDefaultMarketplace(); err != nil {
+				a.log(fmt.Sprintf("Warning: failed to ensure marketplaces: %v", err))
 			}
-			var cmd *exec.Cmd
-			if strings.HasSuffix(status.Path, ".js") {
-				nodePath, _ := exec.LookPath("node")
-				cmd = createHiddenCmd(nodePath, status.Path, "plugin", "install", value)
+			// Enable plugin in ~/.claude/settings.json
+			home, _ := os.UserHomeDir()
+			settingsFile := filepath.Join(home, ".claude", "settings.json")
+			var settings map[string]interface{}
+			if data, err := os.ReadFile(settingsFile); err == nil {
+				if err := json.Unmarshal(data, &settings); err != nil {
+					settings = make(map[string]interface{})
+				}
 			} else {
-				cmd = createHiddenCmd(status.Path, "plugin", "install", value)
+				settings = make(map[string]interface{})
 			}
-			cmd.Env = os.Environ()
-			if out, err := cmd.CombinedOutput(); err != nil {
-				return fmt.Errorf("install failed: %v, output: %s", err, string(out))
+			enabledPlugins, ok := settings["enabledPlugins"].(map[string]interface{})
+			if !ok {
+				enabledPlugins = make(map[string]interface{})
 			}
+			enabledPlugins[value] = true
+			settings["enabledPlugins"] = enabledPlugins
+			data, err := json.MarshalIndent(settings, "", "  ")
+			if err != nil {
+				return fmt.Errorf("failed to marshal settings: %v", err)
+			}
+			if err := os.WriteFile(settingsFile, data, 0644); err != nil {
+				return fmt.Errorf("failed to write settings: %v", err)
+			}
+			a.log(fmt.Sprintf("Plugin %s enabled in settings.json", value))
 		} else {
 			// Unzip to ~/.<tool>/skills
 			home, _ := os.UserHomeDir()
