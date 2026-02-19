@@ -50,11 +50,11 @@ echo "[2/4] Compiling Go Binaries..."
 
 # Build AMD64
 echo "  - Building for amd64..."
-CGO_ENABLED=1 CGO_LDFLAGS="-weak_framework UniformTypeIdentifiers" GOOS=darwin GOARCH=amd64 go build -tags desktop,production -o "${BIN_DIR}/${APP_NAME}_amd64"
+CGO_ENABLED=1 CGO_LDFLAGS="-weak_framework UniformTypeIdentifiers" GOOS=darwin GOARCH=amd64 go build -tags desktop,production,systray_no_appdelegate -o "${BIN_DIR}/${APP_NAME}_amd64"
 
 # Build ARM64
 echo "  - Building for arm64..."
-CGO_ENABLED=1 CGO_LDFLAGS="-weak_framework UniformTypeIdentifiers" GOOS=darwin GOARCH=arm64 go build -tags desktop,production -o "${BIN_DIR}/${APP_NAME}_arm64"
+CGO_ENABLED=1 CGO_LDFLAGS="-weak_framework UniformTypeIdentifiers" GOOS=darwin GOARCH=arm64 go build -tags desktop,production,systray_no_appdelegate -o "${BIN_DIR}/${APP_NAME}_arm64"
 
 # Generate Windows Resources
 echo "  - Generating Windows Resources..."
