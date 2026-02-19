@@ -1,0 +1,50 @@
+name: macOS Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          go install github.com/akavel/rsrc@latest
+
+      - name: Prepare Build Number
+        run: |
+          echo "${{ github.run_number }}" > build_number
+
+      - name: Build with Release Script
+        run: |
+          chmod +x build_release.sh
+          ./build_release.sh
+
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AICoder-macOS
+          path: |
+            dist/*.pkg
+            dist/*.app
+            dist/*.exe
