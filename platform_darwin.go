@@ -296,6 +296,34 @@ func (a *App) InstallToolOnDemand(toolName string) error {
 	return nil
 }
 
+func (a *App) updatePathForNode() {
+	home, _ := os.UserHomeDir()
+	localToolPath := filepath.Join(home, ".cceasy", "tools")
+	nodeBinPath := filepath.Join(localToolPath, "node", "bin")
+
+	currentPath := os.Getenv("PATH")
+	newPath := currentPath
+
+	// Add node bin path if it exists
+	if _, err := os.Stat(nodeBinPath); err == nil {
+		if !strings.Contains(currentPath, nodeBinPath) {
+			newPath = nodeBinPath + string(os.PathListSeparator) + newPath
+		}
+	}
+
+	// Add local tools path if it exists
+	if _, err := os.Stat(localToolPath); err == nil {
+		if !strings.Contains(currentPath, localToolPath) {
+			newPath = localToolPath + string(os.PathListSeparator) + newPath
+		}
+	}
+
+	if newPath != currentPath {
+		os.Setenv("PATH", newPath)
+		a.log(a.tr("Updated PATH environment variable: ") + newPath)
+	}
+}
+
 func (a *App) installNodeJSManually(targetDir string) error {
 	nodeVersion := RequiredNodeVersion
 	arch := "x64"
